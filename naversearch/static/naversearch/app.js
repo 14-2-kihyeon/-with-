@@ -53,17 +53,23 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 
-// 뉴스 목록 불러오기
+
+
+
+
+
+
+// 뉴스 목록 불러오기 (mode: "all" | "bookmark")
 async function loadNewsList(mode = "all") {
   const listEl = document.getElementById("news-list");
   const emptyMsgEl = document.getElementById("empty-message");
 
   try {
-    // 아직 백엔드에서 북마크 필터 API는 없으니 일단 전부 가져오기
+    // 1) 전체 뉴스 목록 가져오기
     const res = await axios.get("/api/news/");
     let newsList = res.data;
 
-    // 추후 mode === 'bookmark' 일 때 is_bookmarked === true 인 것만 필터링
+    // 2) 북마크 보기 모드라면 is_bookmarked === true 만 필터링 (F05 연동)
     if (mode === "bookmark") {
       newsList = newsList.filter((news) => news.is_bookmarked);
     }
@@ -72,11 +78,16 @@ async function loadNewsList(mode = "all") {
 
     if (!newsList.length) {
       emptyMsgEl.classList.remove("hidden");
+      document.getElementById("news-detail").textContent =
+        "좌측에서 기사를 선택하면 상세 내용이 여기에 표시됩니다.";
       return;
     }
     emptyMsgEl.classList.add("hidden");
 
-    newsList.forEach((news) => {
+    let firstLi = null;
+    let firstId = null;
+
+    newsList.forEach((news, index) => {
       const li = document.createElement("li");
       li.className = "naver-news-item";
       li.dataset.id = news.id;
@@ -86,31 +97,70 @@ async function loadNewsList(mode = "all") {
       titleSpan.textContent = news.title;
 
       const starBtn = document.createElement("button");
-      starBtn.className = "naver-bookmark-btn " + 
+      starBtn.className =
+        "naver-bookmark-btn " +
         (news.is_bookmarked ? "bookmarked" : "not-bookmarked");
       starBtn.innerText = "★";
 
-      // 북마크 클릭 시: 나중에 API 연결 (지금은 모양만 토글해도 됨)
-      starBtn.addEventListener("click", (event) => {
-        event.stopPropagation(); // li 클릭(상세보기)와 분리
-        // 나중에: /api/news/<id>/bookmark/ 같은 엔드포인트로 토글 예정
+      // ★★★ 북마크 버튼 클릭 시: 서버에 토글 요청
+      starBtn.addEventListener("click", async (event) => {
+        event.stopPropagation(); // li 클릭(상세보기)와 구분
+
+        try {
+          const res = await axios.post(`/api/news/${news.id}/bookmark/`);
+          const updated = res.data;
+          const isMarked = updated.is_bookmarked;
+
+          // 버튼 색상 갱신
+          starBtn.classList.toggle("bookmarked", isMarked);
+          starBtn.classList.toggle("not-bookmarked", !isMarked);
+
+          // 현재 '북마크 보기' 모드라면, 해제된 기사는 목록에서 제거해야 하므로 새로 로딩
+          const isBookmarkMode = document
+            .getElementById("btn-bookmark")
+            .classList.contains("active");
+
+          if (isBookmarkMode && !isMarked) {
+            await loadNewsList("bookmark");
+          }
+        } catch (error) {
+          console.error(error);
+          alert("북마크 변경 중 오류가 발생했습니다.");
+        }
       });
 
-      // li 클릭 시: 오른쪽에 상세 내용 표시 (간단 버전)
+      // 제목 클릭 시: 상세 API 호출 + active 스타일
       li.addEventListener("click", () => {
-        showNewsDetail(news);
+        document
+          .querySelectorAll(".naver-news-item.active")
+          .forEach((el) => el.classList.remove("active"));
+
+        li.classList.add("active");
+        loadNewsDetail(news.id);
       });
 
       li.appendChild(titleSpan);
       li.appendChild(starBtn);
       listEl.appendChild(li);
+
+      if (index === 0) {
+        firstLi = li;
+        firstId = news.id;
+      }
     });
 
+    // 첫 번째 기사 자동 선택
+    if (firstLi && firstId !== null) {
+      firstLi.classList.add("active");
+      loadNewsDetail(firstId);
+    }
   } catch (error) {
     console.error(error);
     alert("뉴스 목록을 불러오는 중 오류가 발생했습니다.");
   }
 }
+
+
 
 // 오른쪽 상세 영역에 내용 채우기
 function showNewsDetail(news) {
@@ -180,3 +230,24 @@ async function loadNewsDetail(id) {
     alert("뉴스 상세를 불러오는 중 오류가 발생했습니다.");
   }
 }
+
+
+
+
+// === CSRF 토큰을 axios에 자동으로 실어 보내기 ===
+function getCookie(name) {
+  let cookieValue = null;
+  if (document.cookie && document.cookie !== "") {
+    const cookies = document.cookie.split(";");
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i].trim();
+      // cookie가 "name=값" 형태인지 확인
+      if (cookie.substring(0, name.length + 1) === name + "=") {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
+      }
+    }
+  }
+  return cookieValue;
+}
+axios.defaults.headers.common["X-CSRFToken"] = getCookie("csrftoken");

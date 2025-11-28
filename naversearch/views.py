@@ -69,4 +69,22 @@ def news_detail(request, pk):
     return Response(serializer.data, status=status.HTTP_200_OK)
   
   
-  
+@api_view(["POST"])
+def toggle_bookmark(request, pk):
+    """
+    POST /api/news/<id>/bookmark/
+    -> is_bookmarked 값을 토글하고, 변경된 객체를 반환
+    """
+    try:
+        news = News.objects.get(pk=pk)
+    except News.DoesNotExist:
+        return Response(
+            {"detail": "존재하지 않는 기사입니다."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    news.is_bookmarked = not news.is_bookmarked
+    news.save()
+
+    serializer = NewsSerializer(news)
+    return Response(serializer.data, status=status.HTTP_200_OK)

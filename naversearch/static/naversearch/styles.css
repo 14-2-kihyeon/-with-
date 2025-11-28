@@ -179,3 +179,20 @@
   font-size: 0.95rem;
   white-space: pre-wrap;
 }
+
+
+.naver-bookmark-btn {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.naver-bookmark-btn.bookmarked {
+  color: #ffb300;  /* 노란 별 */
+}
+
+.naver-bookmark-btn.not-bookmarked {
+  color: #ccc;     /* 회색 별 */
+}
