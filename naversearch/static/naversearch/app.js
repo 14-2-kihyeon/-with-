@@ -1,3 +1,6 @@
+
+let currentMode = "all";
+let selectedNewsId = null;     // ★ 현재 선택된 뉴스 id
 // naversearch/static/naversearch/app.js
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -5,11 +8,16 @@ document.addEventListener("DOMContentLoaded", () => {
   const searchInput = document.getElementById("search-input");
   const btnAll = document.getElementById("btn-all");
   const btnBookmark = document.getElementById("btn-bookmark");
+  const summaryBtn = document.getElementById("summary-btn");        
+  const summaryContent = document.getElementById("summary-content");
 
-  // 처음 접속하면 전체 뉴스 목록 로딩
-  loadNewsList("all");
+  // 페이지 처음 접속: 전체보기 모드
+  currentMode = "all";
+  btnAll.classList.add("active");
+  btnBookmark.classList.remove("active");
+  loadNewsList(currentMode);
 
-  // 검색 버튼 클릭 시: 네이버 API 호출 + DB 저장 + 목록 갱신
+  // [검색하기] 버튼 (검색 후에는 항상 전체보기 모드로)
   searchBtn.addEventListener("click", async () => {
     const query = searchInput.value.trim();
     if (!query) {
@@ -18,13 +26,12 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     try {
-      // 1) /api/news/search/ 호출해서 네이버 뉴스 → DB 저장
-      await axios.get("/api/news/search/", {
-        params: { q: query },
-      });
-
-      // 2) 저장 후 전체 목록 다시 불러오기
-      await loadNewsList("all");
+      await axios.get("/api/news/search/", { params: { q: query } });
+      // 검색 후에는 전체 리스트로 다시
+      currentMode = "all";
+      btnAll.classList.add("active");
+      btnBookmark.classList.remove("active");
+      await loadNewsList(currentMode);
     } catch (error) {
       console.error(error);
       alert("뉴스 검색 중 오류가 발생했습니다.");
@@ -38,19 +45,51 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // 전체 보기 버튼
+  // [전체 보기] 버튼 클릭
   btnAll.addEventListener("click", () => {
+    if (currentMode === "all") return;   // 이미 전체보기면 패스
+
+    currentMode = "all";
     btnAll.classList.add("active");
     btnBookmark.classList.remove("active");
-    loadNewsList("all");
+    loadNewsList(currentMode);
   });
 
-  // 북마크 보기 버튼 (지금은 구조만, 기능은 나중에 완성)
+  // [북마크 보기] 버튼 클릭
   btnBookmark.addEventListener("click", () => {
+    if (currentMode === "bookmark") return;
+
+    currentMode = "bookmark";
     btnBookmark.classList.add("active");
     btnAll.classList.remove("active");
-    loadNewsList("bookmark"); // 지금은 임시로 전체/북마크 구분 없이 동작시켜도 됨
+    loadNewsList(currentMode);
   });
+
+  // F06: [요약 보기] 버튼 클릭 시 GMS(OpenAI)로 요약 요청
+  summaryBtn.addEventListener("click", async () => {
+    if (!selectedNewsId) {
+      alert("먼저 기사를 선택해 주세요.");
+      return;
+    }
+
+    const originalText = summaryBtn.textContent;
+    summaryBtn.disabled = true;
+    summaryBtn.textContent = "요약 중...";
+    summaryContent.textContent = "";
+
+    try {
+      const res = await axios.post(`/api/news/${selectedNewsId}/summary/`);
+      const data = res.data;
+      summaryContent.textContent = data.summary || "요약 결과가 없습니다.";
+    } catch (error) {
+      console.error(error);
+      summaryContent.textContent = "요약 생성 중 오류가 발생했습니다.";
+    } finally {
+      summaryBtn.disabled = false;
+      summaryBtn.textContent = originalText;
+    }
+  });
+
 });
 
 
@@ -65,11 +104,11 @@ async function loadNewsList(mode = "all") {
   const emptyMsgEl = document.getElementById("empty-message");
 
   try {
-    // 1) 전체 뉴스 목록 가져오기
+    // 1) DB에 저장된 전체 뉴스 가져오기
     const res = await axios.get("/api/news/");
     let newsList = res.data;
 
-    // 2) 북마크 보기 모드라면 is_bookmarked === true 만 필터링 (F05 연동)
+    // 2) 북마크 보기 모드라면 is_bookmarked == true 만 남기기
     if (mode === "bookmark") {
       newsList = newsList.filter((news) => news.is_bookmarked);
     }
@@ -77,6 +116,7 @@ async function loadNewsList(mode = "all") {
     listEl.innerHTML = "";
 
     if (!newsList.length) {
+      // 기사 없을 때 처리
       emptyMsgEl.classList.remove("hidden");
       document.getElementById("news-detail").textContent =
         "좌측에서 기사를 선택하면 상세 내용이 여기에 표시됩니다.";
@@ -102,25 +142,21 @@ async function loadNewsList(mode = "all") {
         (news.is_bookmarked ? "bookmarked" : "not-bookmarked");
       starBtn.innerText = "★";
 
-      // ★★★ 북마크 버튼 클릭 시: 서버에 토글 요청
+      // ★ 북마크 버튼 클릭 (F04)
       starBtn.addEventListener("click", async (event) => {
-        event.stopPropagation(); // li 클릭(상세보기)와 구분
+        event.stopPropagation(); // li 클릭(상세보기) 막기
 
         try {
           const res = await axios.post(`/api/news/${news.id}/bookmark/`);
           const updated = res.data;
           const isMarked = updated.is_bookmarked;
 
-          // 버튼 색상 갱신
+          // 버튼 색 갱신
           starBtn.classList.toggle("bookmarked", isMarked);
           starBtn.classList.toggle("not-bookmarked", !isMarked);
 
-          // 현재 '북마크 보기' 모드라면, 해제된 기사는 목록에서 제거해야 하므로 새로 로딩
-          const isBookmarkMode = document
-            .getElementById("btn-bookmark")
-            .classList.contains("active");
-
-          if (isBookmarkMode && !isMarked) {
+          // 현재 모드가 bookmark 인데 해제되면, 목록에서 제거해야 하므로 재로딩
+          if (currentMode === "bookmark" && !isMarked) {
             await loadNewsList("bookmark");
           }
         } catch (error) {
@@ -129,7 +165,7 @@ async function loadNewsList(mode = "all") {
         }
       });
 
-      // 제목 클릭 시: 상세 API 호출 + active 스타일
+      // 제목 클릭 시: 상세 API 호출 + active 스타일 (F03)
       li.addEventListener("click", () => {
         document
           .querySelectorAll(".naver-news-item.active")
@@ -149,7 +185,7 @@ async function loadNewsList(mode = "all") {
       }
     });
 
-    // 첫 번째 기사 자동 선택
+    // 3) 첫 번째 기사 자동 선택 + 상세 표시
     if (firstLi && firstId !== null) {
       firstLi.classList.add("active");
       loadNewsDetail(firstId);
@@ -193,8 +229,15 @@ function showNewsDetail(news) {
 }
 
 
+// 선택된 뉴스 상세 + 요약 버튼 상태 초기화
 async function loadNewsDetail(id) {
   const detailEl = document.getElementById("news-detail");
+  const summaryBtn = document.getElementById("summary-btn");
+  const summaryContent = document.getElementById("summary-content");
+
+  selectedNewsId = id;          // ★ 현재 선택된 기사 기억
+  summaryBtn.disabled = false;  // 기사 선택되면 요약 버튼 활성화
+  summaryContent.textContent = ""; // 이전 요약 내용은 지움
 
   try {
     const res = await axios.get(`/api/news/${id}/`);
@@ -227,7 +270,7 @@ async function loadNewsDetail(id) {
     detailEl.appendChild(bodyEl);
   } catch (error) {
     console.error(error);
-    alert("뉴스 상세를 불러오는 중 오류가 발생했습니다.");
+    detailEl.textContent = "뉴스 상세를 불러오는 중 오류가 발생했습니다.";
   }
 }
 

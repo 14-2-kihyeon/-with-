@@ -3,7 +3,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 
-from .utils import search_and_save_news
+from .utils import search_and_save_news, summarize_news_text
 from .models import News
 from .serializers import NewsSerializer
 
@@ -88,3 +88,26 @@ def toggle_bookmark(request, pk):
 
     serializer = NewsSerializer(news)
     return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+@api_view(["POST"])
+def summarize_news(request, pk):
+    try:
+        news = News.objects.get(pk=pk)
+    except News.DoesNotExist:
+        return Response(
+            {"detail": "존재하지 않는 기사입니다."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    try:
+        summary = summarize_news_text(news.title, news.description, news.link)
+    except Exception as e:
+        # 디버깅용: 콘솔에도 찍고, 응답으로도 전달
+        print("=== SUMMARY ERROR ===", e)
+        return Response(
+            {"detail": f"요약 생성 중 오류: {e}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+    return Response({"summary": summary}, status=status.HTTP_200_OK)

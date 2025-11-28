@@ -196,3 +196,34 @@
 .naver-bookmark-btn.not-bookmarked {
   color: #ccc;     /* 회색 별 */
 }
+
+
+/* F06: 요약 보기 영역 */
+.naver-news-summary {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid #eee;
+}
+
+.naver-summary-btn {
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: none;
+  background-color: #ffb300;
+  color: #000;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.naver-summary-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.naver-summary-content {
+  margin-top: 8px;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  white-space: pre-wrap;
+}
