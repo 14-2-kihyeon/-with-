@@ -22,5 +22,7 @@ urlpatterns = [
     path('accounts/', include('accounts.urls')),
     path('finances/', include('finances.urls')),
     path('posts/', include('posts.urls')),
+    path("api/", include("naversearch.urls")),
+    path("naver/", include("naversearch.urls")),
 
 ]

@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'naversearch/styles.css' %}">
+{% endblock extra_css %}
+
+{% block content %}
+
+<div class="naver-wrapper">
+
+  <!-- 상단 파란 검색 바 -->
+  <header class="naver-topbar">
+    <div class="naver-logo">
+      SSAFY 뉴스 검색기
+    </div>
+
+    <div class="naver-search-area">
+      <input
+        id="search-input"
+        type="text"
+        class="naver-search-input"
+        placeholder="검색어를 입력하세요. (예: 인공지능, 금융, SSAFY)"
+      >
+      <button id="search-btn" class="naver-search-btn">
+        검색하기
+      </button>
+    </div>
+
+    <div class="naver-top-buttons">
+      <button id="btn-all" class="naver-top-btn active">전체 보기</button>
+      <button id="btn-bookmark" class="naver-top-btn">북마크 보기</button>
+    </div>
+  </header>
+
+  <!-- 메인 영역: 좌측 리스트 / 우측 상세 -->
+  <main class="naver-main">
+    <!-- 왼쪽: 뉴스 목록 -->
+    <section id="news-list-section" class="naver-news-list-section">
+      <ul id="news-list" class="naver-news-list">
+        <!-- JS로 li가 채워짐 -->
+      </ul>
+
+      <p id="empty-message" class="naver-empty-message hidden">
+        아직 저장된 기사가 없습니다.
+      </p>
+    </section>
+
+    <!-- 오른쪽: 뉴스 상세 -->
+    <section id="news-detail-section" class="naver-news-detail-section">
+      <div id="news-detail" class="naver-news-detail">
+        좌측에서 기사를 선택하면 상세 내용이 여기에 표시됩니다.
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- axios CDN -->
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<!-- 이 페이지 전용 JS -->
+<script src="{% static 'naversearch/app.js' %}"></script>
+{% endblock content %}
