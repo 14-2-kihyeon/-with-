@@ -9,6 +9,10 @@ Django 기반 REST API 서버를 구축하고,
 
 ※ 위 경로(./images/ssafy-news-finished.png)에 이 README 상단에 첨부한 스크린샷을 저장해 두면 정상적으로 표시된다.
 
+![SSAFY 뉴스 검색기 화면](./images/capture.png)
+
+
+
 ### 🏗️ 기술 스택
 Backend
 Python 3
@@ -104,6 +108,7 @@ POST	/api/news/<id>/summary/	AI 요약 생성 요청
 ├─ requirements.txt
 └─ README.md
 ```
+
 
 ## 💬 느낀 점
 
