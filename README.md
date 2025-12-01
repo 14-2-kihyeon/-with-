@@ -1,180 +1,112 @@
-# 📘 07 관통 프로젝트 — 금융상품정보 REST API Server  
-정기예금 상품 정보 수집·저장 및 조회 API 구축 프로젝트
-
----
-
+# 📰 SSAFY 뉴스 검색기
 ## 📌 프로젝트 개요
+본 프로젝트는 네이버 뉴스 검색 Open API를 활용하여 금융/SSAFY 관련 뉴스를 검색·저장·조회·북마크·요약하는 웹 서비스를 만드는 것을 목표로 한다.
+Django 기반 REST API 서버를 구축하고,
+프론트엔드에서는 axios를 이용해 비동기 통신으로 뉴스를 조회 및 제어할 수 있도록 구현했다.
+또한 OpenAI(GMS) API를 활용해 선택한 기사의 내용을 한눈에 볼 수 있는 요약본으로 제공한다.
 
-본 프로젝트는 **금융상품통합비교공시(금융감독원) API의 정기예금 데이터를 활용하여**  
-Django 기반 REST API 서버를 구축하는 것을 목표로 한다.
+## 🖼️ 실행 화면
 
-외부 API에서 제공하는 정기예금 상품 및 옵션 데이터를 DB에 저장하고,  
-Django REST Framework를 이용하여 이를 JSON 형태로 제공하는 백엔드 시스템을 구현했다.
+※ 위 경로(./images/ssafy-news-finished.png)에 이 README 상단에 첨부한 스크린샷을 저장해 두면 정상적으로 표시된다.
 
-또한 Postman을 활용하여 전체 기능을 검증하고,  
-API KEY는 `.env`와 django-environ을 통해 보안 관리하였다.
+### 🏗️ 기술 스택
+Backend
+Python 3
+Django
+Django REST Framework (DRF)
+requests (Naver API 요청)
+Frontend
+HTML, CSS, JavaScript
+axios (AJAX 통신)
+DB
+SQLite3 (Django 기본 DB)
+기타
+python-dotenv / django-environ (.env로 API KEY 관리)
+OpenAI / GMS API (뉴스 요약)
 
----
+## 📁 주요 기능 요약
 
-## 🏗️ 기술 스택
+1. 뉴스 검색 & 저장 (F01)
 
-- Python 3  
-- Django  
-- Django REST Framework  
-- SQLite3  
-- Requests  
-- django-environ  
-- Postman  
+네이버 뉴스 검색 Open API를 이용해 키워드 기반으로 뉴스를 조회한다.
+응답받은 뉴스 중 새로운 기사만 DB에 저장하여 중복 저장을 방지한다.
+검색 시마다 기존 데이터는 유지하면서 새 기사만 추가한다.
 
----
+2. 전체 뉴스 목록 조회 (F02)
 
-# 📂 구현 기능 정리
+페이지 진입 또는 검색 후, 저장된 모든 뉴스를 좌측 리스트로 출력한다.
+뉴스가 없을 경우 안내 문구를 표시한다.
+뉴스 리스트 영역만 스크롤 가능하도록 구현했다.
 
-아래는 명세서 기반 F01 ~ F05 기능 구현 결과이다.
+3. 뉴스 상세 보기 (F03)
 
----
+좌측에서 기사를 클릭하면 우측 영역에 다음 정보를 표시한다.
 
-## 🔥 F01 — 정기예금 상품 및 옵션 정보 DB 저장
+제목
+본문(요약/설명)
+발행일
+원문 링크
+긴 내용도 편하게 볼 수 있도록 우측 영역에 별도 스크롤을 적용했다.
 
-금융감독원 정기예금 API를 호출하여 상품 목록(`baseList`)과 옵션(`optionList`)을 수집하고  
-Django ORM을 이용해 DepositProducts, DepositOptions 모델에 저장하였다.
+4. 북마크 토글 (F04)
 
-- API KEY는 `.env`로 관리
-- `update_or_create()`로 중복 데이터 없이 저장
-- 금융감독원 API의 누락 필드 발생(rsrv_type 등)을 예외 처리
+각 기사마다 별(★) 아이콘으로 북마크 상태를 표시한다.
+별 아이콘 클릭 시 is_bookmarked 값을 토글하여 DB에 반영한다.
+응답값을 기반으로 즉시 UI에 반영되도록 axios로 비동기 요청/응답을 처리했다.
 
-📸 **실행 화면**  
-![F01](pictures/07_F01.png)
+5. 전체 / 북마크 보기 전환 (F05)
 
----
+상단에 [전체 보기] / [북마크 보기] 버튼을 제공한다.
+전체 보기 클릭 시: DB에 저장된 모든 뉴스를 출력한다.
+북마크 보기 클릭 시: is_bookmarked = True 인 기사만 필터링하여 출력한다.
+선택된 탭이 시각적으로 구분되도록 스타일을 적용했다.
 
-## 🔥 F02 — 전체 정기예금 상품 JSON 반환
+6. AI 요약 기능 (심화, F06)
 
-DB에 저장된 모든 정기예금 상품을 JSON 형태로 반환하는 REST API를 구현하였다.
+우측 상세 영역에 [요약 보기] 버튼을 제공한다.
+버튼 클릭 시:
+해당 기사의 본문(또는 요약 가능한 텍스트)을 서버로 전송한다.
+서버에서 OpenAI(GMS) API를 호출해 2~3문장 정도의 요약을 생성한다.
+요약 결과를 상세 영역 하단에 표시한다.
+호출 실패 시 에러 메시지를 보여주고, 원문은 그대로 유지한다.
 
-- DepositProductsSerializer로 직렬화
-- 옵션 정보는 nested serializer로 함께 포함
+🔌 API 엔드포인트 예시
+- Method	URL	설명
+```
+GET	/api/news/	전체 뉴스 목록 조회
+GET	/api/news/?bookmark=true	북마크된 뉴스 목록 조회
+GET	/api/news/<id>/	특정 뉴스 상세 조회
+POST	/api/news/search/	검색어 기반 Naver 검색 & 저장
+POST	/api/news/<id>/bookmark/	북마크 상태 토글
+POST	/api/news/<id>/summary/	AI 요약 생성 요청
+실제 URL 네이밍은 프로젝트 구조에 따라 약간 달라질 수 있다.
+```
 
-📸 **실행 화면**  
-![F02](pictures/07_F02.png)
+🗂️ 디렉토리 구조 (예시)
+```
+.
+├─ backend/
+│  ├─ config/              # Django 프로젝트 설정
+│  ├─ news/                # 뉴스 관련 앱
+│  │  ├─ models.py         # News 모델 정의
+│  │  ├─ serializers.py    # NewsSerializer
+│  │  ├─ views.py          # 목록/상세/북마크/요약 API
+│  │  ├─ urls.py           # /api/news/ 라우팅
+│  │  └─ utils.py          # Naver 뉴스 API 호출 함수
+│  └─ templates/
+│     └─ index.html        # 메인 화면 템플릿
+├─ static/
+│  ├─ css/
+│  │  └─ style.css         # 레이아웃 및 스타일
+│  └─ js/
+│     └─ app.js            # axios 요청 & DOM 조작
+├─ .env                    # NAVER / OPENAI / GMS KEY
+├─ requirements.txt
+└─ README.md
+```
 
----
+## 💬 느낀 점
 
-## 🔥 F03 — 정기예금 상품 직접 추가 (POST)
-
-사용자가 직접 JSON 데이터를 POST 요청으로 입력하여 상품을 추가할 수 있게 구성하였다.
-
-- POST 요청 처리
-- validation 실패 시 오류 반환
-- 성공 시 “데이터 삽입 성공” 메시지 제공
-
-📸 **실행 화면**  
-![F03](pictures/07_F03.png)
-
----
-
-## 🔥 F04 — 특정 상품 옵션 리스트 조회
-
-상품 코드(`fin_prdt_cd`)를 기준으로 해당 상품의 모든 옵션 정보를 조회하도록 구현했다.
-
-- ForeignKey로 연결된 옵션 목록을 serializer로 반환
-- 상품 미존재 시 404 처리
-
-📸 **실행 화면**  
-![F04](pictures/07_F04.png)
-
----
-
-## 🔥 F05 — 최고 금리 상품 조회
-
-전체 옵션 중 **intr_rate2(최고 우대금리)**가 가장 높은 옵션을 조회하고  
-해당 옵션과 연관된 상품 정보를 함께 반환한다.
-
-- ORM `order_by('-intr_rate2').first()` 활용
-- 응답 구조: { 상품정보 + 옵션정보 }
-
-📸 **실행 화면**  
-![F05](pictures/07_F05.png)
-
----
-
-# 📘 프로젝트 구조
-
-project/
-│ manage.py
-│ .env
-│ README.md
-│ requirements.txt
-│
-├── finances/
-│ ├── models.py
-│ ├── serializers.py
-│ ├── views.py
-│ ├── urls.py
-│ ├── utils.py
-│ └── migrations/
-│
-├── pictures/
-│ ├── 07_F01.png
-│ ├── 07_F02.png
-│ ├── 07_F03.png
-│ ├── 07_F04.png
-│ └── 07_F05.png
-│
-└── Finflow/
-├── settings.py
-├── urls.py
-└── wsgi.py
-
-
----
-
-# 📚 학습 내용 정리
-
-### ✔ 외부 API 연동
-- Requests 라이브러리로 금융감독원 API 호출
-- 파라미터 전달 및 JSON 데이터 파싱
-- API 응답 구조(result → baseList, optionList) 분석
-
-### ✔ 환경 변수 관리
-- `.env` 파일로 API KEY 보관
-- django-environ으로 안전하게 settings.py에서 로드
-- BASE_DIR 이후에 read_env() 사용해야 정상 로드됨
-
-### ✔ Django ORM 활용
-- `update_or_create()`를 통한 중복 방지
-- FK 관계(product ↔ options) 매핑
-- 일부 필드 누락(rsrv_type 등)으로 발생하는 IntegrityError 해결 경험
-
-### ✔ Django REST Framework
-- Serializer를 이용한 JSON 직렬화
-- Nested Serializer 구성법 학습
-- Response 객체를 통한 REST 응답 형식 구성
-
-### ✔ RESTful API 설계 및 테스트
-- `/save/`, `/products/`, `/products/add/`, `/options/<코드>/`, `/highest/` 엔드포인트 설계
-- GET/POST 요청 처리 방식 이해
-- Postman으로 전체 API 정상 검증
-
----
-
-# 💡 느낀 점 / 회고
-
-이번 프로젝트는 단순한 코드 작성이 아니라  
-**외부 API → 데이터 가공 → DB 저장 → REST API 응답 → 테스트**  
-까지 이어지는 백엔드 전체 사이클을 경험할 수 있는 실전 프로젝트였다.
-
-특히 기억에 남는 점은:
-
-- 환경변수 로딩 문제(API KEY 읽힘 실패)  
-- 금융감독원 API의 옵션 데이터 누락으로 인한 IntegrityError  
-- Nested Serializer 설계  
-- Postman을 통한 오류 추적 및 해결 과정  
-
-이 과정을 통해 **백엔드 API 설계 능력과 디버깅 능력이 크게 향상**되었다.
-
-또한, JSON 기반 금융상품 데이터 구조를 분석하면서  
-실제 실무에서 어떻게 외부 데이터가 들어오고 처리되는지 이해할 수 있었고,  
-앞으로 금융 상품 추천 서비스나 AI 기반 금융 데이터 처리까지 확장할 수 있는 기틀이 마련되었다.
-
----
+외부 Open API(Naver)와 생성형 AI(OpenAI/GMS)를 한 프로젝트 안에서 함께 사용하는 경험을 할 수 있었다.
+DRF로 **CRUD + 상태 토글 + 추가 액션(요약)**까지 구현하면서 REST API 설계와 구현 흐름을 익혔다.
+axios로 비동기 UI를 구성하며, 프론트엔드와 백엔드 간 데이터 흐름을 전체적으로 이해할 수 있었다.
