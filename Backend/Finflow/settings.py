@@ -12,7 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 import environ
-import os
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -20,20 +20,21 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 env = environ.Env()
 environ.Env.read_env(BASE_DIR / '.env')
 API_KEY = env('API_KEY')
-NAVER_CLIENT_ID = os.getenv("NAVER_CLIENT_ID")
-NAVER_CLIENT_SECRET = os.getenv("NAVER_CLIENT_SECRET")
-GMS_KEY = os.getenv("GMS_KEY")
+NAVER_CLIENT_ID = env("NAVER_CLIENT_ID")
+NAVER_CLIENT_SECRET = env("NAVER_CLIENT_SECRET")
+GMS_KEY = env("GMS_KEY")
+SECRET_KEY = env("DJANGO_SECRET_KEY")
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-bdxc7d@j%pe)loajsv2^=z6@7up!7gbv@dtsv4^n^^#-uuo6=7"
+
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
 
 
 # Application definition
@@ -43,7 +44,18 @@ INSTALLED_APPS = [
     "finances",
     "posts",
     "naversearch",
+
+    "corsheaders",
+    "django.contrib.sites",   # ✅ allauth 쓰면 필요
     "rest_framework",
+    "rest_framework.authtoken",
+    "rest_framework_simplejwt.token_blacklist",  # ✅ 로그아웃 블랙리스트 쓸 거면 추가
+
+    "dj_rest_auth",
+    "dj_rest_auth.registration",  # ✅ 회원가입 endpoint
+    "allauth",
+    "allauth.account",
+    "allauth.socialaccount",
     "django_extensions",
     "django.contrib.admin",
     "django.contrib.auth",
@@ -53,15 +65,62 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
 ]
 
+SITE_ID = 1
+
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "allauth.account.middleware.AccountMiddleware",
 ]
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",  
+    "http://127.0.0.1:5173",
+]
+
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ),
+    # 얘는 왜 필요한지 아직 모르겠음
+    "DEFAULT_RENDERER_CLASSES": [
+        "rest_framework.renderers.JSONRenderer",
+    ],
+}
+
+# allauth 사용 시 필수
+AUTHENTICATION_BACKENDS = [
+    "django.contrib.auth.backends.ModelBackend",
+    "allauth.account.auth_backends.AuthenticationBackend",
+]
+
+# allauth 기본 옵션 지정 (개발 단계에서 편하게)
+# 회원가입 시 이메일 인증/메일 발송 때문에 막히는 경우가 많음 
+# 이걸 붙이면 회원가입 로직이 allauth 설정을 많이 타게 돼서,
+# 로그인 방식(유저네임/이메일)과 회원가입에서 실제로 받는 필드가 서로 충돌할 수 있고,
+# 그걸 allauth가 “경고/체크”로 알려주는 거야.
+ACCOUNT_LOGIN_METHODS = {"username"}
+ACCOUNT_SIGNUP_FIELDS = ["username*", "password1*", "password2*"]
+ACCOUNT_EMAIL_VERIFICATION = "none"
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+
+
+from datetime import timedelta
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=10),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+
+    "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": True,
+}
+
 
 ROOT_URLCONF = "Finflow.urls"
 
@@ -116,9 +175,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
-LANGUAGE_CODE = "en-us"
+LANGUAGE_CODE = "ko-kr"
 
-TIME_ZONE = "UTC"
+TIME_ZONE = "Asia/Seoul"
 
 USE_I18N = True
 
@@ -136,3 +195,16 @@ STATIC_URL = "static/"
 AUTH_USER_MODEL = 'accounts.User'
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+REST_USE_JWT = True
+
+REST_AUTH = {
+    "USE_JWT": True,
+    # 옵션(원하면): 로그인 응답에 만료시간 포함
+    # "JWT_AUTH_RETURN_EXPIRATION": True,
+    "REGISTER_SERIALIZER": "accounts.serializers.CustomRegisterSerializer", #회원가입 시 email 선택사항으로 만들기
+    "JWT_AUTH_HTTPONLY": False,   # ✅ (중요) refresh/access를 응답 바디로 쓰려면 False로
+    "SESSION_LOGIN": False,
+    "JWT_AUTH_COOKIE": None,
+    "JWT_AUTH_REFRESH_COOKIE": None,
+}
