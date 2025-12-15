@@ -19,7 +19,9 @@
 
       <!-- 앞으로 합칠 앱들 자리 -->
       <li>
-        <span>예금/적금(Finances) - 준비중</span>
+        <RouterLink to="/finances/deposits">정기예금 보기</RouterLink>
+        <span> // </span>
+        <RouterLink to="/finances/savings">적금</RouterLink>
       </li>
       <li>
         <span>뉴스(NaverSearch) - 준비중</span>

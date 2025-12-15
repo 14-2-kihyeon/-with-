@@ -1,0 +1,6 @@
+.table-wrap { overflow-x: auto; margin-top: 8px; }
+.tbl { width: 100%; border-collapse: collapse; }
+.tbl th, .tbl td { border: 1px solid #ddd; padding: 10px; vertical-align: top; }
+.tbl thead th { background: #f7f7f7; text-align: left; }
+.tbl tbody th { background: #fafafa; text-align: left; }
+.empty { text-align: center; padding: 20px; color: #666; }
