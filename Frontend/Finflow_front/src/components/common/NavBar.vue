@@ -6,6 +6,8 @@
     <RouterLink :to="{ name: 'saving_list' }">Savings</RouterLink>
     <RouterLink :to="{ name: 'naver_news' }">Naver News</RouterLink>
     <RouterLink :to="{ name: 'bank_map' }">KaKao Map</RouterLink>
+    <RouterLink :to="{ name: 'youtube_search' }">YouTube</RouterLink>
+
 
     <div class="spacer"></div>
 

@@ -1,3 +1,8 @@
+
+
+<!-- 표(Table) UI를 재사용하려고 만든 공용 컴포넌트 -->
+
+
 <template>
   <table class="app-table">
     <thead>

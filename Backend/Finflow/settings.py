@@ -25,6 +25,7 @@ NAVER_CLIENT_SECRET = env("NAVER_CLIENT_SECRET")
 GMS_KEY = env("GMS_KEY")
 SECRET_KEY = env("DJANGO_SECRET_KEY")
 KAKAO_MOBILITY_REST_KEY = env("KAKAO_MOBILITY_REST_KEY")
+YOUTUBE_API_KEY = env("YOUTUBE_API_KEY")
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
@@ -46,6 +47,7 @@ INSTALLED_APPS = [
     "posts",
     "naversearch",
     "kakaomap",
+    "youtube",
 
     "corsheaders",
     "django.contrib.sites",   # ✅ allauth 쓰면 필요
@@ -116,7 +118,7 @@ EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 from datetime import timedelta
 
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=10),
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=50),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
 
     "ROTATE_REFRESH_TOKENS": True,

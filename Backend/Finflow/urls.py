@@ -26,5 +26,6 @@ urlpatterns = [
     path('posts/', include('posts.urls')),
     path("naver/", include("naversearch.urls")),
     path("kakaomap/", include('kakaomap.urls')),
+    path("youtube/", include('youtube.urls')),
 
 ]
