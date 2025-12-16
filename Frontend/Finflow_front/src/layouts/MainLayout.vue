@@ -1,8 +1,7 @@
-<!-- src/layouts/MainLayout.vue -->
 <template>
   <div>
     <NavBar />
-    <main class="page">
+    <main class="app-container">
       <RouterView />
     </main>
   </div>
@@ -12,7 +11,10 @@
 import NavBar from "@/components/common/NavBar.vue"
 </script>
 
-
 <style scoped>
-
+.app-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 16px;
+}
 </style>

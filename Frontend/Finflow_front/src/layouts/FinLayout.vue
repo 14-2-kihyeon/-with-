@@ -9,6 +9,6 @@
 </script>
 
 
-<style scoped src="@/assets/styles/finances.css">
+<style src="@/assets/styles/finances.css">
 
 </style>

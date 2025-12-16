@@ -1,25 +1,29 @@
-// src/router/index.js
 import { createRouter, createWebHistory } from "vue-router"
 import { useAuthStore } from "@/stores/auth"
 // 레이아웃
 import MainLayout from "@/layouts/MainLayout.vue"
 import FinLayout from "@/layouts/FinLayout.vue"
-// 메인
+
 import MainView from "@/views/main/MainView.vue"
-// Auth
+
 import LoginView from "@/views/auth/LoginView.vue"
 import SignupView from "@/views/auth/SignupView.vue"
 import MyPageView from "@/views/auth/MyPageView.vue"
-// Posts
+
 import PostListView from "@/views/posts/PostListView.vue"
 import PostDetailView from "@/views/posts/PostDetailView.vue"
 import PostCreateView from "@/views/posts/PostCreateView.vue"
 import PostEditView from "@/views/posts/PostEditView.vue"
-// Finances
+
 import DepositListView from "@/views/finances/deposits/DepositListView.vue"
 import DepositDetailView from "@/views/finances/deposits/DepositDetailView.vue"
 import SavingListView from "@/views/finances/savings/SavingListView.vue"
 import SavingDetailView from "@/views/finances/savings/SavingDetailView.vue"
+
+import NaverNewsView from "@/views/news/NaverNewsView.vue"
+
+import KakaoMapLayout from "@/layouts/KakaoMapLayout.vue"
+import BankMapView from "@/views/kakaomap/BankMapView.vue"
 
 const router = createRouter({
   history: createWebHistory(),
@@ -28,20 +32,26 @@ const router = createRouter({
       path: "/",
       component: MainLayout,
       children: [
+        // ✅ 메인
         { path: "", name: "main", component: MainView },
 
-        // auth
+        // ✅ auth
         { path: "login", name: "login", component: LoginView },
         { path: "signup", name: "signup", component: SignupView },
         { path: "mypage", name: "mypage", component: MyPageView, meta: { requiresAuth: true } },
 
-        // posts
-        { path: "posts", name: "post_list", component: PostListView },
-        { path: "posts/create", name: "post_create", component: PostCreateView, meta: { requiresAuth: true } },
-        { path: "posts/:pk", name: "post_detail", component: PostDetailView, props: true },
-        { path: "posts/:pk/edit", name: "post_edit", component: PostEditView, meta: { requiresAuth: true }, props: true },
+        // ✅ posts (도메인 중첩)
+        {
+          path: "posts",
+          children: [
+            { path: "", name: "post_list", component: PostListView },
+            { path: "create", name: "post_create", component: PostCreateView, meta: { requiresAuth: true } },
+            { path: ":pk", name: "post_detail", component: PostDetailView, props: true },
+            { path: ":pk/edit", name: "post_edit", component: PostEditView, meta: { requiresAuth: true }, props: true },
+          ],
+        },
 
-        // finances (예금/적금 공통 레이아웃)
+        // ✅ finances (도메인 중첩)
         {
           path: "finances",
           component: FinLayout,
@@ -53,21 +63,36 @@ const router = createRouter({
             { path: "savings/:fin_prdt_cd", name: "saving_detail", component: SavingDetailView, props: true },
           ],
         },
+
+        // ✅ naver news
+        { path: "naver", name: "naver_news", component: NaverNewsView },
+        {
+          path: "kakaomap",
+          component: KakaoMapLayout,
+          children: [
+            { path: "", name: "bank_map", component: BankMapView },
+          ],
+        },
       ],
     },
+
+    // 없는 주소 → 메인으로
+    { path: "/:pathMatch(.*)*", redirect: { name: "main" } },
+
   ],
 })
 
-// ✅ nested meta 대응: to.matched 로 검사
 router.beforeEach(async (to) => {
   const auth = useAuthStore()
 
+  // 새로고침 후 토큰은 있는데 user 없으면 복구
   if (auth.isLogin && !auth.user) {
     try { await auth.fetchUser() } catch {}
   }
 
-  const needAuth = to.matched.some((r) => r.meta?.requiresAuth)
-  if (needAuth && !auth.isLogin) return { name: "login" }
+  if (to.meta.requiresAuth && !auth.isLogin) {
+    return { name: "login" }
+  }
 })
 
 export default router

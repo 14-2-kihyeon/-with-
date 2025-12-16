@@ -1,37 +1,19 @@
 <template>
   <div>
-    <h1>Finflow 메인</h1>
+    <h1>Main</h1>
+    <p>각 기능으로 이동하세요.</p>
 
-    <p v-if="auth.isLogin">
-      로그인: {{ auth.user?.username || "loading..." }}
-    </p>
-    <p v-else>
-      로그인 필요 기능이 있습니다.
-    </p>
-
-    <hr />
-
-    <h2>바로가기</h2>
     <ul>
-      <li>
-        <RouterLink to="/posts">게시판(Posts)</RouterLink>
-      </li>
-
-      <!-- 앞으로 합칠 앱들 자리 -->
-      <li>
-        <RouterLink to="/finances/deposits">정기예금 보기</RouterLink>
-        <span> // </span>
-        <RouterLink to="/finances/savings">적금</RouterLink>
-      </li>
-      <li>
-        <span>뉴스(NaverSearch) - 준비중</span>
-      </li>
-      <li>
-        <span>카카오맵(은행 찾기) - 준비중</span>
-      </li>
+      <li><RouterLink :to="{ name: 'post_list' }">게시판</RouterLink></li>
+      <li><RouterLink :to="{ name: 'deposit_list' }">정기예금</RouterLink></li>
+      <li><RouterLink :to="{ name: 'saving_list' }">적금</RouterLink></li>
+      <li><RouterLink :to="{ name: 'naver_news' }">네이버 뉴스</RouterLink></li>
+      <li><RouterLink :to="{ name: 'bank_map' }">카카오 지도(은행찾기)</RouterLink></li>
+      <li><RouterLink :to="{ name: 'mypage' }">마이페이지(로그인 필요)</RouterLink></li>
     </ul>
   </div>
 </template>
+
 
 <script setup>
 import { useAuthStore } from "@/stores/auth"

@@ -24,6 +24,7 @@ NAVER_CLIENT_ID = env("NAVER_CLIENT_ID")
 NAVER_CLIENT_SECRET = env("NAVER_CLIENT_SECRET")
 GMS_KEY = env("GMS_KEY")
 SECRET_KEY = env("DJANGO_SECRET_KEY")
+KAKAO_MOBILITY_REST_KEY = env("KAKAO_MOBILITY_REST_KEY")
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
@@ -44,6 +45,7 @@ INSTALLED_APPS = [
     "finances",
     "posts",
     "naversearch",
+    "kakaomap",
 
     "corsheaders",
     "django.contrib.sites",   # ✅ allauth 쓰면 필요

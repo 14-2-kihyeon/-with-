@@ -1,17 +1,23 @@
 <template>
-  <nav style="display:flex; gap:12px; align-items:center;">
-    <RouterLink to="/">Home</RouterLink>
-    <RouterLink to="/posts">Posts</RouterLink>
+  <nav class="nav">
+    <RouterLink :to="{ name: 'main' }">Main</RouterLink>
+    <RouterLink :to="{ name: 'post_list' }">Posts</RouterLink>
+    <RouterLink :to="{ name: 'deposit_list' }">Deposits</RouterLink>
+    <RouterLink :to="{ name: 'saving_list' }">Savings</RouterLink>
+    <RouterLink :to="{ name: 'naver_news' }">Naver News</RouterLink>
+    <RouterLink :to="{ name: 'bank_map' }">KaKao Map</RouterLink>
+
+    <div class="spacer"></div>
 
     <template v-if="auth.isLogin">
-      <RouterLink to="/mypage">MyPage</RouterLink>
+      <RouterLink :to="{ name: 'mypage' }">MyPage</RouterLink>
       <button @click="onLogout">Logout</button>
       <span>({{ auth.user?.username || "loading..." }})</span>
     </template>
 
     <template v-else>
-      <RouterLink to="/login">Login</RouterLink>
-      <RouterLink to="/signup">Signup</RouterLink>
+      <RouterLink :to="{ name: 'login' }">Login</RouterLink>
+      <RouterLink :to="{ name: 'signup' }">Signup</RouterLink>
     </template>
   </nav>
 </template>
@@ -25,11 +31,11 @@ const router = useRouter()
 
 const onLogout = async () => {
   await auth.logout()
-  router.push("/")
+  router.push({ name: "main" })
 }
 </script>
 
-
 <style scoped>
-
+.nav { display:flex; gap:12px; align-items:center; padding:12px; }
+.spacer { flex:1; }
 </style>
