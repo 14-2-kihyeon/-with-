@@ -8,6 +8,8 @@
     <RouterLink :to="{ name: 'bank_map' }">KaKao Map</RouterLink>
     <RouterLink :to="{ name: 'youtube_search' }">YouTube</RouterLink>
 
+    <RouterLink v-if="auth.isLogin":to="{ name: 'investment_survey' }"class="nav-link">투자 성향 검사</RouterLink>
+    <RouterLink v-if="auth.isLogin":to="{ name: 'recommendations' }"class="nav-link">맞춤 추천</RouterLink>
 
     <div class="spacer"></div>
 

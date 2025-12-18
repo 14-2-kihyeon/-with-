@@ -28,7 +28,9 @@ import BankMapView from "@/views/kakaomap/BankMapView.vue"
 import YoutubeLayout from "@/layouts/YoutubeLayout.vue"
 import SearchView from "@/views/youtube/SearchView.vue"
 import VideoDetailView from "@/views/youtube/VideoDetailView.vue"
-
+// Survey
+import InvestmentSurveyView from "@/views/auth/InvestmentSurveyView.vue"
+import RecommendationsView from "@/views/auth/RecommendationsView.vue"
 
 
 const router = createRouter({
@@ -54,6 +56,8 @@ const router = createRouter({
             { path: "create", name: "post_create", component: PostCreateView, meta: { requiresAuth: true } },
             { path: ":pk", name: "post_detail", component: PostDetailView, props: true },
             { path: ":pk/edit", name: "post_edit", component: PostEditView, meta: { requiresAuth: true }, props: true },
+            { path: "investment-survey", name: "investment_survey", component: InvestmentSurveyView, meta: { requiresAuth: true } },
+            { path: "recommendations", name: "recommendations", component: RecommendationsView, meta: { requiresAuth: true } },
           ],
         },
 
