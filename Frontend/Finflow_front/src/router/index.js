@@ -48,17 +48,40 @@ const router = createRouter({
         { path: "signup", name: "signup", component: SignupView },
         { path: "mypage", name: "mypage", component: MyPageView, meta: { requiresAuth: true } },
 
-        // ✅ posts (도메인 중첩)
+        // ✅ posts 라우트 수정
         {
           path: "posts",
           children: [
             { path: "", name: "post_list", component: PostListView },
             { path: "create", name: "post_create", component: PostCreateView, meta: { requiresAuth: true } },
-            { path: ":pk", name: "post_detail", component: PostDetailView, props: true },
-            { path: ":pk/edit", name: "post_edit", component: PostEditView, meta: { requiresAuth: true }, props: true },
-            { path: "investment-survey", name: "investment_survey", component: InvestmentSurveyView, meta: { requiresAuth: true } },
-            { path: "recommendations", name: "recommendations", component: RecommendationsView, meta: { requiresAuth: true } },
+            { 
+              path: ":pk", 
+              name: "post_detail", 
+              component: PostDetailView, 
+              props: route => ({ pk: parseInt(route.params.pk) })
+            },
+            { 
+              path: ":pk/edit", 
+              name: "post_edit", 
+              component: PostEditView, 
+              meta: { requiresAuth: true }, 
+              props: route => ({ pk: parseInt(route.params.pk) })
+            },
           ],
+        },
+
+        // ✅ 투자 성향은 posts 밖으로 이동
+        { 
+          path: "investment-survey", 
+          name: "investment_survey", 
+          component: InvestmentSurveyView, 
+          meta: { requiresAuth: true } 
+        },
+        { 
+          path: "recommendations", 
+          name: "recommendations", 
+          component: RecommendationsView, 
+          meta: { requiresAuth: true } 
         },
 
         // ✅ finances (도메인 중첩)

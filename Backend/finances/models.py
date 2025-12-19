@@ -14,7 +14,7 @@ class DepositProducts(models.Model):
 
 
 class DepositOptions(models.Model):
-    product = models.ForeignKey(DepositProducts, on_delete=models.CASCADE)
+    product = models.ForeignKey(DepositProducts, on_delete=models.CASCADE, related_name="options")
     intr_rate = models.FloatField(default=-1)      # 기본 금리
     intr_rate2 = models.FloatField(default=-1)     # 최고 우대금리
     save_trm = models.IntegerField()               # 가입 기간(개월)
