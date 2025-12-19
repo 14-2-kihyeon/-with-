@@ -1,0 +1,136 @@
+/* 전체 스타일 */
+.gs-container {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f4f4f4;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+}
+
+/* 헤더 스타일 */
+.gs-header {
+    background-color: #28a745;
+    color: white;
+    padding: 10px 0;
+    text-align: center;
+    width: 100%;
+}
+
+.gs-nav-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    text-align: center;
+}
+
+.gs-nav-item {
+    display: inline-block;
+    margin: 0 15px;
+}
+
+.gs-nav-item a {
+    color: white;
+    text-decoration: none;
+    font-size: 16px;
+}
+
+/* 콘텐츠 영역 */
+.gs-content {
+    width: 100%;
+    max-width: 1200px;
+    margin: 20px auto;
+    padding: 20px;
+    background-color: white;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.gs-title {
+    text-align: center;
+    color: #333;
+    font-size: 24px;
+    margin-bottom: 20px;
+}
+
+/* 버튼 및 입력 필드 스타일 */
+.gs-controls {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.gs-controls select,
+.gs-controls input,
+.gs-controls button {
+    padding: 10px;
+    font-size: 16px;
+    width: 100%;
+    max-width: 200px;
+}
+
+.gs-controls button {
+    background-color: #28a745;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+.gs-controls button:hover {
+    background-color: #218838;
+}
+
+/* 오류 메시지 스타일 */
+.gs-error-message {
+    color: red;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+/* 차트 컨테이너 */
+.gs-chart-container {
+    width: 100%;
+    height: 400px;
+    margin: 0 auto;
+}
+
+/* 푸터 스타일 */
+.gs-footer {
+    background-color: #333;
+    color: white;
+    text-align: center;
+    padding: 10px 0;
+    margin-top: 20px;
+    width: 100%;
+}
+
+.gs-footer p {
+    margin: 0;
+}
+
+/* 화면 크기에 따라 차트 크기 자동 조정 */
+@media (max-width: 768px) {
+    .gs-controls {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .gs-controls select,
+    .gs-controls input,
+    .gs-controls button {
+        width: 100%;
+    }
+
+    .gs-chart-container {
+        height: 300px;  /* 모바일 화면에서 차트 높이를 줄여줍니다 */
+    }
+}
+
+@media (max-width: 480px) {
+    .gs-title {
+        font-size: 20px; /* 작은 화면에서 제목 폰트 크기 줄이기 */
+    }
+}
