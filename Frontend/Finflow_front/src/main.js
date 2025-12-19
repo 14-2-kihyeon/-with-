@@ -11,6 +11,7 @@ import router from './router'
 import "@/assets/styles/base.css"
 import "@/assets/styles/table.css"
 import "@/assets/styles/kakaomap.css"
+import "@/assets/styles/gold_silver.css"
 
 // ✅ Bootstrap CSS 추가
 import 'bootstrap/dist/css/bootstrap.min.css'
