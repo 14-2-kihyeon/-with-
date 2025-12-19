@@ -12,7 +12,7 @@ class DepositProductListSerializer(serializers.ModelSerializer):
         fields = ("fin_prdt_cd", "kor_co_nm", "fin_prdt_nm")
 
 class DepositProductDetailSerializer(serializers.ModelSerializer):
-    options = DepositOptionsSerializer(many=True, read_only=True, source="depositoptions_set")
+    options = DepositOptionsSerializer(many=True, read_only=True,)
 
     class Meta:
         model = DepositProducts
