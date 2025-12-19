@@ -1,180 +1,102 @@
-# 📘 07 관통 프로젝트 — 금융상품정보 REST API Server  
-정기예금 상품 정보 수집·저장 및 조회 API 구축 프로젝트
+# vue - Front 뼈대 구조
 
+![프론트 뼈대 구조](./README전용%20picture/frontend%20구조/Frontend%20구조%20뼈대.PNG)
 ---
+- src/api/
+```
+역할 : "백엔드에 요청 보내는 방법"을 한 곳에 모아두는 영역
+axios.js : JWT(Access) 토큰과 refresh발급 << 거의 모든 작업에서 이루어짐
+그래서 이런 공통 네트워크 규칙을 한 번에 관리해서 반복 작업을 줄인다
+>> 솔직히 반쯤만 이해가 된다
 
-## 📌 프로젝트 개요
+finances.js : 예금/적금처럼 특정 도메인에 대한 API함수만 모아두기
+사실 그림상으로는 stores에 배치가 맞긴함
+근데 이 파일의 코드는  예금/적금이 백엔드에서 다른 금융감독원의 데이터를 가져와 GET 방식만 사용하기 때문에 상태 관리(stores)에 의미적(?)으로는 부합하지 않음 / 추가로 gpt가 추천(이유를 봤는데 기어기..)
+```
+<br>
+<br>
 
-본 프로젝트는 **금융상품통합비교공시(금융감독원) API의 정기예금 데이터를 활용하여**  
-Django 기반 REST API 서버를 구축하는 것을 목표로 한다.
+- src/assets/styles
+```
+역할: 스타일을 목적별로 분리해서 유지보수 쉽게
+base.css, table.css, finances.css
 
-외부 API에서 제공하는 정기예금 상품 및 옵션 데이터를 DB에 저장하고,  
-Django REST Framework를 이용하여 이를 JSON 형태로 제공하는 백엔드 시스템을 구현했다.
+base.css, table.css는 지금 main.js에서 import해서 사용중
 
-또한 Postman을 활용하여 전체 기능을 검증하고,  
-API KEY는 `.env`와 django-environ을 통해 보안 관리하였다.
+지금 3개의 css파일이 존재하는데 base는 말 그대로 프로젝트 전역을 담당(글꼴, 폰트 등등)
+table.css는 예금, 적금을 조회할때 사용했는데, 표 안에 데이터를 넣고, 나중에 표를 또 사용할 가능성이 있기에 전역에 빼둔 것
 
+finances.css는 예금, 적금 전용 css / 도메인 별로 css를 나누어 써야 유지보수가 쉽기 때문 
+저기 밑의 router-index.js 구조를 살펴본 후 아래의 FinLayout 그림을 살펴보면 css파일을 import하는 방식이 다르다
+```
+
+![assets-css](./README전용%20picture/frontend%20구조/main-js.PNG)
+
+<br>
+
+- FinLayout -> css scoped -> import 방식
+![import-finances.css](./README전용%20picture/frontend%20구조/finances%20import.PNG)
+
+<br>
+<br>
+
+
+
+
+
+- src/layouts/
+```
+역할 : 여러 페이지에서 반복되는 "공통 레이아웃"을 담당 
+우리가 지금까지 알고 있던 MainView와 같은 것
+
+MainView가 있는데 왜 굳이 MainView 위에 MainLayout을 만드나요 ?
+일단 아래 그림의 라우터 구조 파악이 중요
+
+MainLayout 하위 
+    main뷰
+    auth 관련
+    posts 관련
+    finances 관련 하위
+        예금, 적금
+
+
+이를 중첩 라우터 구조라 함 -> 이 구조의 장점은
+
+1. 공통 UI를 한 번만 정의할 수 있다(css같은 ??)
+2. URL 구조를 "도메인 단위로 묶기 쉽다"
+3. 팀 협업이 쉽다. 각 도메인별로 나뉘어 있기에 맡은 부분만 건드릴 수가 있다
+4. 
+
+```
+![라우터-인덱스](./README전용%20picture/frontend%20구조/라우터-인덱스.PNG)
+
+
+<br>
+<br>
+<br>
+
+# 특이사항 체크
+
+### git add 수행 후 경고 문구
+![줄바꿈 경고](./README전용%20picture/git%20경고%20문구/git%20add%20수행%20후%20경고%20문구.PNG)
+```
+이 경고는 에러가 아니라 줄바꿈(EOL) 변환 안내이다.
+지금 파일들은 LF(유닉스 줄바꿈)으로 저장되어 있는데,
+나는 Windows환경이라서 다음에 git 파일을 건드릴 때, CRLF(윈도우 줄바꿈)으로 바뀔 수 있다는 경고이다.
+
+커밋/푸시 자체는 그대로 가능하다
+하지만 줄바꿈이 제멋대로 바뀌어서 diff가 더러워지는 문제를 막으려면 설정을 해주는 게 좋다
+
+diff는 마지막 관통 라이브때 배웠다.
+jsdiff -> javascript로 텍스트 구분을 구현한 것
+이전 텍스트와 새 텍스트를 받아서 두 텍스트의 차이를 구분
+```
+
+### 이 경고 문구에 대한 해결법은 일단 메모 후 나중에 다시 알아볼 것
+
+![줄바꿈 에러 추천](./README전용%20picture/git%20경고%20문구/줄바꿈%20에러%20해결.PNG)
 ---
-
-## 🏗️ 기술 스택
-
-- Python 3  
-- Django  
-- Django REST Framework  
-- SQLite3  
-- Requests  
-- django-environ  
-- Postman  
-
----
-
-# 📂 구현 기능 정리
-
-아래는 명세서 기반 F01 ~ F05 기능 구현 결과이다.
-
----
-
-## 🔥 F01 — 정기예금 상품 및 옵션 정보 DB 저장
-
-금융감독원 정기예금 API를 호출하여 상품 목록(`baseList`)과 옵션(`optionList`)을 수집하고  
-Django ORM을 이용해 DepositProducts, DepositOptions 모델에 저장하였다.
-
-- API KEY는 `.env`로 관리
-- `update_or_create()`로 중복 데이터 없이 저장
-- 금융감독원 API의 누락 필드 발생(rsrv_type 등)을 예외 처리
-
-📸 **실행 화면**  
-![F01](pictures/07_F01.png)
-
----
-
-## 🔥 F02 — 전체 정기예금 상품 JSON 반환
-
-DB에 저장된 모든 정기예금 상품을 JSON 형태로 반환하는 REST API를 구현하였다.
-
-- DepositProductsSerializer로 직렬화
-- 옵션 정보는 nested serializer로 함께 포함
-
-📸 **실행 화면**  
-![F02](pictures/07_F02.png)
-
----
-
-## 🔥 F03 — 정기예금 상품 직접 추가 (POST)
-
-사용자가 직접 JSON 데이터를 POST 요청으로 입력하여 상품을 추가할 수 있게 구성하였다.
-
-- POST 요청 처리
-- validation 실패 시 오류 반환
-- 성공 시 “데이터 삽입 성공” 메시지 제공
-
-📸 **실행 화면**  
-![F03](pictures/07_F03.png)
-
----
-
-## 🔥 F04 — 특정 상품 옵션 리스트 조회
-
-상품 코드(`fin_prdt_cd`)를 기준으로 해당 상품의 모든 옵션 정보를 조회하도록 구현했다.
-
-- ForeignKey로 연결된 옵션 목록을 serializer로 반환
-- 상품 미존재 시 404 처리
-
-📸 **실행 화면**  
-![F04](pictures/07_F04.png)
-
----
-
-## 🔥 F05 — 최고 금리 상품 조회
-
-전체 옵션 중 **intr_rate2(최고 우대금리)**가 가장 높은 옵션을 조회하고  
-해당 옵션과 연관된 상품 정보를 함께 반환한다.
-
-- ORM `order_by('-intr_rate2').first()` 활용
-- 응답 구조: { 상품정보 + 옵션정보 }
-
-📸 **실행 화면**  
-![F05](pictures/07_F05.png)
-
----
-
-# 📘 프로젝트 구조
-
-project/
-│ manage.py
-│ .env
-│ README.md
-│ requirements.txt
-│
-├── finances/
-│ ├── models.py
-│ ├── serializers.py
-│ ├── views.py
-│ ├── urls.py
-│ ├── utils.py
-│ └── migrations/
-│
-├── pictures/
-│ ├── 07_F01.png
-│ ├── 07_F02.png
-│ ├── 07_F03.png
-│ ├── 07_F04.png
-│ └── 07_F05.png
-│
-└── Finflow/
-├── settings.py
-├── urls.py
-└── wsgi.py
+![줄바꿈 에러 선택](./README전용%20picture/git%20경고%20문구/줄바꿈%20에러%20선택.PNG)
 
 
----
 
-# 📚 학습 내용 정리
-
-### ✔ 외부 API 연동
-- Requests 라이브러리로 금융감독원 API 호출
-- 파라미터 전달 및 JSON 데이터 파싱
-- API 응답 구조(result → baseList, optionList) 분석
-
-### ✔ 환경 변수 관리
-- `.env` 파일로 API KEY 보관
-- django-environ으로 안전하게 settings.py에서 로드
-- BASE_DIR 이후에 read_env() 사용해야 정상 로드됨
-
-### ✔ Django ORM 활용
-- `update_or_create()`를 통한 중복 방지
-- FK 관계(product ↔ options) 매핑
-- 일부 필드 누락(rsrv_type 등)으로 발생하는 IntegrityError 해결 경험
-
-### ✔ Django REST Framework
-- Serializer를 이용한 JSON 직렬화
-- Nested Serializer 구성법 학습
-- Response 객체를 통한 REST 응답 형식 구성
-
-### ✔ RESTful API 설계 및 테스트
-- `/save/`, `/products/`, `/products/add/`, `/options/<코드>/`, `/highest/` 엔드포인트 설계
-- GET/POST 요청 처리 방식 이해
-- Postman으로 전체 API 정상 검증
-
----
-
-# 💡 느낀 점 / 회고
-
-이번 프로젝트는 단순한 코드 작성이 아니라  
-**외부 API → 데이터 가공 → DB 저장 → REST API 응답 → 테스트**  
-까지 이어지는 백엔드 전체 사이클을 경험할 수 있는 실전 프로젝트였다.
-
-특히 기억에 남는 점은:
-
-- 환경변수 로딩 문제(API KEY 읽힘 실패)  
-- 금융감독원 API의 옵션 데이터 누락으로 인한 IntegrityError  
-- Nested Serializer 설계  
-- Postman을 통한 오류 추적 및 해결 과정  
-
-이 과정을 통해 **백엔드 API 설계 능력과 디버깅 능력이 크게 향상**되었다.
-
-또한, JSON 기반 금융상품 데이터 구조를 분석하면서  
-실제 실무에서 어떻게 외부 데이터가 들어오고 처리되는지 이해할 수 있었고,  
-앞으로 금융 상품 추천 서비스나 AI 기반 금융 데이터 처리까지 확장할 수 있는 기틀이 마련되었다.
-
----
