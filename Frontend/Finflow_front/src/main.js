@@ -12,6 +12,12 @@ import "@/assets/styles/base.css"
 import "@/assets/styles/table.css"
 import "@/assets/styles/kakaomap.css"
 
+// ✅ Bootstrap CSS 추가
+import 'bootstrap/dist/css/bootstrap.min.css'
+// ✅ Bootstrap JS 추가 (드롭다운, 모달 등 사용 시)
+import 'bootstrap/dist/js/bootstrap.bundle.min.js'
+import 'bootstrap-icons/font/bootstrap-icons.css'
+
 const app = createApp(App)
 
 app.use(createPinia())

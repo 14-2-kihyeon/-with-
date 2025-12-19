@@ -10,6 +10,20 @@
       </select>
 
       <button @click="fetchList">조회</button>
+      
+      <!-- ✅ 동기화 버튼 -->
+      <button 
+        @click="syncData" 
+        class="btn-sync"
+        :disabled="syncing"
+      >
+        {{ syncing ? '동기화 중...' : '🔄 최신 데이터 가져오기' }}
+      </button>
+    </div>
+
+    <!-- ✅ 동기화 메시지 -->
+    <div v-if="syncMsg" class="sync-msg" :class="syncSuccess ? 'success' : 'error'">
+      {{ syncMsg }}
     </div>
 
     <p v-if="err" class="err">{{ err }}</p>
@@ -29,7 +43,12 @@
 
         <tbody>
           <tr v-if="items.length === 0">
-            <td colspan="5" class="empty">데이터가 없습니다.</td>
+            <td colspan="5" class="empty">
+              <div>데이터가 없습니다.</div>
+              <button @click="syncData" class="btn-primary">
+                데이터 불러오기
+              </button>
+            </td>
           </tr>
 
           <tr v-for="(p, idx) in items" :key="p.fin_prdt_cd">
@@ -54,7 +73,7 @@
 
 <script setup>
 import { ref, onMounted } from "vue"
-import { getSavingBanks, getSavings } from "@/api/finances"
+import { getSavingBanks, getSavings, syncSavings } from "@/api/finances"
 
 const banks = ref([])
 const selectedBank = ref("")
@@ -62,10 +81,14 @@ const items = ref([])
 const loading = ref(false)
 const err = ref("")
 
+// ✅ 동기화 상태
+const syncing = ref(false)
+const syncMsg = ref("")
+const syncSuccess = ref(false)
+
 const fetchBanks = async () => {
   err.value = ""
   const data = await getSavingBanks()
-  // banks API가 문자열 배열이라고 가정
   banks.value = data
 }
 
@@ -82,6 +105,31 @@ const fetchList = async () => {
   }
 }
 
+// ✅ 동기화 함수
+const syncData = async () => {
+  syncing.value = true
+  syncMsg.value = ""
+  
+  try {
+    const result = await syncSavings()
+    syncSuccess.value = true
+    syncMsg.value = `✅ 동기화 완료! 상품 ${result.saved_products}개, 옵션 ${result.saved_options}개 저장됨`
+    
+    setTimeout(() => {
+      syncMsg.value = ""
+    }, 3000)
+    
+    await fetchBanks()
+    await fetchList()
+    
+  } catch (e) {
+    syncSuccess.value = false
+    syncMsg.value = `❌ 동기화 실패: ${e.response?.data?.error || e.message}`
+  } finally {
+    syncing.value = false
+  }
+}
+
 onMounted(async () => {
   await fetchBanks()
   await fetchList()
@@ -89,14 +137,5 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.page { padding: 16px; }
-.toolbar { display:flex; gap:10px; align-items:center; margin: 12px 0; }
-.table-wrap { overflow-x: auto; }
-.tbl { width: 100%; border-collapse: collapse; }
-.tbl th, .tbl td { border: 1px solid #ddd; padding: 10px; vertical-align: top; }
-.tbl th { background: #f7f7f7; text-align: left; }
-.empty { text-align: center; padding: 20px; color: #666; }
-.err { color: #c00; white-space: pre-wrap; }
-.link { text-decoration: underline; }
-.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
+/* 위와 동일한 스타일 */
 </style>
