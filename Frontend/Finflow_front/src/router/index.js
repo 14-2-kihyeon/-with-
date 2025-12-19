@@ -31,6 +31,7 @@ import VideoDetailView from "@/views/youtube/VideoDetailView.vue"
 // Survey
 import InvestmentSurveyView from "@/views/auth/InvestmentSurveyView.vue"
 import RecommendationsView from "@/views/auth/RecommendationsView.vue"
+import Gold_SilverView from "@/views/finances/gold_silvers/Gold_SilverView.vue"
 
 
 const router = createRouter({
@@ -71,6 +72,8 @@ const router = createRouter({
 
             { path: "savings", name: "saving_list", component: SavingListView },
             { path: "savings/:fin_prdt_cd", name: "saving_detail", component: SavingDetailView, props: true },
+
+            { path: "gold_silver/", name: "gold_silver", component: Gold_SilverView }
           ],
         },
 
