@@ -1,21 +1,7 @@
 <template>
   <main class="home">
-    <!-- 1) 처음 들어왔을 때 소개 -->
-    <section class="home-hero">
-      <div class="home-hero__inner">
-        <h1 class="home-hero__title">Finflow</h1>
-        <p class="home-hero__desc">
-          예·적금 비교부터 투자 성향 기반 추천, 뉴스/지도/유튜브 기능까지
-          금융 생활을 한 곳에서 관리하는 통합 서비스입니다.
-        </p>
 
-        <div class="home-hero__hint">
-          아래로 스크롤해서 기능을 확인하세요 ↓
-        </div>
-      </div>
-    </section>
-
-    <!-- 2) 스크롤 내려가며 기능 소개 -->
+    <!-- 스크롤 내려가며 기능 소개 -->
     <FeatureSection
       v-for="(f, i) in features"
       :key="f.key"
@@ -36,12 +22,6 @@
 <script setup>
 import { useAuthStore } from "@/stores/auth"
 const auth = useAuthStore()
-
-
-
-
-
-
 
 
 import FeatureSection from "@/components/main/FeatureSection.vue"
@@ -117,33 +97,5 @@ const features = [
   overflow-x: hidden;
 }
 
-/* Hero: 너무 길게 잡혀서 밑에 공백이 큼 */
-.home-hero {
-  min-height: 60vh;          /* 80~100vh였다면 확 줄여 */
-  display: grid;
-  align-items: start;
-  padding: 28px 18px 12px;   /* 아래 패딩도 줄임 */
-  scroll-snap-align: start;
-}
-
-.home-hero__inner {
-  max-width: 900px;
-  margin: 0 auto;
-  padding-top: 16px;         /* 내려와 보이면 이 값만 더 줄이기(예: 8px) */
-}
-
-.home-hero__title {
-  font-size: 56px;
-  margin: 0 0 10px;
-}
-.home-hero__desc {
-  margin: 0 0 10px;
-  font-size: 18px;
-  line-height: 1.7;
-  opacity: 0.9;
-}
-.home-hero__hint {
-  opacity: 0.75;
-}
 
 </style>

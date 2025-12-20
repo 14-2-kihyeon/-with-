@@ -1,10 +1,10 @@
 <template>
-  <header class="header">
+  <header class="header" :class="{ 'header--scrolled': scrolled }">
     <nav class="nav-inner">
       <!-- Left: Logo -->
       <RouterLink :to="{ name: 'main' }" class="brand" aria-label="Home">
         <!-- 간단 로고(원하면 이미지로 교체 가능) -->
-        <img class="brand-logo" src="@/assets/navbar/logo3.png" alt="Personal Bank" />
+        <img class="brand-logo" src="@/assets/navbar/logo.png" alt="Personal Bank" />
       </RouterLink>
 
       <!-- Center: Menus -->
@@ -140,18 +140,33 @@ watch(
   () => router.currentRoute.value.fullPath,
   () => closeDropdown()
 )
+
+defineProps({
+  scrolled: { type: Boolean, default: false }
+})
 </script>
 
 <style scoped>
 /* 상단 고정 헤더 */
 .header {
-  position: sticky; /* 스크롤 내려도 상단에 붙음 */
+  position: sticky;
   top: 0;
   z-index: 1000;
 
+  /* ✅ 항상 흰색 */
   background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+
+  border-bottom: 1px solid rgba(15, 23, 42, 0.10);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+
+  /* 스크롤 변화 없으니 transition도 없어도 됨 */
+}
+
+.header--scrolled {
+  background: rgba(255, 255, 255, 0.92);
+  border-bottom-color: rgba(15, 23, 42, 0.10);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
 }
 
 /* 내부 정렬 */

@@ -46,18 +46,3 @@ defineEmits(["rowClick"])
 .empty { text-align:center; padding:16px; }
 </style>
 
-
-
-
-
-
-
-/* Ellipse 4 */
-
-position: absolute;
-width: 409px;
-height: 409px;
-left: 750.64px;
-top: 268px;
-
-background: #7DA7F6;
