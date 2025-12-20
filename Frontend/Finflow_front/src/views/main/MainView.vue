@@ -1,22 +1,4 @@
 <template>
-  <div>
-    <h1>Main</h1>
-    <p>각 기능으로 이동하세요.</p>
-
-    <ul>
-      <li><RouterLink :to="{ name: 'post_list' }">게시판</RouterLink></li>
-      <li><RouterLink :to="{ name: 'deposit_list' }">정기예금</RouterLink></li>
-      <li><RouterLink :to="{ name: 'saving_list' }">적금</RouterLink></li>
-      <li><RouterLink :to="{ name: 'gold_silver' }">현물 상품</RouterLink></li>
-      <li><RouterLink :to="{ name: 'naver_news' }">네이버 뉴스</RouterLink></li>
-      <li><RouterLink :to="{ name: 'bank_map' }">카카오 지도(은행찾기)</RouterLink></li>
-      <li><RouterLink :to="{ name: 'mypage' }">마이페이지(로그인 필요)</RouterLink></li>
-    </ul>
-  </div>
-
-
-
-
   <main class="home">
     <!-- 1) 처음 들어왔을 때 소개 -->
     <section class="home-hero">
@@ -130,30 +112,32 @@ const features = [
 
 <style scoped>
 .home {
-  scroll-snap-type: y mandatory;
+  /* mandatory는 딱딱 끊기는데, 내용이 적으면 공백이 더 커 보입니다 */
+  scroll-snap-type: y proximity;
   overflow-x: hidden;
 }
 
-/* Hero */
+/* Hero: 너무 길게 잡혀서 밑에 공백이 큼 */
 .home-hero {
-  min-height: 100vh;
+  min-height: 60vh;          /* 80~100vh였다면 확 줄여 */
   display: grid;
-  align-items: center;
-  padding: 72px 18px;
+  align-items: start;
+  padding: 28px 18px 12px;   /* 아래 패딩도 줄임 */
   scroll-snap-align: start;
 }
 
 .home-hero__inner {
   max-width: 900px;
   margin: 0 auto;
+  padding-top: 16px;         /* 내려와 보이면 이 값만 더 줄이기(예: 8px) */
 }
 
 .home-hero__title {
   font-size: 56px;
-  margin: 0 0 14px;
+  margin: 0 0 10px;
 }
 .home-hero__desc {
-  margin: 0 0 18px;
+  margin: 0 0 10px;
   font-size: 18px;
   line-height: 1.7;
   opacity: 0.9;
@@ -161,4 +145,5 @@ const features = [
 .home-hero__hint {
   opacity: 0.75;
 }
+
 </style>

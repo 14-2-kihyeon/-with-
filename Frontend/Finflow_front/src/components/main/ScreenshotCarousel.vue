@@ -3,6 +3,7 @@
   <div class="home-carousel">
     <Transition name="home-slide" mode="out-in">
       <img
+        v-if="activeSrc"
         :key="activeSrc"
         class="home-carousel__img"
         :src="activeSrc"
@@ -17,7 +18,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from "vue"
 
 const props = defineProps({
-  images: { type: Array, required: true },   // [".../1.png", ".../2.png"]
+  images: { type: Array, required: true },
   intervalMs: { type: Number, default: 2500 },
   alt: { type: String, default: "feature preview" },
 })
@@ -43,25 +44,31 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+/* ✅ 박스 크기 일정(중요) */
 .home-carousel {
-  position: relative;
   width: 100%;
-  aspect-ratio: 16 / 9;
+  height: clamp(220px, 40vh, 420px); /* ✅ 항상 일정한 “체감 크기” */
   border-radius: 18px;
   overflow: hidden;
+
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.12);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 14px;
+  box-sizing: border-box;
 }
 
 .home-carousel__img {
-  position: absolute;
-  inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;  /* ✅ 안 잘림 */
 }
 
-/* ✅ 이전은 왼쪽으로 나가고, 다음은 오른쪽에서 중앙으로 들어오는 느낌 */
+/* ✅ 이전은 왼쪽으로 나가고, 다음은 오른쪽에서 중앙으로 */
 .home-slide-enter-from {
   transform: translateX(55%);
   opacity: 0;
