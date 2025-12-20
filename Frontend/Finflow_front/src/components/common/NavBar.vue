@@ -4,7 +4,7 @@
       <!-- Left: Logo -->
       <RouterLink :to="{ name: 'main' }" class="brand" aria-label="Home">
         <!-- 간단 로고(원하면 이미지로 교체 가능) -->
-        <img class="brand-logo" src="@/assets/navbar/logo2.png" alt="Personal Bank" />
+        <img class="brand-logo" src="@/assets/navbar/logo3.png" alt="Personal Bank" />
       </RouterLink>
 
       <!-- Center: Menus -->
@@ -163,7 +163,7 @@ watch(
 
   display: flex;
   align-items: center;
-  gap: 18px;
+  gap: 16px;
 }
 
 /* 로고 */
@@ -179,7 +179,7 @@ watch(
 .brand-logo {
   height: 22px;      /* 높이만 고정 */
   width: auto;       /* 가로는 비율대로 */
-  max-width: 120px;  /* 너무 길어지는 것 방지 */
+  max-width: 260px;  /* 너무 길어지는 것 방지 */
   object-fit: contain;
   display: block;
 }

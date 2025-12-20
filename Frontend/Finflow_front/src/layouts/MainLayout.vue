@@ -29,7 +29,6 @@ import NavBar from "@/components/common/NavBar.vue"
   position: fixed;
   inset: 0;
   background-image: url("@/assets/main/kakaomap/Background.png");
-  opacity: 0.3; /* 투명도 조절 */
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -42,7 +41,7 @@ import NavBar from "@/components/common/NavBar.vue"
   content: "";
   position: absolute;
   inset: 0;
-  background: rgba(245, 245, 245, 0.95); /* 0.95면 배경 거의 안 보임 */
+  background: rgba(245, 245, 245, 0.75); /* 0.95면 배경 거의 안 보임 */
   pointer-events: none;
 }
 
