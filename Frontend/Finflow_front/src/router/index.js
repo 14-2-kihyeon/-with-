@@ -129,6 +129,16 @@ const router = createRouter({
     { path: "/:pathMatch(.*)*", redirect: { name: "main" } },
 
   ],
+  scrollBehavior(to, from, savedPosition) {
+    // 뒤로가기 등: 기존 위치 복원
+    if (savedPosition) return savedPosition
+
+    // ✅ main으로 갈 때는 항상 맨 위
+    if (to.name === "main") return { top: 0, left: 0 }
+
+    // 나머지는 기본적으로 맨 위(원하면 제거 가능)
+    return { top: 0, left: 0 }
+  },
 })
 
 router.beforeEach(async (to) => {
