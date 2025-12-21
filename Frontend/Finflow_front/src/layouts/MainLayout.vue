@@ -37,22 +37,6 @@ const NEXT_SECTION_ID = "main-content-start"
 
 const isMain = computed(() => route.name === "main")
 
-/** ✅ 스크롤에 따라 NavBar 스타일 변경 */
-const navScrolled = ref(false)
-
-const onScroll = () => {
-  // Hero 구간에서는 "투명 느낌", 조금만 내려가면 solid+shadow
-  navScrolled.value = window.scrollY > 12
-}
-
-onMounted(() => {
-  window.addEventListener("scroll", onScroll, { passive: true })
-  onScroll()
-})
-
-onBeforeUnmount(() => {
-  window.removeEventListener("scroll", onScroll)
-})
 </script>
 
 <style scoped>
@@ -80,11 +64,12 @@ onBeforeUnmount(() => {
   inset: 0;
   background: linear-gradient(
     to bottom,
-    rgba(255, 255, 255, 0.98) 0%,
-    rgba(245, 245, 245, 0.70) 35%,
-    rgba(245, 245, 245, 0.55) 100%
+    rgba(255, 255, 255, var(--bg-a-top, 0.96)) 0%,
+    rgba(245, 245, 245, var(--bg-a-mid, 0.14)) 35%,
+    rgba(245, 245, 245, var(--bg-a-bot, 0.08)) 100%
   );
   pointer-events: none;
+  transition: background 140ms linear;
 }
 
 /* 콘텐츠 영역: 가로 중앙 정렬 */
