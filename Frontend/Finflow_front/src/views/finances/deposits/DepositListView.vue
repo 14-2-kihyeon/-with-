@@ -11,20 +11,6 @@
       </select>
 
       <button @click="loadDeposits">조회</button>
-      
-      <!-- ✅ 새로 추가 -->
-      <button 
-        @click="syncDeposits" 
-        class="btn-sync"
-        :disabled="syncing"
-      >
-        {{ syncing ? '동기화 중...' : '🔄 최신 데이터 가져오기' }}
-      </button>
-    </div>
-
-    <!-- ✅ 동기화 결과 메시지 -->
-    <div v-if="syncMsg" class="sync-msg" :class="syncSuccess ? 'success' : 'error'">
-      {{ syncMsg }}
     </div>
 
     <p v-if="errorMsg" class="err">{{ errorMsg }}</p>
@@ -45,9 +31,6 @@
           <tr v-if="products.length === 0">
             <td colspan="4" class="empty">
               <div>데이터가 없습니다.</div>
-              <button @click="syncDeposits" class="btn-primary">
-                데이터 불러오기
-              </button>
             </td>
           </tr>
 
@@ -80,11 +63,6 @@ const products = ref([])
 const loading = ref(false)
 const errorMsg = ref("")
 
-// ✅ 동기화 관련 상태
-const syncing = ref(false)
-const syncMsg = ref("")
-const syncSuccess = ref(false)
-
 const loadBanks = async () => {
   try {
     banks.value = await getBanks()
@@ -105,32 +83,6 @@ const loadDeposits = async () => {
   }
 }
 
-// ✅ 동기화 함수 추가
-const syncDeposits = async () => {
-  syncing.value = true
-  syncMsg.value = ""
-  
-  try {
-    const result = await apiSyncDeposits()
-    syncSuccess.value = true
-    syncMsg.value = `✅ 동기화 완료! 상품 ${result.saved_products}개, 옵션 ${result.saved_options}개 저장됨`
-    
-    // 3초 후 메시지 제거
-    setTimeout(() => {
-      syncMsg.value = ""
-    }, 3000)
-    
-    // 목록 새로고침
-    await loadBanks()
-    await loadDeposits()
-    
-  } catch (e) {
-    syncSuccess.value = false
-    syncMsg.value = `❌ 동기화 실패: ${e.response?.data?.error || e.message}`
-  } finally {
-    syncing.value = false
-  }
-}
 
 onMounted(async () => {
   await loadBanks()

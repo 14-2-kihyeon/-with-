@@ -10,8 +10,7 @@
       <!-- Center: Menus -->
       <div class="menu">
         <RouterLink :to="{ name: 'post_list' }" class="nav-link">Posts</RouterLink>
-        <RouterLink :to="{ name: 'deposit_list' }" class="nav-link">Deposits</RouterLink>
-        <RouterLink :to="{ name: 'saving_list' }" class="nav-link">Savings</RouterLink>
+        <RouterLink :to="{ name: 'fin_home' }" class="nav-link">예적금</RouterLink>
         <RouterLink :to="{ name: 'naver_news' }" class="nav-link">Naver News</RouterLink>
         <RouterLink :to="{ name: 'bank_map' }" class="nav-link">KaKao Map</RouterLink>
         <RouterLink :to="{ name: 'youtube_search' }" class="nav-link">YouTube</RouterLink>

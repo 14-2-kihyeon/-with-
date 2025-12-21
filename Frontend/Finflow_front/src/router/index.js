@@ -15,6 +15,7 @@ import PostDetailView from "@/views/posts/PostDetailView.vue"
 import PostCreateView from "@/views/posts/PostCreateView.vue"
 import PostEditView from "@/views/posts/PostEditView.vue"
 // Finances
+import FinHomeView from "@/views/finances/FinHomeView.vue"
 import DepositListView from "@/views/finances/deposits/DepositListView.vue"
 import DepositDetailView from "@/views/finances/deposits/DepositDetailView.vue"
 import SavingListView from "@/views/finances/savings/SavingListView.vue"
@@ -90,6 +91,7 @@ const router = createRouter({
           path: "finances",
           component: FinLayout,
           children: [
+            { path: "", name: "fin_home", component: FinHomeView },
             { path: "deposits", name: "deposit_list", component: DepositListView },
             { path: "deposits/:fin_prdt_cd", name: "deposit_detail", component: DepositDetailView, props: true },
 
