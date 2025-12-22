@@ -15,6 +15,7 @@ import PostDetailView from "@/views/posts/PostDetailView.vue"
 import PostCreateView from "@/views/posts/PostCreateView.vue"
 import PostEditView from "@/views/posts/PostEditView.vue"
 // Finances
+import FinHomeView from "@/views/finances/FinHomeView.vue"
 import DepositListView from "@/views/finances/deposits/DepositListView.vue"
 import DepositDetailView from "@/views/finances/deposits/DepositDetailView.vue"
 import SavingListView from "@/views/finances/savings/SavingListView.vue"
@@ -93,6 +94,7 @@ const router = createRouter({
           path: "finances",
           component: FinLayout,
           children: [
+            { path: "", name: "fin_home", component: FinHomeView },
             { path: "deposits", name: "deposit_list", component: DepositListView },
             { path: "deposits/:fin_prdt_cd", name: "deposit_detail", component: DepositDetailView, props: true },
 
@@ -143,6 +145,16 @@ const router = createRouter({
     { path: "/:pathMatch(.*)*", redirect: { name: "main" } },
 
   ],
+  scrollBehavior(to, from, savedPosition) {
+    // 뒤로가기 등: 기존 위치 복원
+    if (savedPosition) return savedPosition
+
+    // ✅ main으로 갈 때는 항상 맨 위
+    if (to.name === "main") return { top: 0, left: 0 }
+
+    // 나머지는 기본적으로 맨 위(원하면 제거 가능)
+    return { top: 0, left: 0 }
+  },
 })
 
 router.beforeEach(async (to) => {
