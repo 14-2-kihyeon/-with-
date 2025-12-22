@@ -8,6 +8,9 @@ import {
   apiGetStockPrices,
   apiGetStockNews,
   apiPostStockExplain,
+  apiGetMarketSummary,
+  apiGetMarketIndexSnapshot,
+  apiGetMarketIndexSeries,
 } from "@/api/stocks"
 
 export const useStocksStore = defineStore("stocks", () => {
@@ -48,6 +51,45 @@ export const useStocksStore = defineStore("stocks", () => {
     detail: null,
     error: null,
   })
+
+
+// ✅ 대시보드(시장/지수)
+  const dashLoading = ref(false)
+  const dashError = ref(null)
+
+  const indexSnapshot = ref({
+    endpoint: "market_index_snapshot",
+    count: 0,
+    items: [],
+    detail: null,
+    error: null,
+  })
+
+  const indexSeries = ref({
+    endpoint: "market_index_series",
+    symbol: null,
+    name: null,
+    interval: "day",
+    latest: null,
+    count: 0,
+    series: [],
+    detail: null,
+    error: null,
+  })
+
+  const marketSummary = ref({
+    endpoint: "market_summary",
+    requested_as_of: null,
+    as_of_used: null,
+    market: "ALL",
+    breadth: { adv: 0, dec: 0, unch: 0, unknown: 0, total: 0 },
+    turnover: { volume: null, amount: null },
+    top: { gainers: [], losers: [] },
+    detail: null,
+    error: null,
+  })
+
+
 
   function setError(e) {
     const msg =
@@ -178,6 +220,80 @@ export const useStocksStore = defineStore("stocks", () => {
     }
   }
 
+
+  // ✅ 7) 지수 스냅샷
+  const fetchIndexSnapshot = async ({ symbols } = {}) => {
+    dashLoading.value = true
+    dashError.value = null
+    try {
+      const res = await apiGetMarketIndexSnapshot({ symbols })
+      indexSnapshot.value = res.data
+    } catch (e) {
+      const msg =
+        e?.response?.data?.detail || e?.response?.data?.error || e?.message || "지수 스냅샷 요청 실패"
+      dashError.value = msg
+      indexSnapshot.value = { endpoint: "market_index_snapshot", count: 0, items: [], detail: msg, error: msg }
+    } finally {
+      dashLoading.value = false
+    }
+  }
+
+  // ✅ 8) 지수 시계열
+  const fetchIndexSeries = async (symbol, { from, to, interval = "day" } = {}) => {
+    dashLoading.value = true
+    dashError.value = null
+    try {
+      const res = await apiGetMarketIndexSeries(symbol, { from, to, interval })
+      indexSeries.value = res.data
+    } catch (e) {
+      const msg =
+        e?.response?.data?.detail || e?.response?.data?.error || e?.message || "지수 시계열 요청 실패"
+      dashError.value = msg
+      indexSeries.value = {
+        endpoint: "market_index_series",
+        symbol,
+        name: symbol,
+        interval,
+        latest: null,
+        count: 0,
+        series: [],
+        detail: msg,
+        error: msg,
+      }
+    } finally {
+      dashLoading.value = false
+    }
+  }
+
+  // ✅ 9) 시장 요약(브레드스/거래대금/top movers)
+  const fetchMarketSummary = async ({ date, auto = 1, market = "ALL" } = {}) => {
+    dashLoading.value = true
+    dashError.value = null
+    try {
+      const res = await apiGetMarketSummary({ date, auto, market })
+      marketSummary.value = res.data
+    } catch (e) {
+      const msg =
+        e?.response?.data?.detail || e?.response?.data?.error || e?.message || "시장 요약 요청 실패"
+      dashError.value = msg
+      marketSummary.value = {
+        endpoint: "market_summary",
+        requested_as_of: date || null,
+        as_of_used: null,
+        market,
+        breadth: { adv: 0, dec: 0, unch: 0, unknown: 0, total: 0 },
+        turnover: { volume: null, amount: null },
+        top: { gainers: [], losers: [] },
+        detail: msg,
+        error: msg,
+      }
+    } finally {
+      dashLoading.value = false
+    }
+  }
+
+
+
   return {
     loading,
     error,
@@ -197,5 +313,14 @@ export const useStocksStore = defineStore("stocks", () => {
     fetchStockPrices,
     fetchStockNews,
     askExplain,
+
+    dashLoading,
+    dashError,
+    indexSnapshot,
+    indexSeries,
+    marketSummary,
+    fetchIndexSnapshot,
+    fetchIndexSeries,
+    fetchMarketSummary,
   }
 })
