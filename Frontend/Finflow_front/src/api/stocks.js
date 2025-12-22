@@ -1,44 +1,56 @@
 // src/api/stocks.js
-import axios from "axios"
+import api from "@/api/axios"
 
-// 백엔드 주소 (Vite 환경변수 있으면 그거 사용)
-const BASE = import.meta.env.VITE_BACKEND_URL || "http://127.0.0.1:8000"
+const STOCKS = "/api/stocks"
+const MARKET = "/api/stocks/market"
 
-const stocksClient = axios.create({
-  baseURL: `${BASE}/api/stocks/`,
-  timeout: 20000,
-})
+// ----------------------
+// Stocks (종목)
+// ----------------------
+export const apiSearchStocks = (q) => api.get(`${STOCKS}/search/`, { params: { q } })
 
-export function apiSearchStocks(q) {
-  return stocksClient.get("search/", { params: { q } })
+export const apiGetRecommendations = (params = {}) =>
+  api.get(`${STOCKS}/recommendations/`, { params })
+
+export const apiGetStockDetail = (code, params = {}) =>
+  api.get(`${STOCKS}/${code}/`, { params })
+
+export const apiGetStockPrices = (code, params = {}) =>
+  api.get(`${STOCKS}/${code}/prices/`, { params })
+
+export const apiGetStockNews = (code, params = {}) =>
+  api.get(`${STOCKS}/${code}/news/`, { params })
+
+export const apiPostStockExplain = (code, body = {}, params = {}) =>
+  api.post(`${STOCKS}/${code}/explain/`, body, { params, timeout: 130000 })
+
+// ----------------------
+// Market (지수/시장요약/환율)
+// ----------------------
+
+// ✅ (현재 네가 쓰는 방식) 지수 시계열: /api/stocks/market/prices/?symbol=KS11&from=...&to=...
+export const apiGetMarketPrices = (symbol, { from, to } = {}) =>
+  api.get(`${MARKET}/prices/`, { params: { symbol, from, to } })
+
+// ✅ 시장요약: /api/stocks/market/summary/?market=KOSPI
+export const apiGetMarketSummary = (market = "ALL") =>
+  api.get(`${MARKET}/summary/`, { params: { market } })
+
+// ✅ 환율: /api/stocks/market/fx/?pairs=USD/KRW,JPY/KRW...
+export const apiGetFx = (pairsCsv = "USD/KRW,JPY/KRW,EUR/KRW,CNY/KRW") =>
+  api.get(`${MARKET}/fx/`, { params: { pairs: pairsCsv } })
+
+// ----------------------------------------------------
+// ✅ 호환용(export 이름 맞춰주기)
+// 기존 코드가 apiGetMarketIndexSeries 같은 이름을 import 해도 안 터지게.
+// ----------------------------------------------------
+export const apiGetMarketIndexSeries = (symbol, params = {}) => {
+  // params: { from, to } 형태 기대
+  return apiGetMarketPrices(symbol, params)
 }
 
-export function apiGetRecommendations(params = {}) {
-  // params: { date, risk, horizon, top, auto, include_news }
-  return stocksClient.get("recommendations/", { params })
-}
-
-export function apiGetStockDetail(code, params = {}) {
-  // params: { date, auto }
-  return stocksClient.get(`${code}/`, { params })
-}
-
-export function apiGetStockPrices(code, params = {}) {
-  // params: { from, to }
-  return stocksClient.get(`${code}/prices/`, { params })
-}
-
-export function apiGetStockNews(code, params = {}) {
-  // params: { days, limit, refresh }
-  return stocksClient.get(`${code}/news/`, { params })
-}
-
-export function apiPostStockExplain(code, body = {}, params = {}) {
-  // params: { date, auto, refresh_news }
-  // body: { question, date(optional) }
-  return stocksClient.post(`${code}/explain/`, body, {
-    params,
-    // AI 응답이 길어질 수 있으니 timeout 길게
-    timeout: 130000,
-  })
+// 만약 너 프로젝트 어딘가에서 스냅샷을 import 하고 있으면 이것도 같이 살려둠.
+// (백엔드에 이 URL이 없으면 404는 나지만, 지금처럼 "모듈 로딩 실패"는 안 남)
+export const apiGetMarketIndexSnapshot = (params = {}) => {
+  return api.get(`${MARKET}/index/snapshot/`, { params })
 }

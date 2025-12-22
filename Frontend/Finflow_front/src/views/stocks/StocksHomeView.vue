@@ -4,6 +4,15 @@
       <h1 class="title">주식</h1>
       <p class="sub">검색 / 추천 / 뉴스 / AI 설명</p>
     </header>
+    
+    <!-- ✅ KRX 대시보드 -->
+    <StocksMarketDashboard />
+
+
+    <header class="stocks-header">
+      <h1 class="title">주식 검색</h1>
+      <p class="sub">검색 / 추천 / 뉴스 / AI 설명</p>
+    </header>
 
     <div class="card">
       <div class="search-row">
@@ -73,6 +82,8 @@
 <script setup>
 import { onMounted } from "vue"
 import { useStocksStore } from "@/stores/stocks"
+import StocksMarketDashboard from "@/components/stocks/StocksMarketDashboard.vue"  // ✅ 추가
+
 
 const store = useStocksStore()
 

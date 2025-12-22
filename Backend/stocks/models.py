@@ -213,3 +213,50 @@ class RecommendationLog(models.Model):
 
 
 
+# 메인 차트
+
+class MarketIndex(models.Model):
+    """
+    지수 마스터 (예: KS11, KQ11)
+    """
+    symbol = models.CharField(max_length=20, unique=True, db_index=True)  # 'KS11'
+    name = models.CharField(max_length=100, blank=True, default="")      # 'KOSPI'
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["symbol"]
+
+    def __str__(self):
+        return f"{self.symbol} {self.name}".strip()
+
+
+class MarketIndexDaily(models.Model):
+    """
+    지수 일봉 시계열
+    FinanceDataReader DataReader(symbol) 결과(Open/High/Low/Close/Volume) 저장용
+    """
+    index = models.ForeignKey(MarketIndex, on_delete=models.CASCADE, related_name="prices")
+    date = models.DateField(db_index=True)
+
+    open = models.FloatField(null=True, blank=True)
+    high = models.FloatField(null=True, blank=True)
+    low = models.FloatField(null=True, blank=True)
+    close = models.FloatField()
+
+    volume = models.BigIntegerField(null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-date"]
+        constraints = [
+            models.UniqueConstraint(fields=["index", "date"], name="uniq_index_date"),
+        ]
+        indexes = [
+            models.Index(fields=["index", "date"], name="idx_index_date"),
+        ]
+
+    def __str__(self):
+        return f"{self.index.symbol} {self.date} close={self.close}"

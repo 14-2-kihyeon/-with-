@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, date as date_type
 
+from django.db.models import Sum
 from django.db.models import Q
 from django.utils import timezone
 
@@ -803,5 +804,409 @@ def reco_history(request):
             "detail": None,
             "error": None,
         },
+        status=drf_status.HTTP_200_OK,
+    )
+
+
+from .models import MarketIndex, MarketIndexDaily
+
+def _week_key(d):
+    # ISO year-week
+    y, w, _ = d.isocalendar()
+    return (y, w)
+
+def _to_weekly(rows: list[dict]) -> list[dict]:
+    if not rows:
+        return []
+    out = []
+    cur_key = None
+    bucket = None
+
+    for r in rows:
+        d = datetime.strptime(r["date"], "%Y-%m-%d").date()
+        k = _week_key(d)
+        if k != cur_key:
+            if bucket:
+                out.append(bucket)
+            cur_key = k
+            bucket = {
+                "date": r["date"],  # 그 주의 첫 날짜로 표시
+                "open": r.get("open"),
+                "high": r.get("high"),
+                "low": r.get("low"),
+                "close": r.get("close"),
+                "volume": r.get("volume"),
+            }
+        else:
+            # high/low 갱신, close는 마지막 값
+            if bucket.get("high") is None or (r.get("high") is not None and r["high"] > bucket["high"]):
+                bucket["high"] = r.get("high")
+            if bucket.get("low") is None or (r.get("low") is not None and r["low"] < bucket["low"]):
+                bucket["low"] = r.get("low")
+            bucket["close"] = r.get("close")
+            if bucket.get("volume") is not None and r.get("volume") is not None:
+                bucket["volume"] += r["volume"]
+
+    if bucket:
+        out.append(bucket)
+    return out
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def market_index_series(request, symbol: str):
+    """
+    GET /api/stocks/market/index/<symbol>/series/?from=YYYY-MM-DD&to=YYYY-MM-DD&interval=day|week
+    """
+    interval = (request.query_params.get("interval") or "day").lower()
+    d1 = parse_date_any(request.query_params.get("from"))
+    d2 = parse_date_any(request.query_params.get("to"))
+
+    idx = MarketIndex.objects.filter(symbol=symbol).first()
+    if not idx:
+        return Response(
+            {"endpoint":"market_index_series","symbol":symbol,"count":0,"series":[],"detail":"존재하지 않는 지수입니다.","error":None},
+            status=drf_status.HTTP_404_NOT_FOUND,
+        )
+
+    qs = MarketIndexDaily.objects.filter(index=idx).order_by("date")
+    if d1: qs = qs.filter(date__gte=d1)
+    if d2: qs = qs.filter(date__lte=d2)
+    qs = qs[:3000]
+
+    series = [{
+        "date": str(p.date),
+        "open": p.open,
+        "high": p.high,
+        "low": p.low,
+        "close": p.close,
+        "volume": p.volume,
+    } for p in qs]
+
+    if interval == "week":
+        series = _to_weekly(series)
+
+    # 최신값/등락 계산
+    latest = series[-1]["close"] if len(series) >= 1 else None
+    prev = series[-2]["close"] if len(series) >= 2 else None
+    change = (latest - prev) if (latest is not None and prev is not None) else None
+    change_pct = (change / prev * 100.0) if (change is not None and prev) else None
+
+    return Response(
+        {
+            "endpoint": "market_index_series",
+            "symbol": idx.symbol,
+            "name": idx.name or idx.symbol,
+            "from": str(d1) if d1 else None,
+            "to": str(d2) if d2 else None,
+            "interval": interval,
+            "count": len(series),
+            "latest": {"value": latest, "change": change, "change_pct": change_pct},
+            "series": series,
+            "detail": None,
+            "error": None,
+        },
+        status=drf_status.HTTP_200_OK,
+    )
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def market_index_snapshot(request):
+    """
+    GET /api/stocks/market/index/snapshot/?symbols=KS11,KQ11,KS200,KQ150,KRX100
+    """
+    raw = (request.query_params.get("symbols") or "KS11,KQ11,KS200,KQ150,KRX100").strip()
+    symbols = [s.strip() for s in raw.split(",") if s.strip()][:20]
+
+    items = []
+    for sym in symbols:
+        idx = MarketIndex.objects.filter(symbol=sym).first()
+        if not idx:
+            items.append({"symbol": sym, "name": sym, "value": None, "change": None, "change_pct": None})
+            continue
+
+        last2 = list(MarketIndexDaily.objects.filter(index=idx).order_by("-date").values("close","date")[:2])
+        if not last2:
+            items.append({"symbol": idx.symbol, "name": idx.name or idx.symbol, "value": None, "change": None, "change_pct": None})
+            continue
+
+        latest = float(last2[0]["close"])
+        prev = float(last2[1]["close"]) if len(last2) > 1 else None
+        change = (latest - prev) if prev is not None else None
+        change_pct = (change / prev * 100.0) if (change is not None and prev) else None
+
+        items.append({
+            "symbol": idx.symbol,
+            "name": idx.name or idx.symbol,
+            "date": str(last2[0]["date"]),
+            "value": latest,
+            "change": change,
+            "change_pct": change_pct,
+        })
+
+    return Response(
+        {"endpoint":"market_index_snapshot","count":len(items),"items":items,"detail":None,"error":None},
+        status=drf_status.HTTP_200_OK,
+    )
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def market_summary(request):
+    """
+    GET /api/stocks/market/summary/?date=YYYYMMDD&auto=1&market=KOSPI|KOSDAQ|ALL
+    - breadth(상승/하락/보합/unknown)
+    - turnover(거래량/거래대금)
+    - top movers (상승/하락)
+    """
+    requested_as_of = get_as_of(request)
+    auto = bool_q(request.query_params.get("auto", "1"))
+    market = (request.query_params.get("market") or "ALL").upper()
+
+    as_of_used = requested_as_of
+    base = FeatureDaily.objects.filter(date=as_of_used)
+
+    if not base.exists() and auto:
+        best = resolve_best_as_of()
+        if best:
+            as_of_used = best
+            base = FeatureDaily.objects.filter(date=as_of_used)
+
+    # market 필터 (stock.market가 비어있으면 ALL로 동작)
+    if market != "ALL":
+        base = base.filter(stock__market=market)
+
+    total = base.count()
+    adv = base.filter(r1__gt=0).count()
+    dec = base.filter(r1__lt=0).count()
+    unch = base.filter(r1=0).count()
+    unknown = base.filter(r1__isnull=True).count()
+
+    # 거래량/대금 합계 (DailyPrice 기준)
+    price_qs = DailyPrice.objects.filter(date=as_of_used)
+    if market != "ALL":
+        price_qs = price_qs.filter(stock__market=market)
+
+    agg = price_qs.aggregate(
+        volume=Sum("volume"),
+        amount=Sum("amount"),
+    )
+
+    # Top movers (r1 기준)
+    gainers = list(base.filter(r1__isnull=False).order_by("-r1").values("stock__code","stock__name","r1")[:5])
+    losers = list(base.filter(r1__isnull=False).order_by("r1").values("stock__code","stock__name","r1")[:5])
+
+    # close 붙이기
+    codes = [x["stock__code"] for x in gainers] + [x["stock__code"] for x in losers]
+    price_map = {
+        (p["stock__code"]): p
+        for p in DailyPrice.objects.filter(date=as_of_used, stock__code__in=codes)
+            .values("stock__code","close","volume","amount")
+    }
+
+    def _enrich(rows):
+        out = []
+        for r in rows:
+            code = r["stock__code"]
+            p = price_map.get(code, {})
+            out.append({
+                "code": code,
+                "name": r["stock__name"],
+                "r1": float(r["r1"]),
+                "close": p.get("close"),
+                "volume": p.get("volume"),
+                "amount": p.get("amount"),
+            })
+        return out
+
+    return Response(
+        {
+            "endpoint": "market_summary",
+            "requested_as_of": str(requested_as_of),
+            "as_of_used": str(as_of_used),
+            "market": market,
+            "breadth": {"adv": adv, "dec": dec, "unch": unch, "unknown": unknown, "total": total},
+            "turnover": {"volume": agg.get("volume"), "amount": agg.get("amount")},
+            "top": {"gainers": _enrich(gainers), "losers": _enrich(losers)},
+            "detail": None if total else "해당 날짜 FeatureDaily가 없습니다.",
+            "error": None,
+        },
+        status=drf_status.HTTP_200_OK,
+    )
+    
+    
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def fx_snapshot(request):
+    """
+    GET /api/stocks/market/fx/snapshot/
+    반환: 주요 환율 최신값 + 전일대비(가능하면)
+    """
+    try:
+        import FinanceDataReader as fdr
+    except Exception as e:
+        return Response(
+            {"endpoint": "fx_snapshot", "items": [], "detail": "FinanceDataReader import 실패", "error": str(e)},
+            status=drf_status.HTTP_200_OK,
+        )
+
+    symbols = [
+        ("USD/KRW", "USD/KRW"),
+        ("JPY/KRW", "JPY/KRW"),
+        ("EUR/KRW", "EUR/KRW"),
+        ("CNY/KRW", "CNY/KRW"),
+    ]
+
+    items = []
+    for sym, name in symbols:
+        try:
+            df = fdr.DataReader(sym)
+            if df is None or df.empty:
+                items.append({"symbol": sym, "name": name, "date": None, "close": None, "change": None, "change_pct": None})
+                continue
+
+            # 마지막 2개로 변동 계산
+            last = df.iloc[-1]
+            prev = df.iloc[-2] if len(df) >= 2 else None
+
+            close = float(last.get("Close")) if "Close" in df.columns else float(last.iloc[0])
+            prev_close = float(prev.get("Close")) if (prev is not None and "Close" in df.columns) else (float(prev.iloc[0]) if prev is not None else None)
+
+            change = (close - prev_close) if prev_close is not None else None
+            change_pct = (change / prev_close * 100.0) if (prev_close not in (None, 0)) else None
+
+            items.append({
+                "symbol": sym,
+                "name": name,
+                "date": str(df.index[-1].date()) if hasattr(df.index[-1], "date") else str(df.index[-1]),
+                "close": close,
+                "change": change,
+                "change_pct": change_pct,
+            })
+        except Exception as e:
+            items.append({"symbol": sym, "name": name, "date": None, "close": None, "change": None, "change_pct": None, "error": str(e)})
+
+    return Response(
+        {"endpoint": "fx_snapshot", "count": len(items), "items": items, "detail": None, "error": None},
+        status=drf_status.HTTP_200_OK,
+    )
+    
+    
+def _parse_ymd(s):
+    if not s:
+        return None
+    s = str(s).strip()
+    try:
+        if len(s) == 10 and "-" in s:
+            return datetime.strptime(s, "%Y-%m-%d").date()
+        if len(s) == 8 and s.isdigit():
+            return datetime.strptime(s, "%Y%m%d").date()
+    except Exception:
+        return None
+    return None
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def market_prices(request):
+    """
+    GET /api/stocks/market/prices/?symbol=KS11&from=2025-01-01&to=2025-12-22
+    """
+    symbol = (request.query_params.get("symbol") or "KS11").strip()
+    d1 = _parse_ymd(request.query_params.get("from") or request.query_params.get("start"))
+    d2 = _parse_ymd(request.query_params.get("to") or request.query_params.get("end")) or timezone.localdate()
+
+    idx = MarketIndex.objects.filter(symbol=symbol).first()
+    if not idx:
+        return Response(
+            {"endpoint": "market_prices", "symbol": symbol, "count": 0, "prices": [], "detail": "지수(symbol)를 찾을 수 없습니다.", "error": None},
+            status=drf_status.HTTP_404_NOT_FOUND,
+        )
+
+    qs = MarketIndexDaily.objects.filter(index=idx).order_by("date")
+    if d1:
+        qs = qs.filter(date__gte=d1)
+    if d2:
+        qs = qs.filter(date__lte=d2)
+    qs = qs[:4000]
+
+    prices = [{"date": str(p.date), "close": float(p.close) if p.close is not None else None} for p in qs]
+
+    latest = None
+    if len(prices) >= 2 and prices[-1]["close"] is not None and prices[-2]["close"] is not None:
+        cur = prices[-1]["close"]
+        prev = prices[-2]["close"]
+        ch = cur - prev
+        pct = (ch / prev * 100) if prev else None
+        latest = {"date": prices[-1]["date"], "value": cur, "change": ch, "change_pct": pct}
+    elif len(prices) == 1:
+        latest = {"date": prices[-1]["date"], "value": prices[-1]["close"], "change": None, "change_pct": None}
+
+    return Response(
+        {
+            "endpoint": "market_prices",
+            "symbol": idx.symbol,
+            "name": getattr(idx, "name", idx.symbol),
+            "from": str(d1) if d1 else None,
+            "to": str(d2) if d2 else None,
+            "count": len(prices),
+            "prices": prices,
+            "latest": latest,
+            "detail": None,
+            "error": None,
+        },
+        status=drf_status.HTTP_200_OK,
+    )
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def fx_latest(request):
+    """
+    GET /api/stocks/market/fx/?pairs=USD/KRW,JPY/KRW,EUR/KRW,CNY/KRW
+    """
+    raw = (request.query_params.get("pairs") or "").strip()
+    pairs = [p.strip() for p in raw.split(",") if p.strip()] or ["USD/KRW", "JPY/KRW", "EUR/KRW", "CNY/KRW"]
+
+    import FinanceDataReader as fdr
+
+    end = timezone.localdate()
+    start = end - timedelta(days=14)
+
+    items = []
+    for pair in pairs:
+        try:
+            df = fdr.DataReader(pair, start.strftime("%Y-%m-%d"), end.strftime("%Y-%m-%d"))
+        except Exception:
+            df = None
+
+        if df is None or getattr(df, "empty", True):
+            items.append({"pair": pair, "date": None, "value": None, "change": None, "change_pct": None})
+            continue
+
+        close_col = "Close" if "Close" in df.columns else df.columns[0]
+        s = df[close_col].dropna()
+        if len(s) == 0:
+            items.append({"pair": pair, "date": None, "value": None, "change": None, "change_pct": None})
+            continue
+
+        last = float(s.iloc[-1])
+        dt = s.index[-1]
+        d = dt.date().isoformat() if hasattr(dt, "date") else str(dt)
+
+        if len(s) >= 2:
+            prev = float(s.iloc[-2])
+            ch = last - prev
+            pct = (ch / prev * 100) if prev else None
+        else:
+            ch, pct = None, None
+
+        items.append({"pair": pair, "date": d, "value": last, "change": ch, "change_pct": pct})
+
+    as_of = next((it["date"] for it in items if it["date"]), None)
+
+    return Response(
+        {"endpoint": "fx", "as_of": as_of, "count": len(items), "items": items, "detail": None, "error": None},
         status=drf_status.HTTP_200_OK,
     )
