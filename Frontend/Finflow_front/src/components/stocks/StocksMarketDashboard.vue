@@ -54,10 +54,10 @@
           <button class="refresh" :class="{ loading: fxRefreshing }" :disabled="fxRefreshing" @click="refreshFx">
             <span class="ico" aria-hidden="true">↻</span>
             새로고침
-            </button>
+          </button>
         </div>
-        <div class="muted small">기준: {{ marketStore.fx?.as_of || '-' }}</div>
 
+        <div class="muted small">기준: {{ marketStore.fx?.as_of || '-' }}</div>
         <div v-if="marketStore.error" class="err">{{ marketStore.error }}</div>
 
         <ul class="fx-list">
@@ -73,11 +73,20 @@
             </div>
 
             <div class="fx-right">
-              <div class="rate">
-                {{ it.rate ?? it.value ?? it.close }}
+              <!-- ✅ 값 + 변동폭(옆에) -->
+              <div class="fx-row">
+                <div class="rate">
+                {{ fmtFx(it.rate ?? it.value ?? it.close) }}
+                <span class="dot">•</span>
+                <span class="mini" :class="signClass(it.change)">
+                    {{ arrow(it.change) }} {{ fmtFxDelta(it.change) }}
+                </span>
+                </div>
               </div>
-              <div class="delta" :class="signClass(it.change)">
-                {{ it.change == null ? "-" : `${fmtSigned(it.change)} (${fmtSigned(it.change_pct)}%)` }}
+
+              <!-- (선택) 퍼센트는 아래에 작게 -->
+              <div class="fx-pct muted">
+                {{ it.change_pct == null ? "-" : `(${fmtFxPct(it.change_pct)}%)` }}
               </div>
             </div>
           </li>
@@ -97,16 +106,14 @@
         </div>
 
         <button class="refresh" :class="{ loading: sumRefreshing }" :disabled="sumRefreshing" @click="refreshSummary">
-            <span class="ico" aria-hidden="true">↻</span>
-            새로고침
+          <span class="ico" aria-hidden="true">↻</span>
+          새로고침
         </button>
       </div>
 
       <div class="muted small">기준: {{ marketStore.summary?.as_of_used || '-' }}</div>
 
       <div class="sum-grid sum-grid-3">
-
-
         <div class="sum-card">
           <div class="sum-title">거래 규모</div>
           <div class="sum-row"><span class="k">거래량</span><span class="v">{{ fmtCompact(turnover.volume, "주") }}</span></div>
@@ -120,7 +127,8 @@
           <div v-for="it in topGainers" :key="it.code" class="top-row">
             <span class="code">{{ it.code }}</span>
             <span class="name" :title="it.name">{{ it.name }}</span>
-            <span class="pct up">{{ fmtSigned((it.r1 ?? 0) * 100) }}%</span>
+            <!-- ✅ r1은 '수익률(비율)'로 보고 무조건 *100 -->
+            <span class="pct up">{{ fmtSigned(toPct(it.r1)) }}%</span>
           </div>
         </div>
 
@@ -130,7 +138,7 @@
           <div v-for="it in topLosers" :key="it.code" class="top-row">
             <span class="code">{{ it.code }}</span>
             <span class="name" :title="it.name">{{ it.name }}</span>
-            <span class="pct dn">{{ fmtSigned((it.r1 ?? 0) * 100) }}%</span>
+            <span class="pct dn">{{ fmtSigned(toPct(it.r1)) }}%</span>
           </div>
         </div>
       </div>
@@ -143,7 +151,6 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue"
 import Chart from "chart.js/auto"
 import { useMarketStore } from "@/stores/market"
 
-// ✅ assets 국기
 import usFlag from "@/assets/flag/us.png"
 import jpFlag from "@/assets/flag/jp.png"
 import euFlag from "@/assets/flag/eu.png"
@@ -154,15 +161,10 @@ const marketStore = useMarketStore()
 const canvasEl = ref(null)
 let chart = null
 
-// 차트 선택 상태
 const symbol = ref("KS11")
 const selectedLabel = ref("KOSPI")
-
-// interval/range
-const interval = ref("day") // day | week
-const range = ref("all")    // 3m | 6m | 1y | 5y | all
-
-// 시장요약 탭
+const interval = ref("day")
+const range = ref("all")
 const summaryMarket = ref("ALL")
 
 function setSymbol(sym, label) {
@@ -173,7 +175,6 @@ function setSymbol(sym, label) {
 // ---------- 새로 고침 ----------
 const fxRefreshing = ref(false)
 const sumRefreshing = ref(false)
-
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
 async function refreshFx() {
@@ -181,7 +182,6 @@ async function refreshFx() {
   fxRefreshing.value = true
   try {
     await marketStore.fetchFx()
-    // ✅ 데이터가 같아도 "모션"이 보이도록 최소 시간 보장
     await sleep(450)
   } finally {
     fxRefreshing.value = false
@@ -199,12 +199,16 @@ async function refreshSummary() {
   }
 }
 
-
+// ✅ 핵심 수정: r1은 "비율"로 보고 항상 *100 (2.06 -> 206%)
+function toPct(r1) {
+  const x = Number(r1)
+  if (!Number.isFinite(x)) return null
+  return x * 100
+}
 
 // ---------- 날짜 유틸 ----------
 function parseDate(s) {
   if (!s) return null
-  // 이미 Date로 들어오는 경우도 방어
   if (s instanceof Date) return s
   const parts = String(s).split("-").map(Number)
   if (parts.length !== 3) return null
@@ -226,29 +230,19 @@ function subtractRange(lastDateStr) {
   return d
 }
 
-// 기간(span)에 따라 라벨을 자동 축약 (ALL일 때 특히 중요)
 function formatTickLabel(dateStr, spanDays) {
   if (!dateStr) return ""
-
-  // spanDays가 계산 안되면 fallback
   const s = String(dateStr)
-
-  // 3년 이상: YYYY
   if (spanDays >= 365 * 3) return s.slice(0, 4)
-  // 1년 이상: YYYY-MM
   if (spanDays >= 365) return s.slice(0, 7)
-  // 6개월 이상: YY-MM
   if (spanDays >= 180) return s.slice(2, 7)
-  // 그 외: MM-DD
   return s.slice(5)
 }
 
-// ---------- 데이터 뷰 (range/interval 반영) ----------
 const viewSeries = computed(() => {
   const raw = marketStore.series || []
   if (!raw.length) return []
 
-  // 1) range 필터
   const lastDateStr = raw[raw.length - 1]?.date
   const cutoff = subtractRange(lastDateStr)
 
@@ -260,11 +254,9 @@ const viewSeries = computed(() => {
     })
   }
 
-  // 2) week 다운샘플: “대충 5거래일마다”
   if (interval.value === "week" && filtered.length > 10) {
     const out = []
     for (let i = 0; i < filtered.length; i += 5) out.push(filtered[i])
-    // 마지막 값 보장
     const last = filtered[filtered.length - 1]
     if (out[out.length - 1]?.date !== last?.date) out.push(last)
     return out
@@ -278,19 +270,16 @@ const latestPoint = computed(() => {
   return v.length ? v[v.length - 1] : null
 })
 
-// ---------- ✅ “시작~끝을 N등분해서” 라벨 인덱스 선택 ----------
 function desiredTickCount() {
-  // ALL이 제일 길어서 라벨이 길게 겹침 → 개수 줄임
   if (range.value === "3m") return 6
   if (range.value === "6m") return 6
   if (range.value === "1y") return 7
   if (range.value === "5y") return 8
-  return 8 // all
+  return 8
 }
 
 function nearestIndexByTime(times, target) {
-  let lo = 0,
-    hi = times.length - 1
+  let lo = 0, hi = times.length - 1
   while (lo <= hi) {
     const mid = (lo + hi) >> 1
     if (times[mid] < target) lo = mid + 1
@@ -298,8 +287,7 @@ function nearestIndexByTime(times, target) {
   }
   if (lo <= 0) return 0
   if (lo >= times.length) return times.length - 1
-  const a = times[lo - 1],
-    b = times[lo]
+  const a = times[lo - 1], b = times[lo]
   return Math.abs(a - target) <= Math.abs(b - target) ? lo - 1 : lo
 }
 
@@ -310,9 +298,7 @@ function computeTickIndexSet(labels) {
   const k = Math.min(desiredTickCount(), n)
   if (k <= 2) return new Set([0, n - 1])
 
-  // 날짜 파싱
   const dates = labels.map(parseDate)
-  // 파싱 실패가 하나라도 있으면 균등 인덱스로 fallback
   if (dates.some((d) => !d)) {
     const set = new Set([0, n - 1])
     for (let i = 1; i < k - 1; i++) {
@@ -329,13 +315,11 @@ function computeTickIndexSet(labels) {
   const set = new Set([0, n - 1])
   for (let i = 1; i < k - 1; i++) {
     const t = start + ((end - start) * i) / (k - 1)
-    const idx = nearestIndexByTime(times, t)
-    set.add(idx)
+    set.add(nearestIndexByTime(times, t))
   }
   return set
 }
 
-// spanDays 계산(라벨 축약용)
 function calcSpanDays(labels) {
   if (!labels?.length) return 0
   const d0 = parseDate(labels[0])
@@ -343,7 +327,6 @@ function calcSpanDays(labels) {
   if (!d0 || !d1) return 0
   return Math.round((d1.getTime() - d0.getTime()) / 86400000)
 }
-
 
 // ---------- Chart.js ----------
 const LINE_COLOR = "#3b82f6"
@@ -392,15 +375,13 @@ function buildOrUpdateChart() {
         scales: {
           x: {
             ticks: {
-              autoSkip: false,     // ✅ autoSkip 끄고, 우리가 고른 것만 보이게
+              autoSkip: false,
               maxRotation: 0,
               minRotation: 0,
               padding: 6,
               callback: tickCallback,
             },
-            grid: {
-              display: false,      // ✅ 세로줄 제거(회색 배경 방지)
-            },
+            grid: { display: false },
           },
           y: {
             ticks: { maxTicksLimit: 6 },
@@ -417,11 +398,8 @@ function buildOrUpdateChart() {
   chart.data.datasets[0].data = data
   chart.data.datasets[0].borderColor = LINE_COLOR
   chart.data.datasets[0].backgroundColor = FILL_COLOR
-
-  chart.options.scales.x.ticks.autoSkip = false
   chart.options.scales.x.ticks.callback = tickCallback
   chart.options.scales.x.grid.display = false
-
   chart.update("none")
 }
 
@@ -437,18 +415,13 @@ watch(symbol, async () => {
   buildOrUpdateChart()
 })
 
-watch([range, interval], () => {
-  // viewSeries가 바뀌니 차트 갱신
-  buildOrUpdateChart()
-})
+watch([range, interval], () => buildOrUpdateChart())
 
 watch(summaryMarket, async () => {
   await marketStore.fetchMarketSummary(summaryMarket.value)
 })
 
-watch(viewSeries, () => {
-  buildOrUpdateChart()
-})
+watch(viewSeries, () => buildOrUpdateChart())
 
 onBeforeUnmount(() => {
   if (chart) {
@@ -458,15 +431,8 @@ onBeforeUnmount(() => {
 })
 
 // ---------- 환율 국기 ----------
-const flagMap = {
-  "USD/KRW": usFlag,
-  "JPY/KRW": jpFlag,
-  "EUR/KRW": euFlag,
-  "CNY/KRW": cnFlag,
-}
-function flagSrc(pair) {
-  return flagMap[pair] || null
-}
+const flagMap = { "USD/KRW": usFlag, "JPY/KRW": jpFlag, "EUR/KRW": euFlag, "CNY/KRW": cnFlag }
+function flagSrc(pair) { return flagMap[pair] || null }
 
 // ---------- 표시 포맷 ----------
 function fmt(n) {
@@ -486,15 +452,38 @@ function signClass(n) {
   return ""
 }
 
-const breadth = computed(() => marketStore.summary?.breadth || {})
-const turnover = computed(() => marketStore.summary?.turnover || {})
-const topGainers = computed(() => marketStore.summary?.top_gainers || marketStore.summary?.top?.gainers || [])
-const topLosers = computed(() => marketStore.summary?.top_losers || marketStore.summary?.top?.losers || [])
-
-function safeNum(n) {
-  if (n == null) return "-"
-  return Number(n).toLocaleString()
+// ✅ 환율: 값/변동폭 표시용(소수 2자리 고정)
+function fmtFx(v) {
+  const x = Number(v)
+  if (!Number.isFinite(x)) return "-"
+  return x.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
+function fmtFxChange(v) {
+  const x = Number(v)
+  if (!Number.isFinite(x)) return "-"
+  // 변동폭은 부호 없이, 화살표가 담당
+  return Math.abs(x).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+function fmtFxDelta(n) {
+  const x = Number(n)
+  if (!Number.isFinite(x)) return "-"
+  const s = x > 0 ? "+" : ""
+  return `${s}${x.toFixed(2)}`
+}
+function fmtFxPct(v) {
+  const x = Number(v)
+  if (!Number.isFinite(x)) return "-"
+  return (x > 0 ? `+${x.toFixed(2)}` : x.toFixed(2))
+}
+function arrow(v) {
+  const x = Number(v)
+  if (!Number.isFinite(x) || x === 0) return "•"
+  return x > 0 ? "▲" : "▼"
+}
+
+const turnover = computed(() => marketStore.summary?.turnover || {})
+const topGainers = computed(() => marketStore.summary?.top?.gainers || [])
+const topLosers  = computed(() => marketStore.summary?.top?.losers || [])
 
 function fmtCompact(n, unit = "") {
   const x = Number(n)
@@ -503,7 +492,6 @@ function fmtCompact(n, unit = "") {
   if (x >= 1e6) return `${(x / 1e6).toFixed(2)}M ${unit}`.trim()
   return `${x.toLocaleString()} ${unit}`.trim()
 }
-
 function fmtWonCompact(n) {
   const x = Number(n)
   if (!Number.isFinite(x)) return "-"
@@ -512,18 +500,9 @@ function fmtWonCompact(n) {
   if (x >= 1e4) return `₩${(x / 1e4).toFixed(2)}만`
   return `₩${x.toLocaleString()}`
 }
-
-// Top5 퍼센트 표시(네 백엔드가 r1을 주면 r1%로 표시)
-function pctFrom(it) {
-  const v = it?.change_pct ?? it?.r1
-  if (v == null || Number.isNaN(Number(v))) return "-"
-  const x = Number(v)
-  return `${x > 0 ? "+" : ""}${x.toFixed(2)}%`
-}
 </script>
 
 <style scoped>
-/* 전체 */
 .krx-wrap { max-width: 1120px; margin: 0 auto; padding: 20px; }
 .krx-grid { display: grid; grid-template-columns: 1.35fr 0.65fr; gap: 14px; align-items: start; }
 .krx-card { background: rgba(255,255,255,0.9); border-radius: 16px; padding: 16px; border: 1px solid rgba(0,0,0,0.06); overflow: visible; }
@@ -535,7 +514,6 @@ function pctFrom(it) {
 .small { font-size: 12px; }
 .chg { margin-left: 6px; opacity: 0.75; }
 
-/* 버튼 */
 .krx-controls { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
 .btn-group { display: flex; gap: 6px; flex-wrap: wrap; }
 .btn {
@@ -554,7 +532,14 @@ function pctFrom(it) {
   padding: 8px 10px; border-radius: 10px; border: 1px solid rgba(0,0,0,0.12);
   background: #fff; cursor: pointer; font-weight: 900; font-size: 12px;
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
+.refresh.loading { opacity: 0.8; }
+.refresh.loading .ico { animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
 .err { margin-top: 10px; color: #b00020; font-weight: 800; }
 
 .fx-list { list-style: none; padding: 0; margin: 12px 0 0; display: grid; gap: 10px; }
@@ -568,11 +553,19 @@ function pctFrom(it) {
 .flag.ph { width: 28px; height: 20px; border-radius: 6px; background: rgba(0,0,0,0.06); border: 1px solid rgba(0,0,0,0.06); }
 .pair { font-weight: 900; font-size: 13px; white-space: nowrap; }
 .date { font-size: 12px; white-space: nowrap; }
-.fx-right { text-align: right; }
+
+.fx-right { text-align: right; min-width: 120px; }
+.fx-row { display: flex; align-items: baseline; justify-content: flex-end; gap: 10px; }
 .rate { font-weight: 900; }
-.delta { font-size: 12px; font-weight: 900; }
+.fx-chg { font-size: 12px; font-weight: 900; white-space: nowrap; display: inline-flex; gap: 4px; align-items: center; }
+.fx-pct { font-size: 12px; margin-top: 2px; }
+
 .up { color: #d10b2a; }
 .dn { color: #1e5eff; }
+
+
+.dot { opacity: 0.35; margin: 0 6px; }
+.mini { font-weight: 900; font-size: 12px; }
 
 /* 시장 요약 */
 .krx-summary { margin-top: 14px; }
@@ -585,7 +578,6 @@ function pctFrom(it) {
 }
 .tab.on { background: rgba(0,0,0,0.06); }
 
-/* ✅ 3+1 방지: 데스크탑은 무조건 4열, 줄어들면 2열/1열 */
 .sum-grid.sum-grid-3{
   margin-top: 12px;
   display: grid;
@@ -600,8 +592,6 @@ function pctFrom(it) {
   min-width: 0;
 }
 .sum-title { font-weight: 900; margin-bottom: 10px; }
-
-/* ✅ 상승/하락 잘림 방지(라벨 폭 확보 + nowrap) */
 .sum-row {
   display: grid;
   grid-template-columns: 84px 1fr;
@@ -609,80 +599,37 @@ function pctFrom(it) {
   margin: 7px 0;
   column-gap: 10px;
 }
-.sum-row .k {
-  opacity: 0.7;
-  font-weight: 800;
-  white-space: nowrap;
-}
-.sum-row .v {
-  justify-self: end;
-  font-weight: 900;
-  white-space: nowrap;
-}
-
+.sum-row .k { opacity: 0.7; font-weight: 800; white-space: nowrap; }
+.sum-row .v { justify-self: end; font-weight: 900; white-space: nowrap; }
 .mt8 { margin-top: 8px; }
 
+/* ✅ 퍼센트 폭 확장(200%+ 안 잘리게) */
 .top-row{
   display: grid;
-  grid-template-columns: 62px minmax(0, 1fr) 74px; /* ✅ 이름 칸 넓히기 */
+  grid-template-columns: 62px minmax(0, 1fr) 110px;
   gap: 8px;
   align-items: center;
 }
 .code { font-weight: 900; opacity: 0.85; white-space: nowrap; }
-/* 기존 .name 교체 */
 .name{
   font-weight: 800;
   min-width: 0;
-
-  /* ✅ 글자단위로 세로 내려가는 현상 방지 */
   word-break: keep-all;
   overflow-wrap: normal;
-
-  /* ✅ 한 줄만 보여주고 ... */
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .pct { font-weight: 900; text-align: right; white-space: nowrap; }
 
-
-.refresh {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.refresh .ico {
-  display: inline-block;
-}
-
-.refresh.loading {
-  opacity: 0.8;
-}
-
-.refresh.loading .ico {
-  animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-
-
-/* 반응형 */
 @media (max-width: 960px) {
   .krx-grid { grid-template-columns: 1fr; }
-  .sum-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } /* ✅ 2열 고정 */
+  .sum-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 560px) {
-  .sum-grid { grid-template-columns: 1fr; } /* ✅ 1열 고정 */
+  .sum-grid { grid-template-columns: 1fr; }
 }
-
 @media (max-width: 900px){
-  .sum-grid.sum-grid-3{
-    grid-template-columns: 1fr;
-  }
+  .sum-grid.sum-grid-3{ grid-template-columns: 1fr; }
 }
-
 </style>

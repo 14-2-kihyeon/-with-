@@ -1,35 +1,34 @@
 // src/api/market.js
-import axios from "axios"
+import api from "@/api/axios"
 
-const BASE = import.meta.env.VITE_BACKEND_URL || "http://127.0.0.1:8000"
+const BASE = "/api/stocks/market"
 
-const marketClient = axios.create({
-  baseURL: `${BASE}/api/stocks/market/`,
-  timeout: 20000,
-})
-
-// 1) 지수 시계열: /market/index/<symbol>/series/
-export const apiGetIndexSeries = (symbol, { from, to, interval = "day" } = {}) => {
-  return marketClient.get(`index/${symbol}/series/`, {
-    params: { from, to, interval },
-  })
+// ✅ 지수 시계열 (urls.py: market/index/<symbol>/series/)
+export const apiGetIndexSeries = (symbol, params = {}) => {
+  return api.get(`${BASE}/index/${symbol}/series/`, { params })
 }
 
-// 2) 시장 요약: /market/summary/
-export const apiGetMarketSummary = (market = "ALL", { date, auto = 1 } = {}) => {
-  return marketClient.get("summary/", {
-    params: { market, date, auto },
-  })
+// ✅ 지수 스냅샷 (urls.py: market/index/snapshot/)
+export const apiGetIndexSnapshot = (params = {}) => {
+  return api.get(`${BASE}/index/snapshot/`, { params })
 }
 
-// 3) 환율 스냅샷: /market/fx/snapshot/
+// ✅ 시장 요약 (urls.py: market/summary/)
+export const apiGetMarketSummary = (market = "ALL", params = {}) => {
+  return api.get(`${BASE}/summary/`, { params: { market, ...params } })
+}
+
+// ✅ 지수 prices (urls.py: market/prices/) - 필요하면 사용
+export const apiGetMarketPrices = (symbol, params = {}) => {
+  return api.get(`${BASE}/prices/`, { params: { symbol, ...params } })
+}
+
+// ✅ 환율 snapshot (urls.py: market/fx/snapshot/)
 export const apiGetFxSnapshot = () => {
-  return marketClient.get("fx/snapshot/")
+  return api.get(`${BASE}/fx/snapshot/`)
 }
 
-// (선택) 지수 스냅샷 리스트: /market/index/snapshot/
-export const apiGetIndexSnapshot = (symbolsCsv) => {
-  return marketClient.get("index/snapshot/", {
-    params: symbolsCsv ? { symbols: symbolsCsv } : {},
-  })
+// ✅ 환율 latest (urls.py: market/fx/)
+export const apiGetFxLatest = (pairsCsv = "USD/KRW,JPY/KRW,EUR/KRW,CNY/KRW") => {
+  return api.get(`${BASE}/fx/`, { params: { pairs: pairsCsv } })
 }

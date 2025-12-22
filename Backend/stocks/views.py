@@ -808,7 +808,7 @@ def reco_history(request):
     )
 
 
-from .models import MarketIndex, MarketIndexDaily
+from .models import MarketIndex, MarketIndexDaily, FxRateDaily
 
 def _week_key(d):
     # ISO year-week
@@ -1041,57 +1041,46 @@ def market_summary(request):
 def fx_snapshot(request):
     """
     GET /api/stocks/market/fx/snapshot/
-    반환: 주요 환율 최신값 + 전일대비(가능하면)
+    DB에 저장된 환율에서 '최신 1개 + 직전 1개'로 change 계산 (주말/휴장 대응)
     """
-    try:
-        import FinanceDataReader as fdr
-    except Exception as e:
-        return Response(
-            {"endpoint": "fx_snapshot", "items": [], "detail": "FinanceDataReader import 실패", "error": str(e)},
-            status=drf_status.HTTP_200_OK,
-        )
-
-    symbols = [
-        ("USD/KRW", "USD/KRW"),
-        ("JPY/KRW", "JPY/KRW"),
-        ("EUR/KRW", "EUR/KRW"),
-        ("CNY/KRW", "CNY/KRW"),
-    ]
+    pairs = ["USD/KRW", "JPY/KRW", "EUR/KRW", "CNY/KRW"]
 
     items = []
-    for sym, name in symbols:
-        try:
-            df = fdr.DataReader(sym)
-            if df is None or df.empty:
-                items.append({"symbol": sym, "name": name, "date": None, "close": None, "change": None, "change_pct": None})
-                continue
+    as_of = None
 
-            # 마지막 2개로 변동 계산
-            last = df.iloc[-1]
-            prev = df.iloc[-2] if len(df) >= 2 else None
+    for pair in pairs:
+        last2 = list(
+            FxRateDaily.objects
+            .filter(pair=pair)
+            .order_by("-date")
+            .values("date", "close")[:2]
+        )
 
-            close = float(last.get("Close")) if "Close" in df.columns else float(last.iloc[0])
-            prev_close = float(prev.get("Close")) if (prev is not None and "Close" in df.columns) else (float(prev.iloc[0]) if prev is not None else None)
+        if not last2:
+            items.append({"pair": pair, "date": None, "rate": None, "change": None, "change_pct": None})
+            continue
 
-            change = (close - prev_close) if prev_close is not None else None
-            change_pct = (change / prev_close * 100.0) if (prev_close not in (None, 0)) else None
+        latest = float(last2[0]["close"]) if last2[0]["close"] is not None else None
+        prev = float(last2[1]["close"]) if (len(last2) > 1 and last2[1]["close"] is not None) else None
 
-            items.append({
-                "symbol": sym,
-                "name": name,
-                "date": str(df.index[-1].date()) if hasattr(df.index[-1], "date") else str(df.index[-1]),
-                "close": close,
-                "change": change,
-                "change_pct": change_pct,
-            })
-        except Exception as e:
-            items.append({"symbol": sym, "name": name, "date": None, "close": None, "change": None, "change_pct": None, "error": str(e)})
+        change = (latest - prev) if (latest is not None and prev is not None) else None
+        change_pct = (change / prev * 100.0) if (change is not None and prev not in (None, 0)) else None
+
+        d = str(last2[0]["date"])
+        as_of = d if as_of is None else max(as_of, d)
+
+        items.append({
+            "pair": pair,
+            "date": d,
+            "rate": latest,
+            "change": change,
+            "change_pct": change_pct,
+        })
 
     return Response(
-        {"endpoint": "fx_snapshot", "count": len(items), "items": items, "detail": None, "error": None},
+        {"endpoint": "fx_snapshot", "as_of": as_of, "count": len(items), "items": items, "detail": None, "error": None},
         status=drf_status.HTTP_200_OK,
     )
-    
     
 def _parse_ymd(s):
     if not s:
