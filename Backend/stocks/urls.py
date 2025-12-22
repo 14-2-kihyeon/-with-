@@ -3,6 +3,18 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    # ✅ Market (대시보드)
+    path("market/summary/", views.market_summary),
+    path("market/prices/", views.market_prices),
+
+    # ✅ 환율: snapshot / latest 둘 다 살려두기
+    path("market/fx/snapshot/", views.fx_snapshot),  # <- 너의 프론트가 지금 호출하는 것
+    path("market/fx/", views.fx_latest),
+
+    # ✅ 지수
+    path("market/index/snapshot/", views.market_index_snapshot),
+    path("market/index/<str:symbol>/series/", views.market_index_series),
+
     path("recommendations/", views.recommendations),
     path("recommendations/history/", views.reco_history),
     path("search/", views.search_stocks),
