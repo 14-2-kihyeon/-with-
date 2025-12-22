@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from "vue-router"
 import { useAuthStore } from "@/stores/auth"
+import { useFinSyncStore } from "@/stores/finSync"
 // 레이아웃
 import MainLayout from "@/layouts/MainLayout.vue"
 import FinLayout from "@/layouts/FinLayout.vue"
@@ -16,9 +17,7 @@ import PostCreateView from "@/views/posts/PostCreateView.vue"
 import PostEditView from "@/views/posts/PostEditView.vue"
 // Finances
 import FinHomeView from "@/views/finances/FinHomeView.vue"
-import DepositListView from "@/views/finances/deposits/DepositListView.vue"
 import DepositDetailView from "@/views/finances/deposits/DepositDetailView.vue"
-import SavingListView from "@/views/finances/savings/SavingListView.vue"
 import SavingDetailView from "@/views/finances/savings/SavingDetailView.vue"
 // News
 import NaverNewsView from "@/views/news/NaverNewsView.vue"
@@ -59,48 +58,53 @@ const router = createRouter({
           children: [
             { path: "", name: "post_list", component: PostListView },
             { path: "create", name: "post_create", component: PostCreateView, meta: { requiresAuth: true } },
-            { 
-              path: ":pk", 
-              name: "post_detail", 
-              component: PostDetailView, 
+            {
+              path: ":pk",
+              name: "post_detail",
+              component: PostDetailView,
               props: route => ({ pk: parseInt(route.params.pk) })
             },
-            { 
-              path: ":pk/edit", 
-              name: "post_edit", 
-              component: PostEditView, 
-              meta: { requiresAuth: true }, 
+            {
+              path: ":pk/edit",
+              name: "post_edit",
+              component: PostEditView,
+              meta: { requiresAuth: true },
               props: route => ({ pk: parseInt(route.params.pk) })
             },
           ],
         },
 
         // ✅ 투자 성향은 posts 밖으로 이동
-        { 
-          path: "investment-survey", 
-          name: "investment_survey", 
-          component: InvestmentSurveyView, 
-          meta: { requiresAuth: true } 
+        {
+          path: "investment-survey",
+          name: "investment_survey",
+          component: InvestmentSurveyView,
+          meta: { requiresAuth: true }
         },
-        { 
-          path: "recommendations", 
-          name: "recommendations", 
-          component: RecommendationsView, 
-          meta: { requiresAuth: true } 
+        {
+          path: "recommendations",
+          name: "recommendations",
+          component: RecommendationsView,
+          meta: { requiresAuth: true }
         },
 
         // ✅ finances (도메인 중첩)
         {
           path: "finances",
           component: FinLayout,
+          beforeEnter: (to) => {
+            const finSync = useFinSyncStore()
+
+            // fin_home 들어오면 기본 예금 최신화 트리거
+            if (to.name === "fin_home") {
+              finSync.ensureFresh("deposits")
+              return
+            }
+          },
           children: [
             { path: "", name: "fin_home", component: FinHomeView },
-            { path: "deposits", name: "deposit_list", component: DepositListView },
             { path: "deposits/:fin_prdt_cd", name: "deposit_detail", component: DepositDetailView, props: true },
-
-            { path: "savings", name: "saving_list", component: SavingListView },
             { path: "savings/:fin_prdt_cd", name: "saving_detail", component: SavingDetailView, props: true },
-
             { path: "gold_silver/", name: "gold_silver", component: Gold_SilverView }
           ],
         },
@@ -162,7 +166,7 @@ router.beforeEach(async (to) => {
 
   // 새로고침 후 토큰은 있는데 user 없으면 복구
   if (auth.isLogin && !auth.user) {
-    try { await auth.fetchUser() } catch {}
+    try { await auth.fetchUser() } catch { }
   }
 
   if (to.meta.requiresAuth && !auth.isLogin) {
