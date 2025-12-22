@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(venv/Scripts/python.exe manage.py shell:*)",
+      "Bash(venv/Scripts/python.exe:*)",
+      "Bash(del init_survey.py)"
+    ]
+  }
+}

@@ -54,13 +54,13 @@ INSTALLED_APPS = [
     "gold_silver",
 
     "corsheaders",
-    "django.contrib.sites",   # ✅ allauth 쓰면 필요
+    "django.contrib.sites",   # allauth 쓰면 필요
     "rest_framework",
     "rest_framework.authtoken",
-    "rest_framework_simplejwt.token_blacklist",  # ✅ 로그아웃 블랙리스트 쓸 거면 추가
+    "rest_framework_simplejwt.token_blacklist",  # 로그아웃 블랙리스트 쓸 거면 추가
 
     "dj_rest_auth",
-    "dj_rest_auth.registration",  # ✅ 회원가입 endpoint
+    "dj_rest_auth.registration",  # 회원가입 endpoint
     "allauth",
     "allauth.account",
     "allauth.socialaccount",
@@ -111,14 +111,18 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 # allauth 기본 옵션 지정 (개발 단계에서 편하게)
-# 회원가입 시 이메일 인증/메일 발송 때문에 막히는 경우가 많음 
+# 회원가입 시 이메일 인증/메일 발송 때문에 막히는 경우가 많음
 # 이걸 붙이면 회원가입 로직이 allauth 설정을 많이 타게 돼서,
 # 로그인 방식(유저네임/이메일)과 회원가입에서 실제로 받는 필드가 서로 충돌할 수 있고,
-# 그걸 allauth가 “경고/체크”로 알려주는 거야.
+# 그걸 allauth가 "경고/체크"로 알려주는 거야.
 ACCOUNT_LOGIN_METHODS = {"username"}
 ACCOUNT_SIGNUP_FIELDS = ["username*", "password1*", "password2*"]
 ACCOUNT_EMAIL_VERIFICATION = "none"
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+
+# allauth의 deprecated 설정 제거를 위한 새로운 방식
+ACCOUNT_USERNAME_REQUIRED = True  # 유저네임 필수
+ACCOUNT_EMAIL_REQUIRED = False    # 이메일 선택사항
 
 
 from datetime import timedelta
@@ -217,4 +221,10 @@ REST_AUTH = {
     "SESSION_LOGIN": False,
     "JWT_AUTH_COOKIE": None,
     "JWT_AUTH_REFRESH_COOKIE": None,
+
+    # 새로운 설정 방식: EMAIL_REQUIRED, USERNAME_REQUIRED 대신 SIGNUP_FIELDS 사용
+    "SIGNUP_FIELDS": {
+        "username": {"required": True},   # 유저네임 필수
+        "email": {"required": False},     # 이메일을 선택사항으로 설정
+    },
 }
