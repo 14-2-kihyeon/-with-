@@ -14,6 +14,7 @@
         <RouterLink :to="{ name: 'naver_news' }" class="nav-link">Naver News</RouterLink>
         <RouterLink :to="{ name: 'bank_map' }" class="nav-link">KaKao Map</RouterLink>
         <RouterLink :to="{ name: 'youtube_search' }" class="nav-link">YouTube</RouterLink>
+        <RouterLink :to="{ name: 'stocks_home' }" class="nav-link">Stocks</RouterLink>
 
         <RouterLink
           v-if="auth.isLogin"

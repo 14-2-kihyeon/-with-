@@ -33,6 +33,9 @@ import VideoDetailView from "@/views/youtube/VideoDetailView.vue"
 import InvestmentSurveyView from "@/views/auth/InvestmentSurveyView.vue"
 import RecommendationsView from "@/views/auth/RecommendationsView.vue"
 import Gold_SilverView from "@/views/finances/gold_silvers/Gold_SilverView.vue"
+// Stocks
+import StocksHomeView from "@/views/stocks/StocksHomeView.vue"
+import StockDetailView from "@/views/stocks/StockDetailView.vue"
 
 
 const router = createRouter({
@@ -122,6 +125,17 @@ const router = createRouter({
             { path: "video/:id", name: "youtube_detail", component: VideoDetailView, props: true },
             { path: "saved", name: "youtube_saved", component: () => import("@/views/youtube/SavedVideosView.vue") },
             { path: "channels", name: "youtube_channels", component: () => import("@/views/youtube/ChannelsView.vue") },
+          ],
+        },
+        // ✅ stocks
+        {
+          path: "stocks",
+          children: [
+            { path: "", name: "stocks_home", component: StocksHomeView },
+            // 필요하면 따로 추천뷰도 만들 수 있음(지금은 home에 포함되어 있어서 생략 가능)
+            // { path: "recommendations", name: "stocks_recommendations", component: StocksRecoView },
+
+            { path: ":code", name: "stock_detail", component: StockDetailView, props: true },
           ],
         },
       ],

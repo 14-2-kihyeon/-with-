@@ -14,6 +14,7 @@ urlpatterns = [
     path("naver/", include("naversearch.urls")),
     path("kakaomap/", include('kakaomap.urls')),
     path("youtube/", include('youtube.urls')),
-    path("gold_silver/", include('gold_silver.urls'))
+    path("gold_silver/", include('gold_silver.urls')),
+    path('api/stocks/', include('stocks.urls')),
 
 ]

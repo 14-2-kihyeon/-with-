@@ -26,6 +26,8 @@ GMS_KEY = env("GMS_KEY")
 SECRET_KEY = env("DJANGO_SECRET_KEY")
 KAKAO_MOBILITY_REST_KEY = env("KAKAO_MOBILITY_REST_KEY")
 YOUTUBE_API_KEY = env("YOUTUBE_API_KEY")
+STOCK_PRICE_API_KEY = env("STOCK_PRICE_API_KEY")
+STOCK_PRICE_API_URL='https://apis.data.go.kr/1160100/service/GetStockSecuritiesInfoService/getStockPriceInfo'
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
@@ -44,6 +46,7 @@ ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
 INSTALLED_APPS = [
     "accounts",
     "finances",
+    "stocks",
     "posts",
     "naversearch",
     "kakaomap",
