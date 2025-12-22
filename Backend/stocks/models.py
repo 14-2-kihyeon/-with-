@@ -260,3 +260,22 @@ class MarketIndexDaily(models.Model):
 
     def __str__(self):
         return f"{self.index.symbol} {self.date} close={self.close}"
+
+
+
+class FxRateDaily(models.Model):
+    pair = models.CharField(max_length=15)   # 예: "USD/KRW"
+    date = models.DateField()
+    close = models.FloatField(null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ("pair", "date")
+        indexes = [
+            models.Index(fields=["pair", "-date"]),
+        ]
+
+    def __str__(self):
+        return f"{self.pair} {self.date} {self.close}"
