@@ -9,27 +9,14 @@
 
       <!-- Center: Menus -->
       <div class="menu">
-        <RouterLink :to="{ name: 'post_list' }" class="nav-link">Posts</RouterLink>
         <RouterLink :to="{ name: 'fin_home' }" class="nav-link">예적금</RouterLink>
+        <RouterLink :to="{ name: 'stocks_home' }" class="nav-link">Stocks</RouterLink>
         <RouterLink :to="{ name: 'naver_news' }" class="nav-link">Naver News</RouterLink>
         <RouterLink :to="{ name: 'bank_map' }" class="nav-link">KaKao Map</RouterLink>
         <RouterLink :to="{ name: 'youtube_search' }" class="nav-link">YouTube</RouterLink>
-        <RouterLink :to="{ name: 'stocks_home' }" class="nav-link">Stocks</RouterLink>
-
-        <RouterLink
-          v-if="auth.isLogin"
-          :to="{ name: 'investment_survey' }"
-          class="nav-link"
-        >
-          투자 성향 검사
-        </RouterLink>
-        <RouterLink
-          v-if="auth.isLogin"
-          :to="{ name: 'recommendations' }"
-          class="nav-link"
-        >
-          맞춤 추천
-        </RouterLink>
+        <RouterLink v-if="auth.isLogin" :to="{ name: 'investment_survey' }" class="nav-link">투자 성향 검사</RouterLink>
+        <RouterLink v-if="auth.isLogin" :to="{ name: 'recommendations' }" class="nav-link">맞춤 추천</RouterLink>
+        <RouterLink :to="{ name: 'post_list' }" class="nav-link">커뮤니티</RouterLink>
       </div>
 
       <!-- Right: Auth -->
@@ -178,7 +165,7 @@ defineProps({
 
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 96px; /* 로고와 메뉴 사이 간격 확대 */
 }
 
 /* 로고 */
@@ -257,19 +244,28 @@ defineProps({
   align-items: center;
   gap: 8px;
 
-  border: 1px solid rgba(15, 23, 42, 0.12);
-  background: #fff;
+  /* 메탈릭 스타일: 각진 형태 + 그라데이션 테두리 */
+  border: 1.5px solid;
+  border-image: linear-gradient(135deg, #94a3b8, #cbd5e1, #e2e8f0) 1;
+  background: linear-gradient(145deg, #ffffff, #f8fafc);
   color: #0f172a;
 
-  padding: 8px 10px;
-  border-radius: 12px;
+  padding: 9px 14px;
+  border-radius: 4px; /* 각진 형태 */
   cursor: pointer;
 
-  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+  transition: all 0.2s ease;
+  box-shadow:
+    0 1px 3px rgba(15, 23, 42, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 .user-btn:hover {
-  border-color: rgba(37, 99, 235, 0.35);
-  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+  background: linear-gradient(145deg, #f8fafc, #f1f5f9);
+  border-image: linear-gradient(135deg, #64748b, #94a3b8, #cbd5e1) 1;
+  box-shadow:
+    0 4px 12px rgba(15, 23, 42, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 1);
+  transform: translateY(-1px);
 }
 
 .user-icon {
@@ -294,17 +290,21 @@ defineProps({
   transform: rotate(180deg);
 }
 
-/* 드롭다운 */
+/* 드롭다운 - 메탈릭 각진 스타일 */
 .dropdown {
   position: absolute;
   right: 0;
   top: calc(100% + 10px);
   min-width: 180px;
 
-  background: #fff;
-  border: 1px solid rgba(15, 23, 42, 0.12);
-  border-radius: 14px;
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
+  /* 메탈릭 각진 스타일 */
+  background: linear-gradient(145deg, #ffffff, #f8fafc);
+  border: 1.5px solid;
+  border-image: linear-gradient(135deg, #94a3b8, #cbd5e1, #e2e8f0) 1;
+  border-radius: 4px; /* 각진 형태 */
+  box-shadow:
+    0 8px 24px rgba(15, 23, 42, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
   overflow: hidden;
   padding: 6px;
 }
@@ -320,24 +320,26 @@ defineProps({
   border: none;
   cursor: pointer;
 
-  padding: 10px 10px;
-  border-radius: 10px;
+  padding: 10px 12px;
+  border-radius: 3px; /* 각진 형태 */
 
   color: #0f172a;
   font-size: 14px;
   font-weight: 600;
 
-  transition: background 0.15s ease, color 0.15s ease;
+  transition: all 0.2s ease;
 }
 
 .dropdown-item:hover {
-  background: rgba(37, 99, 235, 0.08);
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.08), rgba(59, 130, 246, 0.05));
   color: #1d4ed8;
+  box-shadow: inset 0 1px 2px rgba(37, 99, 235, 0.1);
 }
 
 .dropdown-item.danger:hover {
-  background: rgba(239, 68, 68, 0.10);
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.10), rgba(248, 113, 113, 0.08));
   color: #ef4444;
+  box-shadow: inset 0 1px 2px rgba(239, 68, 68, 0.15);
 }
 
 /* 모바일에서 메뉴가 너무 길면 줄바꿈/스크롤 등 추가 조정 필요 */
