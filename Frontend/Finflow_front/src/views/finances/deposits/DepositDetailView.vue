@@ -80,7 +80,15 @@
 
           <div class="info-item info-item--full">
             <div class="info-k">우대조건</div>
-            <div class="info-v">{{ product.spcl_cnd || "-" }}</div>
+            <div class="info-v info-v--special">
+              <div v-if="product.spcl_cnd" class="special-conditions">
+                <div v-for="(condition, idx) in formatSpecialConditions(product.spcl_cnd)" :key="idx" class="condition-item">
+                  <span class="condition-bullet">•</span>
+                  <span class="condition-text">{{ condition }}</span>
+                </div>
+              </div>
+              <span v-else>-</span>
+            </div>
           </div>
         </div>
       </section>
@@ -100,10 +108,9 @@
           <table class="options-table">
             <thead>
               <tr>
-                <th style="width: 110px;">기간</th>
-                <th style="width: 120px;">기본금리</th>
-                <th style="width: 120px;">최고금리</th>
-                <th>유형</th>
+                <th class="th-center" style="width: 110px;">기간</th>
+                <th class="th-right" style="width: 120px;">기본금리</th>
+                <th class="th-right" style="width: 120px;">최고금리</th>
               </tr>
             </thead>
             <tbody>
@@ -119,7 +126,6 @@
                     {{ formatRate(o.intr_rate2) }}
                   </span>
                 </td>
-                <td class="td-muted">{{ o.rsrv_type || "-" }}</td>
               </tr>
             </tbody>
           </table>
@@ -182,6 +188,37 @@ const formatRate = (v) => {
   const n = Number(v)
   if (Number.isNaN(n)) return "-"
   return `${n.toFixed(2).replace(/\.00$/, "")}%`
+}
+
+const formatSpecialConditions = (text) => {
+  if (!text) return []
+
+  // 1. 명확한 번호로 시작하는 항목만 분리 (예: "1.", "2.", "①", "②" 등)
+  let conditions = text.split(/(?=\d+\.\s|[①②③④⑤⑥⑦⑧⑨⑩]\s)/)
+
+  // 분리된 항목이 2개 이상이면 (즉, 순번이 있으면) 그대로 반환
+  if (conditions.length > 1) {
+    return conditions
+      .map(c => c.trim())
+      .filter(c => c.length > 0)
+      .map(c => c.replace(/^[•\-\*]\s*/, ''))
+  }
+
+  // 2. 순번이 없고, 세미콜론이 있으면 세미콜론으로 분리
+  if (text.includes(';')) {
+    conditions = text.split(/;\s*/)
+  }
+
+  // 3. 여전히 분리되지 않았고, "단," "※" 등으로 시작하는 특별한 경우만 분리
+  if (conditions.length === 1 && /(?:단,|※|＊|★)/.test(text)) {
+    conditions = text.split(/(?=단,|※|＊|★)/)
+  }
+
+  // 빈 문자열 제거 및 트림
+  return conditions
+    .map(c => c.trim())
+    .filter(c => c.length > 0)
+    .map(c => c.replace(/^[•\-\*]\s*/, ''))
 }
 
 const bankMeta = computed(() => {
@@ -438,6 +475,36 @@ watch(() => route.params.fin_prdt_cd, loadDetail)
   line-height: 1.5;
 }
 
+.info-v--special {
+  line-height: 1.7;
+}
+
+.special-conditions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.condition-item {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.condition-bullet {
+  color: rgba(37, 99, 235, 0.75);
+  font-weight: 900;
+  flex-shrink: 0;
+  line-height: 1.5;
+}
+
+.condition-text {
+  flex: 1;
+  color: rgba(15, 23, 42, 0.86);
+  line-height: 1.6;
+  word-break: keep-all;
+}
+
 /* Options table */
 .options-table-wrap {
   overflow-x: auto;
@@ -452,7 +519,6 @@ watch(() => route.params.fin_prdt_cd, loadDetail)
 }
 
 .options-table th {
-  text-align: left;
   padding: 12px 12px;
   font-size: 12px;
   font-weight: 900;
@@ -467,6 +533,8 @@ watch(() => route.params.fin_prdt_cd, loadDetail)
   color: rgba(15, 23, 42, 0.85);
 }
 
+.th-center { text-align: center; }
+.th-right { text-align: right; }
 .td-center { text-align: center; }
 .td-right { text-align: right; }
 .td-muted { color: rgba(15, 23, 42, 0.60); }

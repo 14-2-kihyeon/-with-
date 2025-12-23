@@ -1,60 +1,69 @@
 <template>
   <section class="np-card">
-    <!-- 헤더 -->
-    <div class="np-head">
-      <div class="np-title">
-        <div class="kicker">현물</div>
-        <div class="title">금/은 가격 비교</div>
+    <!-- 로딩 오버레이 -->
+    <div v-if="initialLoading" class="loading-overlay">
+      <div class="loading-spinner"></div>
+      <div class="loading-text">차트 데이터를 불러오는 중...</div>
+    </div>
+
+    <!-- 메인 컨텐츠 -->
+    <div v-show="!initialLoading">
+      <!-- 헤더 -->
+      <div class="np-head">
+        <div class="np-title">
+          <div class="kicker">현물</div>
+          <div class="title">금/은 가격 비교</div>
+        </div>
+
+        <div class="np-actions">
+          <button
+            class="seg"
+            :class="{ active: assetType === 'gold' }"
+            type="button"
+            @click="setAsset('gold')"
+          >
+            금
+          </button>
+          <button
+            class="seg"
+            :class="{ active: assetType === 'silver' }"
+            type="button"
+            @click="setAsset('silver')"
+          >
+            은
+          </button>
+        </div>
       </div>
 
-      <div class="np-actions">
-        <button
-          class="seg"
-          :class="{ active: assetType === 'gold' }"
-          type="button"
-          @click="setAsset('gold')"
-        >
-          금
+      <!-- 컨트롤 -->
+      <div class="np-controls">
+        <div class="field">
+          <div class="label">시작</div>
+          <input class="input" type="date" v-model="startDate" />
+        </div>
+
+        <div class="field">
+          <div class="label">종료</div>
+          <input class="input" type="date" v-model="endDate" />
+        </div>
+
+        <button class="btn" type="button" :disabled="loading" @click="fetchPriceData">
+          <span v-if="loading" class="spinner" />
+          조회
         </button>
-        <button
-          class="seg"
-          :class="{ active: assetType === 'silver' }"
-          type="button"
-          @click="setAsset('silver')"
-        >
-          은
-        </button>
-      </div>
-    </div>
-
-    <!-- 컨트롤 -->
-    <div class="np-controls">
-      <div class="field">
-        <div class="label">시작</div>
-        <input class="input" type="date" v-model="startDate" />
       </div>
 
-      <div class="field">
-        <div class="label">종료</div>
-        <input class="input" type="date" v-model="endDate" />
+      <p v-if="errorMessage" class="np-error">{{ errorMessage }}</p>
+
+      <!-- 차트 -->
+      <div class="np-chart">
+        <canvas ref="chartEl" />
       </div>
 
-      <button class="btn" type="button" :disabled="loading" @click="fetchPriceData">
-        <span v-if="loading" class="spinner" />
-        조회
-      </button>
-    </div>
-
-    <p v-if="errorMessage" class="np-error">{{ errorMessage }}</p>
-
-    <!-- 차트 -->
-    <div class="np-chart">
-      <canvas ref="chartEl" />
-    </div>
-
-    <div class="np-foot">
-      <div class="foot-left">최신 조회 기준 표시</div>
-      <div class="foot-right">© 2025 Bankbook</div>
+      <div class="np-foot">
+        <div class="foot-left">최신 조회 기준 표시</div>
+        <div class="foot-right">© 2025 Bankbook</div>
+      </div>
     </div>
   </section>
 </template>
@@ -69,6 +78,7 @@ const startDate = ref("2023-01-01")
 const endDate = ref("2024-12-31")
 
 const loading = ref(false)
+const initialLoading = ref(true) // 최초 로딩 상태
 const errorMessage = ref("")
 
 const priceData = ref([])
@@ -126,9 +136,19 @@ const fetchPriceData = async () => {
     priceData.value = normalize(data.data || [])
     await nextTick()
     renderChart()
+
+    // 차트 렌더링 완료 후 최초 로딩 상태 해제
+    if (initialLoading.value) {
+      await nextTick()
+      initialLoading.value = false
+    }
   } catch (e) {
     console.error(e)
     errorMessage.value = "서버와의 연결에 실패했습니다."
+    // 에러 발생해도 최초 로딩은 해제
+    if (initialLoading.value) {
+      initialLoading.value = false
+    }
   } finally {
     loading.value = false
   }
@@ -165,9 +185,14 @@ const renderChart = () => {
           label: assetType.value === "gold" ? "금 가격" : "은 가격",
           data: prices,
           fill: false,
-          tension: 0.25,
-          pointRadius: 0,
+          tension: 0, // 곡선 제거: 0으로 설정하여 직선으로 표시
+          pointRadius: 3, // 점 표시
+          pointBackgroundColor: assetType.value === "gold" ? "rgba(255, 193, 7, 0.9)" : "rgba(156, 163, 175, 0.9)",
+          pointBorderColor: "#fff",
+          pointBorderWidth: 1,
+          pointHoverRadius: 5,
           borderWidth: 2,
+          borderColor: assetType.value === "gold" ? "rgba(255, 193, 7, 0.8)" : "rgba(156, 163, 175, 0.8)",
         },
       ],
     },
@@ -219,6 +244,40 @@ watch([startDate, endDate], () => {
   box-shadow: 0 14px 34px rgba(15, 23, 42, 0.08);
   border-radius: 18px;
   padding: 18px;
+  position: relative;
+  min-height: 500px;
+}
+
+/* 로딩 오버레이 */
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 18px;
+  z-index: 10;
+  gap: 16px;
+}
+
+.loading-spinner {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 4px solid rgba(37, 99, 235, 0.15);
+  border-top-color: rgba(37, 99, 235, 0.95);
+  animation: spin 0.8s linear infinite;
+}
+
+.loading-text {
+  font-size: 14px;
+  font-weight: 900;
+  color: rgba(15, 23, 42, 0.70);
 }
 
 /* Header */

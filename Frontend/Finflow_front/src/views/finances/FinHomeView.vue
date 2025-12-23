@@ -206,7 +206,7 @@
 
 <script setup>
 import { computed, onMounted, ref, watch } from "vue"
-import { useRouter } from "vue-router"
+import { useRouter, useRoute } from "vue-router"
 import {
   // 예금
   getDeposits,
@@ -263,6 +263,7 @@ const displayBankName = (apiName) => byApiName.get(apiName)?.label ?? apiName
 // 상태
 // ----------------------------
 const router = useRouter()
+const route = useRoute()
 const activeTab = ref("deposit") // 'deposit' | 'saving'
 const loading = ref(false)
 const errorMsg = ref("")
@@ -480,7 +481,14 @@ const isBookmarked = (finPrdtCd) => {
 // 마운트: fin_home 들어오면 예금 자동 준비 + 리스트 표시
 // ----------------------------
 onMounted(async () => {
-  activeTab.value = "deposit"
+  // Query parameter로 tab이 전달되면 해당 탭으로 설정
+  const tabFromQuery = route.query.tab
+  if (tabFromQuery === "saving") {
+    activeTab.value = "saving"
+  } else {
+    activeTab.value = "deposit"
+  }
+
   await fetchList()
   await fetchBookmarks()
 })

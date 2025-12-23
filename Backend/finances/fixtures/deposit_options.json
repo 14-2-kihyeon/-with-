@@ -1,0 +1,1597 @@
+﻿[
+{
+  "model": "finances.depositoptions",
+  "pk": 1,
+  "fields": {
+    "product": 1,
+    "intr_rate": 2.55,
+    "intr_rate2": 2.55,
+    "save_trm": 1,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 2,
+  "fields": {
+    "product": 1,
+    "intr_rate": 2.65,
+    "intr_rate2": 2.65,
+    "save_trm": 3,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 3,
+  "fields": {
+    "product": 1,
+    "intr_rate": 2.8,
+    "intr_rate2": 2.8,
+    "save_trm": 6,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 4,
+  "fields": {
+    "product": 1,
+    "intr_rate": 2.85,
+    "intr_rate2": 2.85,
+    "save_trm": 12,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 5,
+  "fields": {
+    "product": 1,
+    "intr_rate": 2.4,
+    "intr_rate2": 2.4,
+    "save_trm": 24,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 6,
+  "fields": {
+    "product": 1,
+    "intr_rate": 2.4,
+    "intr_rate2": 2.4,
+    "save_trm": 36,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 7,
+  "fields": {
+    "product": 2,
+    "intr_rate": 2.1,
+    "intr_rate2": 2.3,
+    "save_trm": 1,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 8,
+  "fields": {
+    "product": 2,
+    "intr_rate": 2.8,
+    "intr_rate2": 3.0,
+    "save_trm": 3,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 9,
+  "fields": {
+    "product": 2,
+    "intr_rate": 2.9,
+    "intr_rate2": 3.1,
+    "save_trm": 6,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 10,
+  "fields": {
+    "product": 2,
+    "intr_rate": 2.95,
+    "intr_rate2": 3.25,
+    "save_trm": 12,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 11,
+  "fields": {
+    "product": 3,
+    "intr_rate": 2.35,
+    "intr_rate2": 2.8,
+    "save_trm": 12,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 12,
+  "fields": {
+    "product": 4,
+    "intr_rate": 1.5,
+    "intr_rate2": 1.5,
+    "save_trm": 1,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 13,
+  "fields": {
+    "product": 4,
+    "intr_rate": 1.7,
+    "intr_rate2": 2.4,
+    "save_trm": 3,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 14,
+  "fields": {
+    "product": 4,
+    "intr_rate": 1.8,
+    "intr_rate2": 2.4,
+    "save_trm": 6,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 15,
+  "fields": {
+    "product": 4,
+    "intr_rate": 1.95,
+    "intr_rate2": 2.4,
+    "save_trm": 12,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 16,
+  "fields": {
+    "product": 4,
+    "intr_rate": 1.6,
+    "intr_rate2": 1.6,
+    "save_trm": 24,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 17,
+  "fields": {
+    "product": 4,
+    "intr_rate": 1.6,
+    "intr_rate2": 1.6,
+    "save_trm": 36,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 18,
+  "fields": {
+    "product": 5,
+    "intr_rate": 1.4,
+    "intr_rate2": 2.1,
+    "save_trm": 1,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 19,
+  "fields": {
+    "product": 5,
+    "intr_rate": 1.65,
+    "intr_rate2": 2.35,
+    "save_trm": 3,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 20,
+  "fields": {
+    "product": 5,
+    "intr_rate": 1.8,
+    "intr_rate2": 2.5,
+    "save_trm": 6,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 21,
+  "fields": {
+    "product": 5,
+    "intr_rate": 2.2,
+    "intr_rate2": 2.9,
+    "save_trm": 12,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 22,
+  "fields": {
+    "product": 5,
+    "intr_rate": 1.85,
+    "intr_rate2": 2.9,
+    "save_trm": 24,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 23,
+  "fields": {
+    "product": 5,
+    "intr_rate": 1.25,
+    "intr_rate2": 1.95,
+    "save_trm": 36,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 24,
+  "fields": {
+    "product": 6,
+    "intr_rate": 2.5,
+    "intr_rate2": 2.7,
+    "save_trm": 6,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 25,
+  "fields": {
+    "product": 6,
+    "intr_rate": 2.65,
+    "intr_rate2": 2.85,
+    "save_trm": 12,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 26,
+  "fields": {
+    "product": 7,
+    "intr_rate": 2.56,
+    "intr_rate2": 2.76,
+    "save_trm": 12,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 27,
+  "fields": {
+    "product": 7,
+    "intr_rate": 2.36,
+    "intr_rate2": 2.56,
+    "save_trm": 24,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 28,
+  "fields": {
+    "product": 7,
+    "intr_rate": 2.5,
+    "intr_rate2": 2.7,
+    "save_trm": 36,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 29,
+  "fields": {
+    "product": 8,
+    "intr_rate": 2.16,
+    "intr_rate2": 2.26,
+    "save_trm": 1,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 30,
+  "fields": {
+    "product": 8,
+    "intr_rate": 2.41,
+    "intr_rate2": 2.51,
+    "save_trm": 3,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 31,
+  "fields": {
+    "product": 8,
+    "intr_rate": 2.45,
+    "intr_rate2": 2.55,
+    "save_trm": 6,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 32,
+  "fields": {
+    "product": 8,
+    "intr_rate": 2.46,
+    "intr_rate2": 2.66,
+    "save_trm": 12,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 33,
+  "fields": {
+    "product": 8,
+    "intr_rate": 2.26,
+    "intr_rate2": 2.46,
+    "save_trm": 24,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 34,
+  "fields": {
+    "product": 8,
+    "intr_rate": 2.4,
+    "intr_rate2": 2.6,
+    "save_trm": 36,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 35,
+  "fields": {
+    "product": 9,
+    "intr_rate": 2.36,
+    "intr_rate2": 2.86,
+    "save_trm": 12,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 36,
+  "fields": {
+    "product": 10,
+    "intr_rate": 2.45,
+    "intr_rate2": 2.45,
+    "save_trm": 3,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 37,
+  "fields": {
+    "product": 10,
+    "intr_rate": 2.63,
+    "intr_rate2": 2.63,
+    "save_trm": 6,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 38,
+  "fields": {
+    "product": 10,
+    "intr_rate": 2.6,
+    "intr_rate2": 2.6,
+    "save_trm": 12,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 39,
+  "fields": {
+    "product": 11,
+    "intr_rate": 2.0,
+    "intr_rate2": 2.1,
+    "save_trm": 1,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 40,
+  "fields": {
+    "product": 11,
+    "intr_rate": 2.1,
+    "intr_rate2": 2.2,
+    "save_trm": 3,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 41,
+  "fields": {
+    "product": 11,
+    "intr_rate": 2.25,
+    "intr_rate2": 2.35,
+    "save_trm": 6,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 42,
+  "fields": {
+    "product": 11,
+    "intr_rate": 2.3,
+    "intr_rate2": 2.4,
+    "save_trm": 12,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 43,
+  "fields": {
+    "product": 11,
+    "intr_rate": 2.2,
+    "intr_rate2": 2.3,
+    "save_trm": 24,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 44,
+  "fields": {
+    "product": 11,
+    "intr_rate": 2.2,
+    "intr_rate2": 2.3,
+    "save_trm": 36,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 45,
+  "fields": {
+    "product": 12,
+    "intr_rate": 1.4,
+    "intr_rate2": 2.4,
+    "save_trm": 1,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 46,
+  "fields": {
+    "product": 12,
+    "intr_rate": 1.7,
+    "intr_rate2": 2.45,
+    "save_trm": 3,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 47,
+  "fields": {
+    "product": 12,
+    "intr_rate": 1.9,
+    "intr_rate2": 3.0,
+    "save_trm": 6,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 48,
+  "fields": {
+    "product": 12,
+    "intr_rate": 2.0,
+    "intr_rate2": 3.1,
+    "save_trm": 12,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 49,
+  "fields": {
+    "product": 12,
+    "intr_rate": 1.85,
+    "intr_rate2": 2.4,
+    "save_trm": 24,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 50,
+  "fields": {
+    "product": 12,
+    "intr_rate": 1.85,
+    "intr_rate2": 2.4,
+    "save_trm": 36,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 51,
+  "fields": {
+    "product": 13,
+    "intr_rate": 1.7,
+    "intr_rate2": 2.35,
+    "save_trm": 3,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 52,
+  "fields": {
+    "product": 13,
+    "intr_rate": 1.8,
+    "intr_rate2": 2.5,
+    "save_trm": 6,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 53,
+  "fields": {
+    "product": 13,
+    "intr_rate": 1.9,
+    "intr_rate2": 2.55,
+    "save_trm": 12,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 54,
+  "fields": {
+    "product": 14,
+    "intr_rate": 2.5,
+    "intr_rate2": 2.5,
+    "save_trm": 3,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 55,
+  "fields": {
+    "product": 14,
+    "intr_rate": 2.8,
+    "intr_rate2": 2.8,
+    "save_trm": 6,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 56,
+  "fields": {
+    "product": 14,
+    "intr_rate": 2.85,
+    "intr_rate2": 2.85,
+    "save_trm": 12,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 57,
+  "fields": {
+    "product": 15,
+    "intr_rate": 2.6,
+    "intr_rate2": 3.1,
+    "save_trm": 12,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 58,
+  "fields": {
+    "product": 16,
+    "intr_rate": 1.9,
+    "intr_rate2": 2.0,
+    "save_trm": 1,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 59,
+  "fields": {
+    "product": 16,
+    "intr_rate": 2.45,
+    "intr_rate2": 2.55,
+    "save_trm": 3,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 60,
+  "fields": {
+    "product": 16,
+    "intr_rate": 2.35,
+    "intr_rate2": 2.8,
+    "save_trm": 6,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 61,
+  "fields": {
+    "product": 16,
+    "intr_rate": 2.35,
+    "intr_rate2": 2.45,
+    "save_trm": 12,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 62,
+  "fields": {
+    "product": 17,
+    "intr_rate": 2.0,
+    "intr_rate2": 2.5,
+    "save_trm": 3,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 63,
+  "fields": {
+    "product": 17,
+    "intr_rate": 2.05,
+    "intr_rate2": 2.55,
+    "save_trm": 6,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 64,
+  "fields": {
+    "product": 17,
+    "intr_rate": 2.05,
+    "intr_rate2": 2.55,
+    "save_trm": 12,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 65,
+  "fields": {
+    "product": 17,
+    "intr_rate": 2.05,
+    "intr_rate2": 2.55,
+    "save_trm": 24,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 66,
+  "fields": {
+    "product": 18,
+    "intr_rate": 2.05,
+    "intr_rate2": 2.95,
+    "save_trm": 3,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 67,
+  "fields": {
+    "product": 18,
+    "intr_rate": 2.05,
+    "intr_rate2": 2.95,
+    "save_trm": 6,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 68,
+  "fields": {
+    "product": 18,
+    "intr_rate": 2.0,
+    "intr_rate2": 3.15,
+    "save_trm": 12,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 69,
+  "fields": {
+    "product": 19,
+    "intr_rate": 2.55,
+    "intr_rate2": 2.95,
+    "save_trm": 6,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 70,
+  "fields": {
+    "product": 19,
+    "intr_rate": 2.75,
+    "intr_rate2": 3.15,
+    "save_trm": 12,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 71,
+  "fields": {
+    "product": 19,
+    "intr_rate": 2.15,
+    "intr_rate2": 2.55,
+    "save_trm": 24,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 72,
+  "fields": {
+    "product": 20,
+    "intr_rate": 2.25,
+    "intr_rate2": 2.45,
+    "save_trm": 12,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 73,
+  "fields": {
+    "product": 20,
+    "intr_rate": 2.1,
+    "intr_rate2": 2.3,
+    "save_trm": 24,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 74,
+  "fields": {
+    "product": 20,
+    "intr_rate": 2.05,
+    "intr_rate2": 2.25,
+    "save_trm": 36,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 75,
+  "fields": {
+    "product": 21,
+    "intr_rate": 2.64,
+    "intr_rate2": 2.64,
+    "save_trm": 6,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 76,
+  "fields": {
+    "product": 21,
+    "intr_rate": 2.63,
+    "intr_rate2": 2.63,
+    "save_trm": 12,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 77,
+  "fields": {
+    "product": 21,
+    "intr_rate": 2.7,
+    "intr_rate2": 2.7,
+    "save_trm": 24,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 78,
+  "fields": {
+    "product": 21,
+    "intr_rate": 2.9,
+    "intr_rate2": 2.9,
+    "save_trm": 36,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 79,
+  "fields": {
+    "product": 22,
+    "intr_rate": 2.31,
+    "intr_rate2": 2.31,
+    "save_trm": 1,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 80,
+  "fields": {
+    "product": 22,
+    "intr_rate": 2.55,
+    "intr_rate2": 2.55,
+    "save_trm": 3,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 81,
+  "fields": {
+    "product": 22,
+    "intr_rate": 2.69,
+    "intr_rate2": 2.69,
+    "save_trm": 6,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 82,
+  "fields": {
+    "product": 22,
+    "intr_rate": 2.73,
+    "intr_rate2": 2.73,
+    "save_trm": 12,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 83,
+  "fields": {
+    "product": 23,
+    "intr_rate": 2.45,
+    "intr_rate2": 2.45,
+    "save_trm": 1,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 84,
+  "fields": {
+    "product": 23,
+    "intr_rate": 2.65,
+    "intr_rate2": 2.65,
+    "save_trm": 3,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 85,
+  "fields": {
+    "product": 23,
+    "intr_rate": 2.8,
+    "intr_rate2": 2.8,
+    "save_trm": 6,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 86,
+  "fields": {
+    "product": 23,
+    "intr_rate": 2.9,
+    "intr_rate2": 2.9,
+    "save_trm": 12,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 87,
+  "fields": {
+    "product": 23,
+    "intr_rate": 2.4,
+    "intr_rate2": 2.4,
+    "save_trm": 24,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 88,
+  "fields": {
+    "product": 23,
+    "intr_rate": 2.4,
+    "intr_rate2": 2.4,
+    "save_trm": 36,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 89,
+  "fields": {
+    "product": 24,
+    "intr_rate": 1.8,
+    "intr_rate2": 2.45,
+    "save_trm": 1,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 90,
+  "fields": {
+    "product": 24,
+    "intr_rate": 2.0,
+    "intr_rate2": 2.65,
+    "save_trm": 3,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 91,
+  "fields": {
+    "product": 24,
+    "intr_rate": 2.1,
+    "intr_rate2": 2.8,
+    "save_trm": 6,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 92,
+  "fields": {
+    "product": 24,
+    "intr_rate": 2.15,
+    "intr_rate2": 2.85,
+    "save_trm": 12,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 93,
+  "fields": {
+    "product": 24,
+    "intr_rate": 2.2,
+    "intr_rate2": 2.4,
+    "save_trm": 24,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 94,
+  "fields": {
+    "product": 24,
+    "intr_rate": 2.2,
+    "intr_rate2": 2.4,
+    "save_trm": 36,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 95,
+  "fields": {
+    "product": 25,
+    "intr_rate": 1.8,
+    "intr_rate2": 2.5,
+    "save_trm": 1,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 96,
+  "fields": {
+    "product": 25,
+    "intr_rate": 2.0,
+    "intr_rate2": 2.65,
+    "save_trm": 3,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 97,
+  "fields": {
+    "product": 25,
+    "intr_rate": 2.0,
+    "intr_rate2": 2.9,
+    "save_trm": 6,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 98,
+  "fields": {
+    "product": 25,
+    "intr_rate": 2.05,
+    "intr_rate2": 3.0,
+    "save_trm": 12,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 99,
+  "fields": {
+    "product": 26,
+    "intr_rate": 1.8,
+    "intr_rate2": 2.45,
+    "save_trm": 1,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 100,
+  "fields": {
+    "product": 26,
+    "intr_rate": 2.0,
+    "intr_rate2": 2.6,
+    "save_trm": 3,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 101,
+  "fields": {
+    "product": 26,
+    "intr_rate": 2.0,
+    "intr_rate2": 2.75,
+    "save_trm": 6,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 102,
+  "fields": {
+    "product": 26,
+    "intr_rate": 2.05,
+    "intr_rate2": 2.8,
+    "save_trm": 12,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 103,
+  "fields": {
+    "product": 26,
+    "intr_rate": 2.1,
+    "intr_rate2": 2.4,
+    "save_trm": 24,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 104,
+  "fields": {
+    "product": 26,
+    "intr_rate": 2.1,
+    "intr_rate2": 2.4,
+    "save_trm": 36,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 105,
+  "fields": {
+    "product": 27,
+    "intr_rate": 2.35,
+    "intr_rate2": 2.45,
+    "save_trm": 1,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 106,
+  "fields": {
+    "product": 27,
+    "intr_rate": 2.6,
+    "intr_rate2": 2.7,
+    "save_trm": 3,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 107,
+  "fields": {
+    "product": 27,
+    "intr_rate": 2.8,
+    "intr_rate2": 2.9,
+    "save_trm": 6,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 108,
+  "fields": {
+    "product": 27,
+    "intr_rate": 2.8,
+    "intr_rate2": 2.9,
+    "save_trm": 12,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 109,
+  "fields": {
+    "product": 28,
+    "intr_rate": 2.15,
+    "intr_rate2": 2.55,
+    "save_trm": 12,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 110,
+  "fields": {
+    "product": 28,
+    "intr_rate": 2.1,
+    "intr_rate2": 2.5,
+    "save_trm": 24,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 111,
+  "fields": {
+    "product": 28,
+    "intr_rate": 2.05,
+    "intr_rate2": 2.45,
+    "save_trm": 36,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 112,
+  "fields": {
+    "product": 29,
+    "intr_rate": 2.4,
+    "intr_rate2": 2.4,
+    "save_trm": 1,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 113,
+  "fields": {
+    "product": 29,
+    "intr_rate": 2.7,
+    "intr_rate2": 2.7,
+    "save_trm": 3,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 114,
+  "fields": {
+    "product": 29,
+    "intr_rate": 2.9,
+    "intr_rate2": 2.9,
+    "save_trm": 6,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 115,
+  "fields": {
+    "product": 29,
+    "intr_rate": 2.9,
+    "intr_rate2": 2.9,
+    "save_trm": 12,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 116,
+  "fields": {
+    "product": 29,
+    "intr_rate": 2.6,
+    "intr_rate2": 2.6,
+    "save_trm": 24,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 117,
+  "fields": {
+    "product": 29,
+    "intr_rate": 2.6,
+    "intr_rate2": 2.6,
+    "save_trm": 36,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 118,
+  "fields": {
+    "product": 30,
+    "intr_rate": 2.15,
+    "intr_rate2": 2.6,
+    "save_trm": 12,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 119,
+  "fields": {
+    "product": 31,
+    "intr_rate": 1.8,
+    "intr_rate2": 2.45,
+    "save_trm": 1,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 120,
+  "fields": {
+    "product": 31,
+    "intr_rate": 1.9,
+    "intr_rate2": 2.65,
+    "save_trm": 3,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 121,
+  "fields": {
+    "product": 31,
+    "intr_rate": 2.0,
+    "intr_rate2": 2.8,
+    "save_trm": 6,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 122,
+  "fields": {
+    "product": 31,
+    "intr_rate": 2.05,
+    "intr_rate2": 2.85,
+    "save_trm": 12,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 123,
+  "fields": {
+    "product": 31,
+    "intr_rate": 2.05,
+    "intr_rate2": 2.4,
+    "save_trm": 24,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 124,
+  "fields": {
+    "product": 31,
+    "intr_rate": 2.05,
+    "intr_rate2": 2.4,
+    "save_trm": 36,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 125,
+  "fields": {
+    "product": 32,
+    "intr_rate": 2.5,
+    "intr_rate2": 2.5,
+    "save_trm": 1,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 126,
+  "fields": {
+    "product": 32,
+    "intr_rate": 2.65,
+    "intr_rate2": 2.65,
+    "save_trm": 3,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 127,
+  "fields": {
+    "product": 32,
+    "intr_rate": 2.86,
+    "intr_rate2": 2.86,
+    "save_trm": 6,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 128,
+  "fields": {
+    "product": 32,
+    "intr_rate": 2.86,
+    "intr_rate2": 2.86,
+    "save_trm": 12,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 129,
+  "fields": {
+    "product": 32,
+    "intr_rate": 2.45,
+    "intr_rate2": 2.45,
+    "save_trm": 24,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 130,
+  "fields": {
+    "product": 32,
+    "intr_rate": 2.45,
+    "intr_rate2": 2.45,
+    "save_trm": 36,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 131,
+  "fields": {
+    "product": 33,
+    "intr_rate": 2.65,
+    "intr_rate2": 3.0,
+    "save_trm": 6,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 132,
+  "fields": {
+    "product": 33,
+    "intr_rate": 2.65,
+    "intr_rate2": 3.0,
+    "save_trm": 12,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 133,
+  "fields": {
+    "product": 34,
+    "intr_rate": 3.0,
+    "intr_rate2": 3.0,
+    "save_trm": 3,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 134,
+  "fields": {
+    "product": 34,
+    "intr_rate": 3.0,
+    "intr_rate2": 3.0,
+    "save_trm": 6,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 135,
+  "fields": {
+    "product": 34,
+    "intr_rate": 3.0,
+    "intr_rate2": 3.0,
+    "save_trm": 12,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 136,
+  "fields": {
+    "product": 35,
+    "intr_rate": 2.05,
+    "intr_rate2": 3.1,
+    "save_trm": 12,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 137,
+  "fields": {
+    "product": 36,
+    "intr_rate": 2.6,
+    "intr_rate2": 2.6,
+    "save_trm": 1,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 138,
+  "fields": {
+    "product": 36,
+    "intr_rate": 2.75,
+    "intr_rate2": 2.75,
+    "save_trm": 3,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 139,
+  "fields": {
+    "product": 36,
+    "intr_rate": 2.95,
+    "intr_rate2": 2.95,
+    "save_trm": 6,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 140,
+  "fields": {
+    "product": 36,
+    "intr_rate": 2.95,
+    "intr_rate2": 2.95,
+    "save_trm": 12,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 141,
+  "fields": {
+    "product": 36,
+    "intr_rate": 2.6,
+    "intr_rate2": 2.6,
+    "save_trm": 24,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 142,
+  "fields": {
+    "product": 36,
+    "intr_rate": 2.6,
+    "intr_rate2": 2.6,
+    "save_trm": 36,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 143,
+  "fields": {
+    "product": 37,
+    "intr_rate": 2.5,
+    "intr_rate2": 2.5,
+    "save_trm": 3,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 144,
+  "fields": {
+    "product": 37,
+    "intr_rate": 2.5,
+    "intr_rate2": 2.5,
+    "save_trm": 6,
+    "rsrv_type": null
+  }
+},
+{
+  "model": "finances.depositoptions",
+  "pk": 145,
+  "fields": {
+    "product": 37,
+    "intr_rate": 2.8,
+    "intr_rate2": 2.8,
+    "save_trm": 12,
+    "rsrv_type": null
+  }
+}
+]

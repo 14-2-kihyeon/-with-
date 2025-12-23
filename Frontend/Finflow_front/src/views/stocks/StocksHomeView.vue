@@ -52,7 +52,7 @@
     <div class="card">
       <div class="row-between">
         <h2 class="card-title">오늘의 추천</h2>
-        <button class="btn ghost" @click="store.fetchRecommendations({ top: 20, auto: 1, include_news: 1 })">
+        <button class="btn ghost" @click="store.fetchRecommendations({ top: 5, auto: 1, include_news: 1 })">
           새로고침
         </button>
       </div>
@@ -60,7 +60,7 @@
       <div v-if="store.reco.detail" class="hint">{{ store.reco.detail }}</div>
 
       <ul class="reco-list">
-        <li v-for="r in store.reco.recommendations" :key="r.code" class="reco-item">
+        <li v-for="r in store.reco.recommendations.slice(0, 5)" :key="r.code" class="reco-item">
           <div class="left">
             <div class="name">{{ r.name }}</div>
             <div class="meta">{{ r.code }} · score {{ r.score }}</div>
@@ -88,8 +88,8 @@ import StocksMarketDashboard from "@/components/stocks/StocksMarketDashboard.vue
 const store = useStocksStore()
 
 onMounted(() => {
-  // 들어오자마자 추천 호출
-  store.fetchRecommendations({ top: 20, auto: 1, include_news: 1 })
+  // 들어오자마자 추천 호출 (5개만)
+  store.fetchRecommendations({ top: 5, auto: 1, include_news: 1 })
 })
 </script>
 
