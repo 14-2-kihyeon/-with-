@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     "kakaomap",
     "youtube",
     "gold_silver",
+    "chatbot",
 
     "corsheaders",
     "django.contrib.sites",   # allauth 쓰면 필요
