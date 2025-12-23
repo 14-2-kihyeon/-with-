@@ -1,169 +1,162 @@
 <template>
-  <div class="container py-5">
-    <div class="row">
-      <div class="col-lg-8 mx-auto">
-        <!-- 뒤로가기 버튼 -->
-        <div class="mb-3">
-          <RouterLink to="/posts" class="btn btn-outline-secondary btn-sm">
-            <i class="bi bi-arrow-left"></i> 목록으로
-          </RouterLink>
-        </div>
+  <div class="community-page">
+    <!-- 헤더 -->
+    <div class="page-nav">
+      <RouterLink to="/posts" class="btn-back">
+        ← 목록으로
+      </RouterLink>
+    </div>
 
-        <!-- 게시글 카드 -->
-        <div v-if="p" class="card shadow-sm mb-4">
-          <!-- 헤더 -->
-          <div class="card-header bg-primary text-white py-3">
-            <h2 class="mb-0">{{ p.title }}</h2>
-          </div>
+    <!-- 로딩 -->
+    <div v-if="!p" class="loading-state">
+      <div class="loading-spinner">⏳</div>
+      <div class="loading-text">불러오는 중...</div>
+    </div>
 
-          <!-- 작성자 정보 -->
-          <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
-              <div class="d-flex align-items-center">
-                <div class="avatar-circle bg-primary text-white me-3">
-                  {{ p.user?.username?.[0]?.toUpperCase() }}
-                </div>
-                <div>
-                  <h6 class="mb-0">{{ p.user?.username }}</h6>
-                  <small class="text-muted">
-                    <i class="bi bi-clock"></i>
-                    {{ formatDate(p.created_at) }}
-                  </small>
-                </div>
+    <!-- 게시글 상세 -->
+    <div v-else>
+      <!-- 게시글 카드 -->
+      <div class="post-card">
+        <!-- 헤더 -->
+        <div class="post-header">
+          <h1 class="post-title">{{ p.title }}</h1>
+          
+          <div class="post-info">
+            <div class="author-info">
+              <div class="author-avatar">
+                {{ p.user?.username?.[0]?.toUpperCase() }}
               </div>
-
-              <!-- 작성자 버튼 -->
-              <div v-if="isOwner" class="btn-group">
-                <RouterLink 
-                  :to="`/posts/${p.pk}/edit`" 
-                  class="btn btn-sm btn-outline-primary"
-                >
-                  <i class="bi bi-pencil"></i> 수정
-                </RouterLink>
-                <button 
-                  @click="onDelete" 
-                  class="btn btn-sm btn-outline-danger"
-                >
-                  <i class="bi bi-trash"></i> 삭제
-                </button>
-              </div>
-            </div>
-
-            <!-- 본문 -->
-            <div class="post-content">
-              <p class="fs-5 lh-lg">{{ p.content }}</p>
-            </div>
-          </div>
-
-          <!-- 좋아요/공유 (선택사항) -->
-          <div class="card-footer bg-light">
-            <div class="d-flex gap-2">
-              <button class="btn btn-sm btn-outline-secondary">
-                <i class="bi bi-hand-thumbs-up"></i> 좋아요
-              </button>
-              <button class="btn btn-sm btn-outline-secondary">
-                <i class="bi bi-share"></i> 공유
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- 댓글 섹션 -->
-        <div v-if="p" class="card shadow-sm">
-          <div class="card-header bg-white py-3">
-            <h4 class="mb-0">
-              <i class="bi bi-chat-dots"></i>
-              댓글 
-              <span class="badge bg-primary ms-2">{{ p.comments?.length || 0 }}</span>
-            </h4>
-          </div>
-
-          <div class="card-body">
-            <!-- 댓글 작성 폼 -->
-            <div v-if="auth.isLogin" class="mb-4">
-              <div class="card bg-light">
-                <div class="card-body">
-                  <textarea
-                    v-model="comment"
-                    class="form-control mb-3"
-                    rows="3"
-                    placeholder="금융 상품에 대한 의견이나 조언을 나눠주세요..."
-                    maxlength="200"
-                  ></textarea>
-                  <div class="d-flex justify-content-between align-items-center">
-                    <small class="text-muted">
-                      {{ comment.length }}/200
-                    </small>
-                    <button 
-                      @click="onCreateComment" 
-                      class="btn btn-primary"
-                      :disabled="!comment.trim()"
-                    >
-                      <i class="bi bi-send"></i> 댓글 작성
-                    </button>
-                  </div>
+              <div class="author-details">
+                <div class="author-name">{{ p.user?.username }}</div>
+                <div class="post-date">
+                  <span class="date-icon">🕐</span>
+                  {{ formatDate(p.created_at) }}
                 </div>
               </div>
             </div>
 
-            <!-- 로그인 안내 -->
-            <div v-else class="alert alert-warning d-flex align-items-center" role="alert">
-              <i class="bi bi-exclamation-triangle-fill me-3"></i>
-              <div>
-                댓글을 작성하려면 
-                <RouterLink to="/login" class="alert-link">로그인</RouterLink>
-                이 필요합니다.
-              </div>
-            </div>
-
-            <!-- 댓글 목록 -->
-            <div class="comments-list">
-              <!-- 댓글 없을 때 -->
-              <div v-if="!p.comments || p.comments.length === 0" class="text-center py-5 text-muted">
-                <i class="bi bi-chat display-4"></i>
-                <p class="mt-3">아직 댓글이 없습니다. 첫 댓글을 작성해보세요!</p>
-              </div>
-
-              <!-- 댓글 항목 -->
-              <div
-                v-for="c in p.comments"
-                :key="c.pk"
-                class="comment-item mb-3 p-3 border rounded"
+            <!-- 작성자 버튼 -->
+            <div v-if="isOwner" class="post-actions">
+              <RouterLink 
+                :to="`/posts/${p.pk}/edit`" 
+                class="btn-edit"
               >
-                <div class="d-flex justify-content-between align-items-start">
-                  <div class="flex-grow-1">
-                    <div class="d-flex align-items-center mb-2">
-                      <div class="avatar-circle-sm bg-secondary text-white me-2">
-                        {{ c.user?.username?.[0]?.toUpperCase() }}
-                      </div>
-                      <div>
-                        <strong>{{ c.user?.username }}</strong>
-                        <small class="text-muted ms-2">
-                          {{ formatDate(c.created_at) }}
-                        </small>
-                      </div>
-                    </div>
-                    <p class="mb-0">{{ c.content }}</p>
-                  </div>
-
-                  <!-- 댓글 삭제 버튼 -->
-                  <button
-                    v-if="c.user?.pk === auth.user?.pk"
-                    @click="onDeleteComment(c.pk)"
-                    class="btn btn-sm btn-outline-danger ms-2"
-                  >
-                    <i class="bi bi-trash"></i>
-                  </button>
-                </div>
-              </div>
+                <span class="btn-icon">✏️</span>
+                수정
+              </RouterLink>
+              <button 
+                @click="onDelete" 
+                class="btn-delete"
+              >
+                <span class="btn-icon">🗑️</span>
+                삭제
+              </button>
             </div>
           </div>
         </div>
 
-        <!-- 로딩 -->
-        <div v-else class="text-center py-5">
-          <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">로딩 중...</span>
+        <!-- 본문 -->
+        <div class="post-content">
+          <p>{{ p.content }}</p>
+        </div>
+
+        <!-- 좋아요/공유 -->
+        <div class="post-footer">
+          <button class="action-btn">
+            <span class="action-icon">👍</span>
+            좋아요
+          </button>
+          <button class="action-btn">
+            <span class="action-icon">🔗</span>
+            공유
+          </button>
+        </div>
+      </div>
+
+      <!-- 댓글 섹션 -->
+      <div class="comments-card">
+        <div class="comments-header">
+          <h2 class="comments-title">
+            <span class="title-icon">💬</span>
+            댓글
+            <span class="comment-count">{{ p.comments?.length || 0 }}</span>
+          </h2>
+        </div>
+
+        <div class="comments-body">
+          <!-- 댓글 작성 폼 (로그인 시) -->
+          <div v-if="auth.isLogin" class="comment-form">
+            <textarea
+              v-model="comment"
+              class="comment-input"
+              rows="3"
+              placeholder="금융 상품에 대한 의견이나 조언을 나눠주세요..."
+              maxlength="200"
+            ></textarea>
+            <div class="comment-form-footer">
+              <div class="char-count">{{ comment.length }}/200</div>
+              <button 
+                @click="onCreateComment" 
+                class="btn-primary"
+                :disabled="!comment.trim()"
+              >
+                <span class="btn-icon">📤</span>
+                댓글 작성
+              </button>
+            </div>
+          </div>
+
+          <!-- 로그인 안내 -->
+          <div v-else class="login-notice">
+            <span class="notice-icon">🔒</span>
+            <div class="notice-text">
+              댓글을 작성하려면 
+              <RouterLink to="/login" class="notice-link">로그인</RouterLink>
+              이 필요합니다.
+            </div>
+          </div>
+
+          <!-- 댓글 목록 -->
+          <div class="comments-list">
+            <!-- 댓글 없을 때 -->
+            <div v-if="!p.comments || p.comments.length === 0" class="empty-comments">
+              <div class="empty-icon">💬</div>
+              <div class="empty-text">아직 댓글이 없습니다</div>
+              <div class="empty-hint">첫 댓글을 작성해보세요!</div>
+            </div>
+
+            <!-- 댓글 항목 -->
+            <div
+              v-for="c in p.comments"
+              :key="c.pk"
+              class="comment-item"
+            >
+              <div class="comment-author">
+                <div class="comment-avatar">
+                  {{ c.user?.username?.[0]?.toUpperCase() }}
+                </div>
+                <div class="comment-meta">
+                  <div class="comment-username">{{ c.user?.username }}</div>
+                  <div class="comment-date">
+                    {{ formatDate(c.created_at) }}
+                  </div>
+                </div>
+              </div>
+
+              <div class="comment-content">
+                {{ c.content }}
+              </div>
+
+              <!-- 댓글 삭제 버튼 -->
+              <button
+                v-if="c.user?.pk === auth.user?.pk"
+                @click="onDeleteComment(c.pk)"
+                class="btn-delete-comment"
+              >
+                <span class="btn-icon">🗑️</span>
+                삭제
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -189,7 +182,6 @@ const isOwner = computed(() => {
   return auth.user?.pk && p.value?.user?.pk === auth.user.pk
 })
 
-// 날짜 포맷팅
 const formatDate = (dateString) => {
   const date = new Date(dateString)
   const now = new Date()
@@ -249,57 +241,534 @@ const onDeleteComment = async (commentPk) => {
 </script>
 
 <style scoped>
-.avatar-circle {
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.5rem;
-  font-weight: bold;
+/* 페이지 래퍼 */
+.community-page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 20px;
+  background: #f9fafb;
+  min-height: 100vh;
 }
 
-.avatar-circle-sm {
-  width: 32px;
-  height: 32px;
+/* 페이지 네비게이션 */
+.page-nav {
+  margin-bottom: 16px;
+}
+
+.btn-back {
+  display: inline-flex;
+  align-items: center;
+  padding: 10px 18px;
+  background: #ffffff;
+  border: 1.5px solid #d1d5db;
+  border-radius: 8px;
+  color: #6b7280;
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.15s ease;
+}
+
+.btn-back:hover {
+  border-color: #9ca3af;
+  background: #f8fafc;
+}
+
+/* 로딩 상태 */
+.loading-state {
+  text-align: center;
+  padding: 80px 20px;
+}
+
+.loading-spinner {
+  font-size: 3rem;
+  margin-bottom: 16px;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.loading-text {
+  font-size: 1rem;
+  color: #6b7280;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* 게시글 카드 */
+.post-card {
+  background: #ffffff;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e5e8eb;
+  margin-bottom: 20px;
+}
+
+.post-header {
+  padding: 28px;
+  background: linear-gradient(135deg, #00C73C 0%, #00A832 100%);
+  color: #ffffff;
+}
+
+.post-title {
+  margin: 0 0 20px 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.post-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.author-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.author-avatar {
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.875rem;
-  font-weight: bold;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.author-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.author-name {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.post-date {
+  font-size: 0.85rem;
+  opacity: 0.9;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.date-icon {
+  font-size: 0.9rem;
+}
+
+.post-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-edit,
+.btn-delete {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-decoration: none;
+}
+
+.btn-edit {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.btn-edit:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.btn-delete {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ffffff;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.btn-delete:hover {
+  background: rgba(239, 68, 68, 0.3);
 }
 
 .post-content {
-  font-size: 1.1rem;
+  padding: 32px 28px;
+  font-size: 1.05rem;
   line-height: 1.8;
+  color: #191f28;
   white-space: pre-wrap;
   word-break: break-word;
 }
 
+.post-footer {
+  padding: 16px 28px;
+  background: #f8fafc;
+  border-top: 1px solid #e5e8eb;
+  display: flex;
+  gap: 10px;
+}
+
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  background: #ffffff;
+  border: 1.5px solid #d1d5db;
+  border-radius: 8px;
+  color: #6b7280;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.action-btn:hover {
+  border-color: #00C73C;
+  color: #00C73C;
+}
+
+.action-icon {
+  font-size: 1rem;
+}
+
+/* 댓글 카드 */
+.comments-card {
+  background: #ffffff;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e5e8eb;
+}
+
+.comments-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid #e5e8eb;
+}
+
+.comments-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #191f28;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.title-icon {
+  font-size: 1.2rem;
+}
+
+.comment-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 8px;
+  background: #00C73C;
+  color: #ffffff;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.comments-body {
+  padding: 20px 24px;
+}
+
+/* 댓글 작성 폼 */
+.comment-form {
+  background: #f8fafc;
+  border: 1px solid #e5e8eb;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 24px;
+}
+
+.comment-input {
+  width: 100%;
+  padding: 12px;
+  border: 1.5px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  color: #191f28;
+  background: #ffffff;
+  resize: vertical;
+  font-family: inherit;
+  line-height: 1.5;
+  margin-bottom: 12px;
+  transition: all 0.15s ease;
+}
+
+.comment-input:focus {
+  outline: none;
+  border-color: #00C73C;
+  box-shadow: 0 0 0 3px rgba(0, 199, 60, 0.1);
+}
+
+.comment-input::placeholder {
+  color: #9ca3af;
+}
+
+.comment-form-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.char-count {
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+/* 로그인 안내 */
+.login-notice {
+  background: #fef3c7;
+  border: 1px solid #fbbf24;
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.notice-icon {
+  font-size: 1.2rem;
+}
+
+.notice-text {
+  font-size: 0.9rem;
+  color: #92400e;
+}
+
+.notice-link {
+  color: #00C73C;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.notice-link:hover {
+  text-decoration: underline;
+}
+
+/* 댓글 리스트 */
+.comments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.empty-comments {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.empty-icon {
+  font-size: 3rem;
+  margin-bottom: 12px;
+  opacity: 0.5;
+}
+
+.empty-text {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #191f28;
+  margin-bottom: 4px;
+}
+
+.empty-hint {
+  font-size: 0.9rem;
+  color: #6b7280;
+}
+
 .comment-item {
-  background-color: #f8f9fa;
-  transition: all 0.2s ease;
+  background: #f8fafc;
+  border: 1px solid #e5e8eb;
+  border-radius: 12px;
+  padding: 16px;
+  position: relative;
+  transition: all 0.15s ease;
 }
 
 .comment-item:hover {
-  background-color: #e9ecef;
-  transform: translateX(5px);
+  background: #f1f3f5;
 }
 
-.card {
+.comment-author {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.comment-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #00C73C;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.comment-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.comment-username {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #191f28;
+}
+
+.comment-date {
+  font-size: 0.8rem;
+  color: #9ca3af;
+}
+
+.comment-content {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: #4b5563;
+  padding-right: 60px;
+}
+
+.btn-delete-comment {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-delete-comment:hover {
+  background: #fecaca;
+}
+
+/* 버튼 */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 18px;
+  background: #00C73C;
+  color: #ffffff;
   border: none;
-  border-radius: 12px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
 }
 
-.comments-list {
-  max-height: 600px;
-  overflow-y: auto;
+.btn-primary:hover:not(:disabled) {
+  background: #00A832;
 }
 
-.form-control:focus {
-  border-color: #0d6efd;
-  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-icon {
+  font-size: 0.95rem;
+}
+
+/* 반응형 */
+@media (max-width: 968px) {
+  .community-page {
+    padding: 12px;
+  }
+
+  .post-header {
+    padding: 20px;
+  }
+
+  .post-title {
+    font-size: 1.3rem;
+  }
+
+  .post-info {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .post-content {
+    padding: 24px 20px;
+  }
+
+  .post-footer,
+  .comments-header,
+  .comments-body {
+    padding: 16px 20px;
+  }
+
+  .comment-content {
+    padding-right: 0;
+    margin-bottom: 40px;
+  }
+
+  .btn-delete-comment {
+    top: auto;
+    bottom: 12px;
+    right: 12px;
+  }
+}
+
+@media (max-width: 640px) {
+  .post-title {
+    font-size: 1.2rem;
+  }
+
+  .author-avatar {
+    width: 40px;
+    height: 40px;
+    font-size: 1.1rem;
+  }
+
+  .post-actions {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .btn-edit,
+  .btn-delete {
+    width: 100%;
+    justify-content: center;
+  }
 }
 </style>
