@@ -1,15 +1,16 @@
 <template>
   <div class="yt-page">
     <!-- 헤더 -->
-    <div class="yt-header">
-      <div class="yt-header-content">
-        <div class="yt-title-group">
-          <span class="yt-title-icon">📌</span>
-          <h2 class="yt-title">나중에 볼 영상</h2>
-        </div>
-        <a class="yt-back" href="javascript:void(0)" @click="goBack">← 뒤로가기</a>
-      </div>
-    </div>
+    <header class="yt-header">
+      <button class="btn-back-icon" @click="goBack" aria-label="뒤로가기">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+      </button>
+      <h2 class="yt-header-title">
+        <span class="yt-header-emoji">📌</span> 나중에 볼 영상
+      </h2>
+    </header>
 
     <!-- 빈 상태 -->
     <div v-if="savedVideos.length === 0" class="yt-empty">

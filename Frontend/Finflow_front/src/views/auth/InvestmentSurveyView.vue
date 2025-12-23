@@ -52,7 +52,7 @@
               :class="{ selected: basicInfo.gender === 'M' }"
               @click="basicInfo.gender = 'M'"
             >
-              <span class="gender-icon">👨</span>
+              <span class="gender-icon">🧑🏻</span>
               <span class="gender-text">남성</span>
             </button>
             <button
@@ -61,7 +61,7 @@
               :class="{ selected: basicInfo.gender === 'F' }"
               @click="basicInfo.gender = 'F'"
             >
-              <span class="gender-icon">👩</span>
+              <span class="gender-icon">👧🏻</span>
               <span class="gender-text">여성</span>
             </button>
           </div>
@@ -117,8 +117,8 @@
             <option value="주택구매">🏡 주택 구매</option>
             <option value="결혼자금">💒 결혼 자금</option>
             <option value="자녀교육">🎓 자녀 교육비</option>
-            <option value="노후준비">🌅 노후 준비</option>
-            <option value="기타">📌 기타</option>
+            <option value="노후준비">🎅🏻 노후 준비</option>
+            <option value="기타">🎸 기타</option>
           </select>
         </div>
 
@@ -198,21 +198,21 @@
           }"
         >
           <div class="result-title">
-            <span class="result-type">당신의 투자 성향</span>
+            <!-- <span class="result-type">당신의 투자 성향</span> -->
           </div>
         </div>
 
 
         <div class="result-body">
           <div class="result-section">
-            <div class="section-icon">💡</div>
-            <h3>투자 성향 설명</h3>
+            <div class="section-icon"></div>
+            <h3>💡 투자 성향 설명</h3>
             <p class="section-text">{{ result.description }}</p>
           </div>
 
           <div class="result-section">
-            <div class="section-icon">⭐</div>
-            <h3>주요 특징</h3>
+            <div class="section-icon"></div>
+            <h3>⭐ 주요 특징</h3>
             <ul class="characteristics-list">
               <li v-for="(char, index) in result.characteristics" :key="index">
                 <span class="char-icon">✓</span>
@@ -222,8 +222,8 @@
           </div>
 
           <div class="result-section recommendation-section">
-            <div class="section-icon">🎯</div>
-            <h3>추천 금융 상품</h3>
+            <div class="section-icon"></div>
+            <h3>🎯 추천 금융 상품</h3>
             <div class="products-tags">
               <span
                 v-for="(product, index) in result.recommended_products?.split(', ') || []"
@@ -460,7 +460,7 @@ onMounted(() => {
 .header-badge {
   display: inline-block;
   padding: 6px 16px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #667eea 0%, #3d66eb 100%);
   color: white;
   font-size: 12px;
   font-weight: 700;
@@ -473,7 +473,7 @@ onMounted(() => {
   font-size: 36px;
   font-weight: 800;
   margin-bottom: 16px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #667eea 0%, #0e0d0d 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -506,7 +506,7 @@ onMounted(() => {
 .progress-fill {
   position: relative;
   height: 100%;
-  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(90deg, #667eea 0%, #3d66eb 100%);
   transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   border-radius: 100px;
 }
@@ -726,7 +726,7 @@ onMounted(() => {
   display: inline-block;
   padding: 6px 14px;
   background: #f3f0ff;
-  color: #7c3aed;
+  color: #3d66eb;
   font-size: 12px;
   font-weight: 700;
   border-radius: 20px;
@@ -846,7 +846,7 @@ onMounted(() => {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #667eea 0%, #3d66eb 100%);
   color: white;
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
@@ -934,8 +934,8 @@ onMounted(() => {
   inset: 0;
   background: linear-gradient(
     to top,
-    rgba(0,0,0,0.25),
-    rgba(0,0,0,0.15),
+    rgba(0,0,0,0),
+    rgba(0,0,0,0),
     transparent
   );
 }
@@ -967,7 +967,7 @@ onMounted(() => {
 .result-type {
   font-size: 20px;
   font-weight: 800;
-  color: rgb(255, 255, 255);
+  color: rgb(19, 18, 18);
   margin: 0;
   text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
 }
@@ -1046,7 +1046,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #10b981;
+  background: #3d66eb;
   color: white;
   border-radius: 50%;
   font-size: 12px;

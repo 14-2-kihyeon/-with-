@@ -5,7 +5,7 @@
 </template>
 
 <script setup>
-import "@/assets/styles/kakaomap.css"
+// import "@/assets/styles/kakaomap.css"
 </script>
 
 

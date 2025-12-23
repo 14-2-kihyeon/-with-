@@ -25,7 +25,7 @@ import { useRoute, useRouter } from "vue-router"
 import NavBar from "@/components/common/NavBar.vue"
 import HeroSection from "@/components/main/HeroSection.vue";
 import PopUp from "@/components/common/PopUp.vue";
-import popupImage from "@/assets/main/popup.png" 
+import popupImage from "@/assets/main/popup3.png" 
 
 const promoImage = popupImage
 

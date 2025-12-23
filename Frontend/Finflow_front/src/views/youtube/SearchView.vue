@@ -1,31 +1,26 @@
 <template>
   <div class="yt-page">
-    <!-- 헤더 -->
-    <div class="yt-header">
-      <div class="yt-header-content">
-        <div class="yt-title-group">
-          <span class="yt-title-icon">▶️</span>
-          <h2 class="yt-title">YouTube 검색</h2>
-        </div>
-        <a class="yt-back" href="javascript:void(0)" @click="goBack">← 뒤로가기</a>
+    <header class="yt-header">
+      <div class="yt-title-group">
+        <span class="yt-title-icon">🔴</span>
+        <h2 class="yt-title">YouTube 검색</h2>
       </div>
-    </div>
+      <a class="yt-back" href="javascript:void(0)" @click="goBack">뒤로가기</a>
+    </header>
 
-    <!-- 검색바 카드 -->
     <div class="yt-search-card">
       <div class="yt-searchbar">
         <input
-          placeholder="검색어를 입력하세요"
+          placeholder="검색어를 입력하세요 (예: 재테크, 주식)"
           v-model.trim="query"
           @keyup.enter="submitSearch"
         />
         <button class="yt-btn primary" @click="submitSearch" :disabled="loading || !query">
-          {{ loading ? "검색중..." : "검색" }}
+          {{ loading ? "..." : "검색" }}
         </button>
       </div>
 
-      <!-- 빠른 액세스 버튼 -->
-      <div class="yt-actions" style="margin-top: 12px; margin-bottom: 0;">
+      <div class="yt-actions">
         <RouterLink class="yt-btn soft" :to="{ name: 'youtube_saved' }">
           📌 나중에 볼 영상
         </RouterLink>
@@ -35,23 +30,20 @@
       </div>
     </div>
 
-    <!-- 에러 메시지 -->
-    <div v-if="error" class="yt-alert">{{ error }}</div>
+    <div v-if="error" class="yt-alert">⚠️ {{ error }}</div>
 
-    <!-- 로딩 -->
-    <div v-if="loading" class="yt-loading">검색 중입니다...</div>
-
-    <!-- 빈 상태 -->
-    <div v-else-if="!videos.length && query" class="yt-empty">
-      <div class="yt-empty-text">검색 결과가 없습니다</div>
-      <div class="yt-empty-hint">다른 검색어로 시도해보세요</div>
+    <div v-if="loading" class="yt-loading">
+      <span>영상을 찾아보고 있어요...</span>
     </div>
 
-    <!-- 비디오 그리드 -->
+    <div v-else-if="!videos.length && query" class="yt-empty">
+      <div class="yt-empty-icon">🔍</div>
+      <div class="yt-empty-text">검색 결과가 없습니다</div>
+      <p style="color:#8B95A1; margin-top:8px;">다른 키워드로 검색해보세요.</p>
+    </div>
+
     <div v-else class="yt-grid">
-      <div v-for="video in videos" :key="video.videoId">
-        <VideoCard :video="video" />
-      </div>
+      <VideoCard v-for="video in videos" :key="video.videoId" :video="video" />
     </div>
   </div>
 </template>
@@ -80,7 +72,7 @@ const submitSearch = () => {
 watch(
   () => [route.query.q, route.query.channelId],
   async ([q, channelId]) => {
-    if (typeof q !== "string" || !q.trim()) return
+    if (!q || (typeof q === "string" && !q.trim())) return
 
     query.value = q
     error.value = ""
@@ -88,7 +80,7 @@ watch(
 
     try {
       const res = await searchYoutube(q, typeof channelId === "string" ? channelId : "")
-      videos.value = res.data
+      videos.value = res.data || []
     } catch (e) {
       error.value = "검색 중 오류가 발생했습니다."
       console.error(e)
