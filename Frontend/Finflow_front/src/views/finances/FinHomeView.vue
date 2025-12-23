@@ -158,6 +158,22 @@
                 <div class="rate__label">최고</div>
                 <div class="rate__value">{{ fmtRate(item.intr_rate) }}%</div>
               </div>
+              <div class="list-item__actions">
+                <button
+                  class="btn-bookmark"
+                  :class="{ bookmarked: isBookmarked(item.fin_prdt_cd) }"
+                  @click="toggleBookmark(item.fin_prdt_cd)"
+                  :title="isBookmarked(item.fin_prdt_cd) ? '관심상품 해제' : '관심상품 등록'"
+                >
+                  {{ isBookmarked(item.fin_prdt_cd) ? '❤️' : '🤍' }}
+                </button>
+                <RouterLink
+                  class="btn-detail"
+                  :to="detailLink(item)"
+                >
+                  자세히 →
+                </RouterLink>
+              </div>
             </div>
           </article>
         </div>
@@ -199,6 +215,7 @@ import {
   getSavings,
   syncSavings,
 } from "@/api/finances"
+import api from "@/api/axios"
 
 // ----------------------------
 // 고정 은행 테이블 (표시명/로고 제어)
@@ -267,6 +284,9 @@ const visibleBanks = computed(() => {
 const allItems = ref([]) // 현재 탭 기준 raw list
 const page = ref(1)
 const PAGE_SIZE = 10
+
+// 북마크 상태
+const bookmarkedProducts = ref(new Set())
 
 // ----------------------------
 // 데이터 로드/동기화: "비어있으면 동기화" 전략
@@ -425,11 +445,44 @@ const fmtRate = (v) => {
 }
 
 // ----------------------------
+// 북마크 기능
+// ----------------------------
+const fetchBookmarks = async () => {
+  try {
+    const res = await api.get("/accounts/bookmarks/")
+    bookmarkedProducts.value = new Set(res.data.map(b => b.fin_prdt_cd))
+  } catch (error) {
+    console.error("북마크 로딩 실패:", error)
+  }
+}
+
+const toggleBookmark = async (finPrdtCd) => {
+  try {
+    await api.post(`/accounts/recommendations/${finPrdtCd}/bookmark/`)
+
+    // 북마크 상태 토글
+    if (bookmarkedProducts.value.has(finPrdtCd)) {
+      bookmarkedProducts.value.delete(finPrdtCd)
+    } else {
+      bookmarkedProducts.value.add(finPrdtCd)
+    }
+  } catch (error) {
+    console.error("북마크 실패:", error)
+    alert("북마크에 실패했습니다.")
+  }
+}
+
+const isBookmarked = (finPrdtCd) => {
+  return bookmarkedProducts.value.has(finPrdtCd)
+}
+
+// ----------------------------
 // 마운트: fin_home 들어오면 예금 자동 준비 + 리스트 표시
 // ----------------------------
 onMounted(async () => {
   activeTab.value = "deposit"
   await fetchList()
+  await fetchBookmarks()
 })
 </script>
 
@@ -772,6 +825,10 @@ onMounted(async () => {
 /* 우측 금리 */
 .list-item__right {
   flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
 }
 .rate {
   text-align: right;
@@ -786,6 +843,46 @@ onMounted(async () => {
   font-size: 18px;
   font-weight: 950;
   color: #16a34a;
+}
+
+/* 액션 버튼들 */
+.list-item__actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.btn-bookmark {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-size: 20px;
+  padding: 4px;
+  line-height: 1;
+  transition: transform 0.2s ease;
+}
+.btn-bookmark:hover {
+  transform: scale(1.15);
+}
+
+.btn-detail {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #3182F6, #2563eb);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 900;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2);
+}
+.btn-detail:hover {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+  transform: translateY(-1px);
 }
 
 /* 페이지네이션 */
