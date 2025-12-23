@@ -20,13 +20,13 @@ class InvestmentProfile(models.Model):
 
     RISK_TYPE_CHOICES = [
         # 남성 유형
-        ('timid_male', '에겐소심남'),           # 남성 0-33점
-        ('normal_male', '보통남'),              # 남성 34-66점
-        ('speculative_male', '테토투기남'),     # 남성 67-100점
+        ('timid_male', '에겐소심남'),           
+        ('normal_male', '중간남'),              
+        ('speculative_male', '테토투기남'),     
         # 여성 유형
-        ('timid_female', '에겐소심녀'),         # 여성 0-33점
-        ('normal_female', '보통녀'),            # 여성 34-66점
-        ('speculative_female', '테토투기녀'),   # 여성 67-100점
+        ('timid_female', '에겐소심녀'),        
+        ('normal_female', '중간녀'),            
+        ('speculative_female', '테토투기녀'),   
     ]
 
     user = models.OneToOneField(

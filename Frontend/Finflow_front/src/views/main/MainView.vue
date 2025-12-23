@@ -13,8 +13,6 @@
       :interval-ms="2600"
     />
 
-    <!-- AI 챗봇 위젯 -->
-    <ChatbotWidget v-if="auth.isLogin" />
   </main>
 
 
@@ -23,12 +21,7 @@
 
 
 <script setup>
-import { useAuthStore } from "@/stores/auth"
-const auth = useAuthStore()
-
-
 import FeatureSection from "@/components/main/FeatureSection.vue"
-import ChatbotWidget from "@/components/common/ChatbotWidget.vue"
 
 /**
  * ✅ 캡쳐 이미지 경로는 네 프로젝트 상황에 맞게 바꿔줘.

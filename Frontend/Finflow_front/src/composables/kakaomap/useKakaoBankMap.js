@@ -15,6 +15,9 @@ export function useKakaoBankMap() {
   const originMarker = ref(null)
   const originOverlay = ref(null)
 
+  const destOverlay = ref(null)    // 도착 마커
+  const selectedDestMarker = ref(null) // 선택된 도착지의 기존 마커 (숨김 처리용)
+
   const mapInfo = ref([])
   const bankInfo = ref([])
 
@@ -40,6 +43,13 @@ export function useKakaoBankMap() {
     }
   }
 
+  const clearDestMarker = () => {
+    if (destOverlay.value) {
+      destOverlay.value.setMap(null)
+      destOverlay.value = null
+    }
+  }
+
   /* ---------- origin marker (고정) ---------- */
   const setOriginMarker = ({ lat, lng }) => {
     if (!map.value) return
@@ -48,31 +58,116 @@ export function useKakaoBankMap() {
 
     // 출발지 변경되면 기존 경로는 의미 없으니 제거
     clearPolyline()
+    clearDestMarker()
 
     if (originMarker.value) originMarker.value.setMap(null)
     if (originOverlay.value) originOverlay.value.setMap(null)
 
-    const imgSrc =
-      "https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png"
-    const imgSize = new kakao.maps.Size(24, 35)
-    const markerImage = new kakao.maps.MarkerImage(imgSrc, imgSize)
+    // 네이버 지도 스타일의 출발 마커 (초록색 핀 모양)
+    const content = `
+      <div style="
+        position: relative;
+        width: 48px;
+        height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      ">
+        <!-- 핀 몸체 -->
+        <div style="
+          position: absolute;
+          top: 0;
+          width: 48px;
+          height: 48px;
+          background: #03C75A;
+          border: 4px solid white;
+          border-radius: 50% 50% 50% 0;
+          transform: rotate(-45deg);
+          box-shadow: 0 3px 12px rgba(0, 0, 0, 0.3);
+        "></div>
 
-    originMarker.value = new kakao.maps.Marker({
-      map: map.value,
-      position: pos,
-      title: "내 위치(출발지)",
-      image: markerImage,
-      zIndex: 10,
-    })
+        <!-- 텍스트 -->
+        <div style="
+          position: absolute;
+          top: 8px;
+          margin-top : 8px;
+          width: 100%;
+          text-align: center;
+          font-size: 13px;
+          font-weight: bold;
+          color: white;
+          z-index: 1;
+          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+        ">출발</div>
+      </div>
+    `
 
     originOverlay.value = new kakao.maps.CustomOverlay({
       position: pos,
-      content: `<div class="map-origin-label">내 위치</div>`,
-      yAnchor: 2.2,
+      content: content,
+      yAnchor: 0.5,
+      zIndex: 10,
     })
     originOverlay.value.setMap(map.value)
 
     map.value.setCenter(pos)
+  }
+
+  /* ---------- destination marker (도착) ---------- */
+  const setDestMarker = ({ lat, lng }) => {
+    if (!map.value) return
+    const kakao = window.kakao
+    const pos = new kakao.maps.LatLng(lat, lng)
+
+    // 기존 도착 마커 제거
+    clearDestMarker()
+
+    // 네이버 지도 스타일의 도착 마커 (빨간색 핀 모양)
+    const content = `
+      <div style="
+        position: relative;
+        width: 48px;
+        height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      ">
+        <!-- 핀 몸체 -->
+        <div style="
+          position: absolute;
+          top: 0;
+          width: 48px;
+          height: 48px;
+          background: #FF5733;
+          border: 4px solid white;
+          border-radius: 50% 50% 50% 0;
+          transform: rotate(-45deg);
+          box-shadow: 0 3px 12px rgba(0, 0, 0, 0.3);
+        "></div>
+
+        <!-- 텍스트 -->
+        <div style="
+          position: absolute;
+          top: 8px;
+          margin-top: 8px;
+          width: 100%;
+          text-align: center;
+          font-size: 13px;
+          font-weight: bold;
+          color: white;
+          z-index: 1;
+          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+        ">도착</div>
+      </div>
+    `
+
+    destOverlay.value = new kakao.maps.CustomOverlay({
+      position: pos,
+      content: content,
+      yAnchor: 0.5,
+      zIndex: 10,
+    })
+    destOverlay.value.setMap(map.value)
   }
 
   /* ---------- map init ---------- */
@@ -171,6 +266,7 @@ export function useKakaoBankMap() {
 
     clearMarkers()
     clearPolyline()       // ✅ 검색 시 이전 경로 제거
+    clearDestMarker()     // ✅ 검색 시 도착 마커도 제거
     placeResults.value = []
 
     const kakao = window.kakao
@@ -197,8 +293,24 @@ export function useKakaoBankMap() {
           title: p.place_name,
         })
 
+        // 인포윈도우 생성 (주소 표시)
+        const infowindow = new kakao.maps.InfoWindow({
+          content: `<div style="padding:8px 12px;font-size:12px;white-space:nowrap;">${p.address_name || p.road_address_name || p.place_name}</div>`,
+        })
+
+        // 마우스 오버 이벤트 - 주소 표시
+        kakao.maps.event.addListener(marker, "mouseover", () => {
+          infowindow.open(map.value, marker)
+        })
+
+        // 마우스 아웃 이벤트 - 주소 숨김
+        kakao.maps.event.addListener(marker, "mouseout", () => {
+          infowindow.close()
+        })
+
+        // 클릭 이벤트 - 길찾기
         kakao.maps.event.addListener(marker, "click", () => {
-          drawRouteTo({ lat, lng })   // ✅ 마커 클릭하면 길찾기
+          drawRouteTo({ lat, lng, name: p.place_name })   // ✅ 마커 클릭하면 길찾기
         })
 
         markers.value.push(marker)
@@ -223,6 +335,9 @@ export function useKakaoBankMap() {
 
       const path = res.data.path ?? []
       drawPolyline(path)
+
+      // ✅ 도착 마커 표시
+      setDestMarker({ lat: dest.lat, lng: dest.lng })
 
       // ✅ 출발/도착/경로가 한 화면에 보이도록 자동 줌
       fitBoundsToRoute(path, dest)
