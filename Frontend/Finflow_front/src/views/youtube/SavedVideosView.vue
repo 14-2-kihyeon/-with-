@@ -1,11 +1,24 @@
 <template>
-  <div>
-    <a class="yt-back" href="javascript:void(0)" @click="goBack">&lt; 뒤로가기</a>
-    <h2 class="yt-title">나중에 볼 영상</h2>
+  <div class="yt-page">
+    <!-- 헤더 -->
+    <div class="yt-header">
+      <div class="yt-header-content">
+        <div class="yt-title-group">
+          <span class="yt-title-icon">📌</span>
+          <h2 class="yt-title">나중에 볼 영상</h2>
+        </div>
+        <a class="yt-back" href="javascript:void(0)" @click="goBack">← 뒤로가기</a>
+      </div>
+    </div>
 
-    <div v-if="savedVideos.length === 0" class="yt-alert">저장된 영상이 없습니다.</div>
+    <!-- 빈 상태 -->
+    <div v-if="savedVideos.length === 0" class="yt-empty">
+      <div class="yt-empty-text">저장된 영상이 없습니다</div>
+      <div class="yt-empty-hint">관심있는 영상을 저장해보세요</div>
+    </div>
 
-    <div class="yt-grid">
+    <!-- 저장된 비디오 그리드 -->
+    <div v-else class="yt-grid">
       <div v-for="v in savedVideos" :key="v.videoId">
         <div class="yt-card">
           <RouterLink :to="{ name: 'youtube_detail', params: { id: v.videoId } }">
@@ -15,14 +28,21 @@
             <div class="yt-card-title">{{ v.title }}</div>
             <div class="yt-card-meta">{{ v.channelTitle }}</div>
 
-            <div class="yt-actions" style="margin-top:10px;">
-              <button class="yt-btn danger" @click="remove(v.videoId)">삭제</button>
+            <div class="yt-actions" style="margin-top:12px;">
+              <RouterLink 
+                class="yt-btn soft" 
+                :to="{ name: 'youtube_detail', params: { id: v.videoId } }"
+              >
+                ▶️ 재생
+              </RouterLink>
+              <button class="yt-btn danger" @click="remove(v.videoId)">
+                🗑️ 삭제
+              </button>
             </div>
           </div>
         </div>
       </div>
     </div>
-
   </div>
 </template>
 
@@ -34,9 +54,13 @@ const router = useRouter()
 const savedVideos = ref([])
 
 const key = "savedVideos"
+
 const load = () => {
-  try { savedVideos.value = JSON.parse(localStorage.getItem(key) || "[]") }
-  catch { savedVideos.value = [] }
+  try { 
+    savedVideos.value = JSON.parse(localStorage.getItem(key) || "[]") 
+  } catch { 
+    savedVideos.value = [] 
+  }
 }
 
 const remove = (videoId) => {
@@ -46,5 +70,6 @@ const remove = (videoId) => {
 }
 
 const goBack = () => router.back()
+
 onMounted(load)
 </script>

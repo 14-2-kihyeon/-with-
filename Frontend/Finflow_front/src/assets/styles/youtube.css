@@ -1,108 +1,264 @@
-/* src/assets/styles/youtube.css */
+/* src/assets/styles/youtube.css - Toss/Npay Clean Style with YouTube Red */
 
+/* 전체 페이지 */
 .yt-page {
-  padding: 16px;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 20px;
+  background: #f9fafb;
+  min-height: 100vh;
+}
+
+/* 헤더 영역 */
+.yt-header {
+  background: #FF0000;
+  border-radius: 16px;
+  padding: 20px 28px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 8px rgba(255, 0, 0, 0.15);
+}
+
+.yt-header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.yt-title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.yt-title-icon {
+  font-size: 1.5rem;
 }
 
 .yt-title {
-  font-size: 22px;
-  font-weight: 800;
-  margin: 4px 0 12px;
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #ffffff;
 }
 
 .yt-back {
-  display: inline-block;
-  margin-bottom: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
   text-decoration: none;
-  color: inherit;
-  opacity: 0.75;
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.15s ease;
 }
-.yt-back:hover { opacity: 1; }
+
+.yt-back:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* 검색바 카드 */
+.yt-search-card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e5e8eb;
+}
 
 .yt-searchbar {
   display: flex;
-  gap: 8px;
-  margin: 12px 0 16px;
+  gap: 10px;
 }
 
 .yt-searchbar input {
   flex: 1;
-  padding: 10px 12px;
-  border: 1px solid #ddd;
+  padding: 12px 16px;
+  border: 1px solid #d1d5db;
   border-radius: 10px;
+  font-size: 0.95rem;
+  color: #191f28;
+  background: #ffffff;
+  transition: all 0.15s ease;
 }
 
+.yt-searchbar input:focus {
+  outline: none;
+  border-color: #FF0000;
+  box-shadow: 0 0 0 3px rgba(255, 0, 0, 0.1);
+}
+
+.yt-searchbar input::placeholder {
+  color: #9ca3af;
+}
+
+/* 버튼 스타일 */
 .yt-btn {
-  padding: 10px 14px;
-  border: 1px solid #ddd;
+  padding: 12px 20px;
+  border: 1.5px solid #d1d5db;
   border-radius: 10px;
   cursor: pointer;
-  background: #fff;
-  font-weight: 700;
+  background: #ffffff;
+  color: #4b5563;
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  text-decoration: none;
+  display: inline-block;
+  text-align: center;
 }
+
+.yt-btn:hover:not(:disabled) {
+  border-color: #9ca3af;
+  background: #f8fafc;
+}
+
+.yt-btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
 .yt-btn:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: not-allowed;
+  background: #f3f4f6;
+  color: #9ca3af;
 }
+
 .yt-btn.primary {
-  background: #111;
-  color: #fff;
-  border-color: #111;
+  background: #FF0000;
+  color: #ffffff;
+  border-color: #FF0000;
 }
 
+.yt-btn.primary:hover:not(:disabled) {
+  background: #CC0000;
+  border-color: #CC0000;
+}
+
+.yt-btn.soft {
+  background: #f8fafc;
+  border-color: #e5e8eb;
+  color: #4b5563;
+}
+
+.yt-btn.soft:hover:not(:disabled) {
+  background: #f1f3f5;
+  border-color: #d1d5db;
+}
+
+.yt-btn.warn {
+  background: #fef3c7;
+  border-color: #fbbf24;
+  color: #92400e;
+}
+
+.yt-btn.warn:hover:not(:disabled) {
+  background: #fde68a;
+}
+
+.yt-btn.danger {
+  background: #fee2e2;
+  border-color: #f87171;
+  color: #991b1b;
+}
+
+.yt-btn.danger:hover:not(:disabled) {
+  background: #fecaca;
+}
+
+.yt-btn.opacity-50 {
+  opacity: 0.5;
+}
+
+/* 알림 메시지 */
 .yt-alert {
-  border: 1px solid #f3c4c4;
-  background: #ffecec;
-  padding: 10px 12px;
-  border-radius: 10px;
-  margin-bottom: 12px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  padding: 14px 16px;
+  border-radius: 12px;
+  margin-bottom: 16px;
+  color: #991b1b;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
 }
 
-/* ✅ 여기서 “세로로 1개씩만” 문제 해결: 그리드 */
+.yt-alert::before {
+  content: "⚠️";
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+/* 그리드 레이아웃 */
 .yt-grid {
   display: grid;
   grid-template-columns: repeat(1, minmax(0, 1fr));
-  gap: 14px;
+  gap: 16px;
 }
 
-/* 화면 커지면 2~4개 */
 @media (min-width: 640px) {
-  .yt-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-@media (min-width: 1024px) {
-  .yt-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-}
-@media (min-width: 1280px) {
-  .yt-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .yt-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
-.yt-card {
-  border: 1px solid #eee;
-  border-radius: 14px;
-  overflow: hidden;
-  background: #fff;
-  cursor: pointer;
-  transition: transform 0.08s ease;
+@media (min-width: 1024px) {
+  .yt-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
-.yt-card:hover { transform: translateY(-2px); }
+
+@media (min-width: 1280px) {
+  .yt-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+/* 비디오 카드 */
+.yt-card {
+  background: #ffffff;
+  border: 1px solid #e5e8eb;
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  text-decoration: none;
+  color: inherit;
+  display: block;
+}
+
+.yt-card:hover {
+  border-color: #FF0000;
+  box-shadow: 0 4px 12px rgba(255, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
 
 .yt-thumb {
   width: 100%;
   aspect-ratio: 16 / 9;
   object-fit: cover;
   display: block;
+  background: #f3f4f6;
 }
 
 .yt-card-body {
-  padding: 10px 12px 12px;
+  padding: 14px 16px 16px;
 }
 
 .yt-card-title {
-  font-weight: 800;
-  font-size: 14px;
-  line-height: 1.25;
-  margin-bottom: 6px;
-
+  font-weight: 600;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  color: #191f28;
+  margin-bottom: 8px;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -110,34 +266,241 @@
 }
 
 .yt-card-meta {
-  font-size: 12px;
-  opacity: 0.7;
+  font-size: 0.85rem;
+  color: #6b7280;
+  line-height: 1.4;
 }
 
+/* 액션 버튼 그룹 */
 .yt-actions {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   margin-top: 12px;
   flex-wrap: wrap;
 }
 
-.yt-btn.soft {
-  background: #f6f6f6;
+.yt-actions .yt-btn {
+  padding: 8px 14px;
+  font-size: 0.85rem;
+  flex: 1;
+  min-width: fit-content;
 }
 
-.yt-btn.warn {
-  background: #ffefc2;
-  border-color: #ffe39a;
-}
-
-.yt-btn.danger {
-  background: #ffe5e5;
-  border-color: #ffbcbc;
-}
-
+/* 상세 설명 */
 .yt-desc {
   white-space: pre-line;
-  font-size: 14px;
-  line-height: 1.6;
-  opacity: 0.9;
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: #4b5563;
+  padding: 16px;
+  background: #f8fafc;
+  border-radius: 10px;
+  border: 1px solid #e5e8eb;
+  margin-top: 12px;
+}
+
+/* 비디오 iframe 컨테이너 */
+.yt-video-container {
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #e5e8eb;
+  margin: 16px 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.yt-video-wrapper {
+  aspect-ratio: 16 / 9;
+  position: relative;
+}
+
+.yt-video-wrapper iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+/* 채널 정보 */
+.yt-channel-info {
+  margin-top: 12px;
+  padding: 12px;
+  background: #f8fafc;
+  border-radius: 10px;
+  border: 1px solid #e5e8eb;
+}
+
+.yt-channel-name {
+  font-weight: 700;
+  font-size: 1rem;
+  color: #191f28;
+}
+
+/* 로딩 상태 */
+.yt-loading {
+  text-align: center;
+  padding: 40px 20px;
+  color: #6b7280;
+  font-size: 0.95rem;
+}
+
+.yt-loading::before {
+  content: "⏳";
+  display: block;
+  font-size: 2rem;
+  margin-bottom: 12px;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* 빈 상태 */
+.yt-empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: #6b7280;
+}
+
+.yt-empty::before {
+  content: "🔍";
+  display: block;
+  font-size: 3rem;
+  margin-bottom: 12px;
+  opacity: 0.5;
+}
+
+.yt-empty-text {
+  font-size: 1rem;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.yt-empty-hint {
+  font-size: 0.9rem;
+  opacity: 0.7;
+}
+
+/* 반응형 */
+@media (max-width: 968px) {
+  .yt-page {
+    padding: 12px;
+  }
+
+  .yt-header {
+    padding: 16px 20px;
+  }
+
+  .yt-header-content {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .yt-title {
+    font-size: 1.15rem;
+  }
+
+  .yt-searchbar {
+    flex-direction: column;
+  }
+
+  .yt-searchbar .yt-btn {
+    width: 100%;
+  }
+
+  .yt-actions .yt-btn {
+    flex: 1 1 calc(50% - 4px);
+  }
+}
+
+@media (max-width: 640px) {
+  .yt-search-card {
+    padding: 16px;
+  }
+
+  .yt-title-icon {
+    font-size: 1.3rem;
+  }
+
+  .yt-card-body {
+    padding: 12px 14px 14px;
+  }
+
+  .yt-card-title {
+    font-size: 0.9rem;
+  }
+
+  .yt-card-meta {
+    font-size: 0.8rem;
+  }
+
+  .yt-actions .yt-btn {
+    flex: 1 1 100%;
+    font-size: 0.85rem;
+  }
+}
+
+/* 포커스 스타일 */
+.yt-btn:focus,
+.yt-searchbar input:focus,
+.yt-back:focus {
+  outline: 2px solid #FF0000;
+  outline-offset: 2px;
+}
+
+/* 애니메이션 */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.yt-card {
+  animation: slideIn 0.3s ease-out;
+}
+
+/* 스켈레톤 로딩 */
+.yt-skeleton {
+  background: linear-gradient(
+    90deg,
+    #f3f4f6 25%,
+    #e5e7eb 50%,
+    #f3f4f6 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.5s ease-in-out infinite;
+  border-radius: 8px;
+}
+
+@keyframes skeleton-loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.yt-skeleton-thumb {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+}
+
+.yt-skeleton-title {
+  height: 20px;
+  margin-bottom: 8px;
+}
+
+.yt-skeleton-meta {
+  height: 16px;
+  width: 60%;
 }
