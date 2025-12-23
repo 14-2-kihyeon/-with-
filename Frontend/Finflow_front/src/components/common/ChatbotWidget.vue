@@ -157,6 +157,7 @@ import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import api from '@/api/axios'
+import legoImage from '@/assets/main/icon/lego.png'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -229,14 +230,7 @@ const riskTypeLabel = computed(() => {
 })
 
 const avatarImage = computed(() => {
-  // 이미지 파일 경로 (public/assets/chatbot/ 폴더에 이미지 추가 필요)
-  // 이미지가 없으면 CSS gradient로 대체 아이콘 표시됨
-  const images = {
-    'timid': '/assets/chatbot/timid-avatar.png',
-    'normal': '/assets/chatbot/normal-avatar.png',
-    'speculative': '/assets/chatbot/speculative-avatar.png',
-  }
-  return images[avatarType.value] || images.normal
+  return legoImage
 })
 
 const containerStyle = computed(() => ({

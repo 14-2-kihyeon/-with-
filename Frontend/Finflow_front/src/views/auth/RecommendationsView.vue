@@ -4,19 +4,21 @@
     <!-- 헤더 -->
     <div class="recommendations-header">
       <div class="header-left">
-        <h1>💎 맞춤 상품 추천</h1>
+        <div class="title-wrapper">
+          <div class="title-accent"></div>
+          <h1>맞춤 상품 추천</h1>
+        </div>
         <p class="subtitle">당신의 투자 성향에 맞는 최적의 금융 상품을 찾아드립니다</p>
       </div>
       <div v-if="profile" class="header-right">
         <div class="user-profile-badge">
-          <span class="badge-icon">{{ getRiskIcon(profile.risk_type) }}</span>
+          <div class="badge-type-indicator" :class="getTypeClass(profile.risk_type)"></div>
           <div class="badge-info">
             <span class="badge-label">투자 성향</span>
             <span class="badge-value">{{ profile.risk_type_name }}</span>
           </div>
         </div>
         <button class="btn-retake" @click="goToSurvey">
-          <span class="btn-icon">🔄</span>
           재검사하기
         </button>
       </div>
@@ -24,11 +26,17 @@
 
     <!-- 투자 성향 미등록 -->
     <div v-if="!profile && !loading" class="empty-state">
-      <div class="empty-icon">📊</div>
+      <div class="empty-icon-circle">
+        <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
+          <rect x="8" y="24" width="8" height="32" rx="2" fill="#cbd5e1"/>
+          <rect x="20" y="16" width="8" height="40" rx="2" fill="#94a3b8"/>
+          <rect x="32" y="20" width="8" height="36" rx="2" fill="#64748b"/>
+          <rect x="44" y="12" width="8" height="44" rx="2" fill="#3b82f6"/>
+        </svg>
+      </div>
       <h2>투자 성향 검사가 필요합니다</h2>
       <p>맞춤 상품 추천을 받으려면 먼저 투자 성향 검사를 진행해주세요.</p>
       <button class="btn-primary btn-large" @click="goToSurvey">
-        <span class="btn-icon">📝</span>
         투자 성향 검사 시작하기
       </button>
     </div>
@@ -44,34 +52,47 @@
       <!-- 프로필 요약 카드 -->
       <div class="profile-summary-card" :class="`type-${getTypeClass(profile.risk_type)}`">
         <div class="summary-header">
-          <div class="header-icon">{{ getRiskIcon(profile.risk_type) }}</div>
+          <img
+            :src="getCharacterImage(profile.risk_type)"
+            :alt="profile.risk_type_name"
+            class="character-image"
+          />
           <div class="header-text">
-            <h2>{{ profile.risk_type_name }} 투자자</h2>
-            <p class="score-display">투자 성향 점수: <strong>{{ profile.risk_score}}점</strong></p>
+            <h2>{{ auth.user?.username || '투자자' }}님의 프로필</h2>
+            <p class="score-display">{{ profile.risk_type_name }} · 성향 점수: <strong>{{ profile.risk_score}}점</strong></p>
           </div>
           <div class="gender-badge">{{ profile.gender_display }}</div>
         </div>
 
         <div class="profile-stats">
           <div class="stat-item">
-            <div class="stat-icon">🎯</div>
             <div class="stat-content">
               <span class="stat-label">투자 목표</span>
               <span class="stat-value">{{ profile.investment_goal || '-' }}</span>
             </div>
           </div>
           <div class="stat-item">
-            <div class="stat-icon">⏱️</div>
             <div class="stat-content">
               <span class="stat-label">투자 기간</span>
               <span class="stat-value">{{ profile.investment_period }}개월</span>
             </div>
           </div>
           <div class="stat-item">
-            <div class="stat-icon">💰</div>
             <div class="stat-content">
               <span class="stat-label">현재 저축액</span>
               <span class="stat-value">{{ formatCurrency(profile.savings) }}</span>
+            </div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-content">
+              <span class="stat-label">투자 금액</span>
+              <span class="stat-value">{{ formatCurrency(profile.investment_amount || profile.savings) }}</span>
+            </div>
+          </div>
+          <div v-if="recommendations.length > 0" class="stat-item highlight">
+            <div class="stat-content">
+              <span class="stat-label">예상 총액 (최고 상품 복리 기준)</span>
+              <span class="stat-value large">{{ formatCurrency(calculateCompoundTotal(profile.savings, profile.investment_amount || profile.savings, recommendations[0].option.intr_rate2, recommendations[0].option.save_trm, profile.investment_period)) }}</span>
             </div>
           </div>
         </div>
@@ -80,7 +101,7 @@
       <!-- 투자 계획 섹션 -->
       <div v-if="investmentPlan" class="investment-plan-section">
         <div class="section-header">
-          <h2><span class="header-icon">📋</span> 맞춤 투자 계획</h2>
+          <h2>맞춤 투자 계획</h2>
           <p class="section-subtitle">{{ investmentPlan.total_period_months }}개월 동안의 투자 전략을 제시합니다</p>
         </div>
 
@@ -100,9 +121,19 @@
             >
               <div class="step-number">{{ index + 1 }}</div>
               <div class="step-content">
-                <div class="step-period">{{ step.period }}</div>
-                <div class="step-action">{{ step.action }}</div>
+                <div class="step-header">
+                  <div class="step-period">{{ step.period }}</div>
+                  <div class="step-action">{{ step.action }}</div>
+                </div>
                 <div class="step-description">{{ step.description }}</div>
+                <!-- 예상 수익 표시 (profile.savings를 기준으로) -->
+                <div v-if="step.expected_rate" class="step-profit">
+                  <span class="profit-label">예상 수익</span>
+                  <span class="profit-value">
+                    +{{ calculateProfit(profile.savings, step.expected_rate, step.months || profile.investment_period).toLocaleString() }}만원
+                  </span>
+                  <span class="profit-rate">(연 {{ step.expected_rate }}%)</span>
+                </div>
               </div>
             </div>
           </div>
@@ -110,7 +141,7 @@
 
         <!-- 투자 팁 -->
         <div class="plan-tips">
-          <h3>💡 투자 성공 팁</h3>
+          <h3>투자 성공 팁</h3>
           <ul class="tips-list">
             <li v-for="(tip, index) in investmentPlan.tips" :key="index">
               <span class="tip-icon">✓</span>
@@ -123,18 +154,30 @@
       <!-- 추천 상품 섹션 -->
       <div class="recommendations-section">
         <div class="section-header">
-          <h2><span class="header-icon">🎁</span> 추천 금융 상품</h2>
+          <h2>추천 금융 상품</h2>
           <p class="section-subtitle">총 {{ totalCount }}개 상품 중 상위 매칭 상품을 보여드립니다</p>
         </div>
 
         <div class="recommendations-grid">
           <div
-            v-for="(rec, index) in recommendations"
-            :key="`${rec.product.fin_prdt_cd}-${rec.option.save_trm}`"
+            v-for="(rec, index) in uniqueRecommendations"
+            :key="rec.product.fin_prdt_cd"
             class="recommendation-card"
           >
             <div class="card-rank">
-              <div class="rank-badge">{{ index + 1 }}</div>
+              <div class="rank-info">
+                <div class="rank-badge">{{ index + 1 }}</div>
+                <img
+                  v-if="getBankLogo(rec.product.kor_co_nm)"
+                  :src="getBankLogo(rec.product.kor_co_nm)"
+                  :alt="rec.product.kor_co_nm"
+                  class="bank-logo"
+                />
+                <div class="rank-details">
+                  <span class="rank-bank">{{ rec.product.kor_co_nm }}</span>
+                  <span class="rank-product">{{ cleanProductName(rec.product.fin_prdt_nm) }}</span>
+                </div>
+              </div>
               <div class="match-score">
                 <div class="score-circle" :style="{ '--score': rec.match_score }">
                   <span>{{ rec.match_score }}</span>
@@ -144,9 +187,6 @@
             </div>
 
             <div class="card-body">
-              <div class="bank-name">{{ rec.product.kor_co_nm }}</div>
-              <h3 class="product-name">{{ rec.product.fin_prdt_nm }}</h3>
-
               <div class="product-rates">
                 <div class="rate-box">
                   <span class="rate-label">기본금리</span>
@@ -162,9 +202,17 @@
                 </div>
               </div>
 
-              <div class="recommendation-reason">
-                <div class="reason-icon">💬</div>
-                <p>{{ rec.reason }}</p>
+              <!-- 예상 수익 강조 표시 -->
+              <div class="profit-highlight">
+                <div class="profit-main">
+                  <span class="profit-label">예상 수익</span>
+                  <span class="profit-amount">
+                    +{{ calculateProfit(profile.savings, rec.option.intr_rate2, rec.option.save_trm).toLocaleString() }}만원
+                  </span>
+                </div>
+                <div class="profit-detail">
+                  {{ profile.savings.toLocaleString() }}만원 × {{ rec.option.save_trm }}개월 × 최고금리 {{ rec.option.intr_rate2.toFixed(2) }}%
+                </div>
               </div>
 
               <div class="product-details">
@@ -174,12 +222,17 @@
                 </div>
               </div>
 
+              <!-- 우대조건 구조화 -->
               <div v-if="rec.product.spcl_cnd" class="special-condition">
                 <div class="condition-header">
-                  <span class="condition-icon">⭐</span>
                   <span class="condition-title">우대조건</span>
                 </div>
-                <p class="condition-text">{{ rec.product.spcl_cnd }}</p>
+                <ul class="condition-list">
+                  <li v-for="(condition, idx) in parseSpecialConditions(rec.product.spcl_cnd)" :key="idx">
+                    <span class="condition-bullet"></span>
+                    <span class="condition-text">{{ condition }}</span>
+                  </li>
+                </ul>
               </div>
             </div>
 
@@ -204,7 +257,6 @@
 
         <!-- 추천 상품 없음 -->
         <div v-if="recommendations.length === 0" class="empty-recommendations">
-          <div class="empty-icon">📭</div>
           <p>현재 조건에 맞는 추천 상품이 없습니다.</p>
           <p class="empty-hint">투자 기간이나 조건을 변경하여 다시 검색해보세요.</p>
         </div>
@@ -214,11 +266,21 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue"
+import { ref, onMounted, computed } from "vue"
 import { useRouter } from "vue-router"
+import { useAuthStore } from "@/stores/auth"
 import api from "@/api/axios"
 
+// 투자 성향 결과 이미지 import
+import timidMale from "@/assets/character/timid_male.png"
+import timidFemale from "@/assets/character/timid_female.png"
+import normalMale from "@/assets/character/normal_male.png"
+import normalFemale from "@/assets/character/normal_female.png"
+import speculativeMale from "@/assets/character/speculative_male.png"
+import speculativeFemale from "@/assets/character/speculative_female.png"
+
 const router = useRouter()
+const auth = useAuthStore()
 
 // 상태
 const loading = ref(false)
@@ -228,12 +290,35 @@ const investmentPlan = ref(null)
 const totalCount = ref(0)
 const bookmarkedProducts = ref(new Set())
 
+// 중복 상품 제거 (같은 fin_prdt_cd는 최고 금리 옵션만 표시)
+const uniqueRecommendations = computed(() => {
+  const seen = new Map()
+
+  for (const rec of recommendations.value) {
+    const key = rec.product.fin_prdt_cd
+    const existing = seen.get(key)
+
+    // 아직 없거나, 더 높은 금리면 교체
+    if (!existing || rec.option.intr_rate2 > existing.option.intr_rate2) {
+      seen.set(key, rec)
+    }
+  }
+
+  return Array.from(seen.values()).slice(0, 9)
+})
+
 // Methods
 const fetchRecommendations = async () => {
   loading.value = true
   try {
     const res = await api.get("/accounts/recommendations/")
     profile.value = res.data.profile
+
+    // username이 없으면 user 정보에서 가져오기
+    if (!profile.value.username && res.data.user) {
+      profile.value.username = res.data.user.username
+    }
+
     recommendations.value = res.data.recommendations || []
     investmentPlan.value = res.data.investment_plan
     totalCount.value = res.data.total_count || 0
@@ -263,12 +348,14 @@ const toggleBookmark = async (finPrdtCd) => {
   try {
     await api.post(`/accounts/recommendations/${finPrdtCd}/bookmark/`)
 
-    // 북마크 상태 토글
-    if (bookmarkedProducts.value.has(finPrdtCd)) {
-      bookmarkedProducts.value.delete(finPrdtCd)
+    // 북마크 상태 토글 (Vue 반응성을 위해 새로운 Set 생성)
+    const newSet = new Set(bookmarkedProducts.value)
+    if (newSet.has(finPrdtCd)) {
+      newSet.delete(finPrdtCd)
     } else {
-      bookmarkedProducts.value.add(finPrdtCd)
+      newSet.add(finPrdtCd)
     }
+    bookmarkedProducts.value = newSet
   } catch (error) {
     console.error("북마크 실패:", error)
     alert("북마크에 실패했습니다.")
@@ -287,18 +374,6 @@ const goToSurvey = () => {
   router.push({ name: "investment_survey" })
 }
 
-const getRiskIcon = (riskType) => {
-  const icons = {
-    timid_male: "🛡️",
-    normal_male: "⚖️",
-    speculative_male: "🚀",
-    timid_female: "🛡️",
-    normal_female: "⚖️",
-    speculative_female: "🚀",
-  }
-  return icons[riskType] || "📊"
-}
-
 const getTypeClass = (riskType) => {
   if (riskType?.includes('timid')) return 'timid'
   if (riskType?.includes('normal')) return 'normal'
@@ -309,6 +384,116 @@ const getTypeClass = (riskType) => {
 const formatCurrency = (amount) => {
   if (!amount) return '-'
   return `${Number(amount).toLocaleString()}만원`
+}
+
+// 상품명에서 (만기지급식) 또는 (만기일시지급식) 제거
+const cleanProductName = (name) => {
+  if (!name) return ''
+  return name.replace(/\(만기일?시?지급식\)/g, '').trim()
+}
+
+// 예상 수익 계산 함수 (단리)
+const calculateProfit = (principal, rate, months) => {
+  if (!principal || !rate || !months) return 0
+  // 단리 계산: 원금 * (금리/100) * (개월수/12)
+  const profit = principal * (rate / 100) * (months / 12)
+  return Math.floor(profit)
+}
+
+// 복리 적용 예상 총액 계산 함수
+const calculateCompoundTotal = (savings, investmentAmount, bestRate, bestPeriod, totalPeriod) => {
+  if (!savings || !investmentAmount || !bestRate || !bestPeriod || !totalPeriod) return savings + investmentAmount
+
+  // 최고 상품을 몇 번 반복 가입할 수 있는지 계산
+  const n = Math.floor(totalPeriod / bestPeriod)
+
+  // 초기 투자 총액 (현재 저축액 + 투자 금액)
+  let total = savings + investmentAmount
+
+  // n번 복리 적용
+  for (let i = 0; i < n; i++) {
+    total = total * (1 + (bestRate / 100) * (bestPeriod / 12))
+  }
+
+  return Math.floor(total)
+}
+
+// 우대조건 파싱 함수
+const parseSpecialConditions = (conditions) => {
+  if (!conditions) return []
+
+  // 1. 번호로 시작하는 조건들 (1., 2., 1), 2) 등)
+  const numberedPattern = /\d+[.)]\s*[^1-9]+/g
+  let items = conditions.match(numberedPattern)
+
+  if (items && items.length > 1) {
+    return items.map(item => item.replace(/^\d+[.)]\s*/, '').trim())
+  }
+
+  // 2. 쉼표나 세미콜론으로 구분
+  items = conditions.split(/[,;]/)
+  if (items.length > 1) {
+    return items.map(item => item.trim()).filter(item => item.length > 0)
+  }
+
+  // 3. '및', '그리고', '또는'으로 구분
+  items = conditions.split(/\s+(?:및|그리고|또는)\s+/)
+  if (items.length > 1) {
+    return items.map(item => item.trim())
+  }
+
+  // 4. 구분할 수 없으면 전체를 하나의 항목으로
+  return [conditions.trim()]
+}
+
+// 투자 성향 결과 이미지 가져오기
+const getCharacterImage = (riskType) => {
+  const map = {
+    timid_male: timidMale,
+    timid_female: timidFemale,
+    normal_male: normalMale,
+    normal_female: normalFemale,
+    speculative_male: speculativeMale,
+    speculative_female: speculativeFemale,
+  }
+  return map[riskType] || normalMale
+}
+
+// 은행 정보 매핑 테이블
+const BANKS = [
+  { apiName: "경남은행", logo: "knbank.png" },
+  { apiName: "광주은행", logo: "kjbank.png" },
+  { apiName: "국민은행", logo: "kb.png" },
+  { apiName: "농협은행주식회사", logo: "nh.png" },
+  { apiName: "부산은행", logo: "bnk.png" },
+  { apiName: "수협은행", logo: "sh.png" },
+  { apiName: "신한은행", logo: "shinhan.png" },
+  { apiName: "아이엠뱅크", logo: "imbank.png" },
+  { apiName: "우리은행", logo: "woori.png" },
+  { apiName: "전북은행", logo: "jb.png" },
+  { apiName: "제주은행", logo: "jj.png" },
+  { apiName: "주식회사 카카오뱅크", logo: "kakao.png" },
+  { apiName: "주식회사 케이뱅크", logo: "kbank.png" },
+  { apiName: "주식회사 하나은행", logo: "hana.png" },
+  { apiName: "중소기업은행", logo: "ibk.png" },
+  { apiName: "토스뱅크 주식회사", logo: "toss.png" },
+  { apiName: "한국산업은행", logo: "kdb.png" },
+  { apiName: "한국스탠다드차타드은행", logo: "sc.png" },
+]
+
+const byApiName = new Map(BANKS.map(b => [b.apiName, b]))
+
+// 은행 로고 이미지 경로 가져오기
+const getBankLogo = (bankName) => {
+  const bank = byApiName.get(bankName)
+  if (bank) {
+    try {
+      return new URL(`../../assets/banks/${bank.logo}`, import.meta.url).href
+    } catch {
+      return ''
+    }
+  }
+  return ''
 }
 
 onMounted(async () => {
@@ -337,20 +522,37 @@ onMounted(async () => {
   gap: 32px;
 }
 
+.header-left {
+  margin-left: 24px;
+}
+
+.title-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.title-accent {
+  width: 6px;
+  height: 48px;
+  background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%);
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
 .header-left h1 {
   font-size: 36px;
   font-weight: 800;
-  color: #0f172a;
-  margin-bottom: 8px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: #191f28;
+  margin: 0;
+  position: relative;
 }
 
 .subtitle {
   font-size: 16px;
   color: #64748b;
+  margin-left: 22px;
 }
 
 .header-right {
@@ -364,20 +566,36 @@ onMounted(async () => {
   align-items: center;
   gap: 12px;
   padding: 12px 20px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 16px;
-  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
-  color: white;
+  background: #f8fafc;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  color: #0f172a;
 }
 
-.badge-icon {
-  font-size: 32px;
+.badge-type-indicator {
+  width: 8px;
+  height: 40px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.badge-type-indicator.timid {
+  background: linear-gradient(180deg, #3b82f6 0%, #60a5fa 100%);
+}
+
+.badge-type-indicator.normal {
+  background: linear-gradient(180deg, #10b981 0%, #34d399 100%);
+}
+
+.badge-type-indicator.speculative {
+  background: linear-gradient(180deg, #f59e0b 0%, #fbbf24 100%);
 }
 
 .badge-label {
   display: block;
   font-size: 12px;
-  opacity: 0.9;
+  color: #64748b;
   margin-bottom: 2px;
 }
 
@@ -385,6 +603,7 @@ onMounted(async () => {
   display: block;
   font-size: 18px;
   font-weight: 700;
+  color: #0f172a;
 }
 
 .btn-retake {
@@ -403,10 +622,9 @@ onMounted(async () => {
 }
 
 .btn-retake:hover {
-  border-color: #667eea;
-  color: #667eea;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+  border-color: #3b82f6;
+  color: #3b82f6;
+  background: #f0f9ff;
 }
 
 .btn-icon {
@@ -422,15 +640,15 @@ onMounted(async () => {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
 }
 
-.empty-icon {
-  font-size: 96px;
-  margin-bottom: 24px;
-  animation: bounce 2s infinite;
-}
-
-@keyframes bounce {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-20px); }
+.empty-icon-circle {
+  width: 120px;
+  height: 120px;
+  margin: 0 auto 24px;
+  background: #f8fafc;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .empty-state h2 {
@@ -451,20 +669,18 @@ onMounted(async () => {
   align-items: center;
   gap: 8px;
   padding: 16px 32px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #3b82f6;
   color: white;
   border: none;
   border-radius: 12px;
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s;
-  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
+  transition: all 0.2s;
 }
 
 .btn-primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 32px rgba(102, 126, 234, 0.4);
+  background: #2563eb;
 }
 
 /* Loading */
@@ -478,7 +694,7 @@ onMounted(async () => {
   height: 48px;
   margin: 0 auto 24px;
   border: 4px solid #e2e8f0;
-  border-top-color: #667eea;
+  border-top-color: #3b82f6;
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
@@ -509,8 +725,8 @@ onMounted(async () => {
 }
 
 .profile-summary-card.type-normal {
-  border-color: #c4b5fd;
-  background: linear-gradient(135deg, #ffffff 0%, #f5f3ff 100%);
+  border-color: #bfdbfe;
+  background: linear-gradient(135deg, #ffffff 0%, #eff6ff 100%);
 }
 
 .profile-summary-card.type-speculative {
@@ -527,8 +743,11 @@ onMounted(async () => {
   border-bottom: 2px solid #f1f5f9;
 }
 
-.header-icon {
-  font-size: 56px;
+.character-image {
+  width: 100px;
+  height: 100px;
+  object-fit: contain;
+  flex-shrink: 0;
 }
 
 .header-text h2 {
@@ -544,15 +763,15 @@ onMounted(async () => {
 }
 
 .score-display strong {
-  color: #667eea;
+  color: #0f172a;
   font-weight: 700;
 }
 
 .gender-badge {
   margin-left: auto;
   padding: 8px 16px;
-  background: rgba(102, 126, 234, 0.1);
-  color: #667eea;
+  background: #f1f5f9;
+  color: #475569;
   border-radius: 20px;
   font-size: 14px;
   font-weight: 600;
@@ -568,14 +787,15 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 16px;
+  padding: 20px;
   background: white;
   border-radius: 12px;
   border: 1px solid #e2e8f0;
 }
 
-.stat-icon {
-  font-size: 32px;
+.stat-item.highlight {
+  background: #f8fafc;
+  border: 2px solid #0f172a;
 }
 
 .stat-label {
@@ -590,6 +810,10 @@ onMounted(async () => {
   font-size: 18px;
   font-weight: 700;
   color: #0f172a;
+}
+
+.stat-value.large {
+  font-size: 22px;
 }
 
 /* 투자 계획 섹션 */
@@ -607,17 +831,10 @@ onMounted(async () => {
 }
 
 .section-header h2 {
-  display: flex;
-  align-items: center;
-  gap: 12px;
   font-size: 24px;
   font-weight: 700;
   color: #0f172a;
   margin-bottom: 8px;
-}
-
-.header-icon {
-  font-size: 28px;
 }
 
 .section-subtitle {
@@ -677,13 +894,12 @@ onMounted(async () => {
   padding: 20px;
   background: #f8fafc;
   border-radius: 12px;
-  border-left: 4px solid #667eea;
-  transition: all 0.3s;
+  border-left: 4px solid #3b82f6;
+  transition: all 0.2s;
 }
 
 .step-item:hover {
-  background: #eff6ff;
-  transform: translateX(4px);
+  background: #f1f5f9;
 }
 
 .step-number {
@@ -693,7 +909,7 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #3b82f6;
   color: white;
   border-radius: 50%;
   font-size: 16px;
@@ -704,9 +920,13 @@ onMounted(async () => {
   flex: 1;
 }
 
+.step-header {
+  margin-bottom: 8px;
+}
+
 .step-period {
   font-size: 12px;
-  color: #667eea;
+  color: #64748b;
   font-weight: 600;
   margin-bottom: 4px;
 }
@@ -715,13 +935,41 @@ onMounted(async () => {
   font-size: 16px;
   font-weight: 700;
   color: #0f172a;
-  margin-bottom: 6px;
 }
 
 .step-description {
   font-size: 14px;
   color: #64748b;
   line-height: 1.6;
+  margin-bottom: 12px;
+}
+
+.step-profit {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+  border-radius: 8px;
+  border-left: 3px solid #10b981;
+}
+
+.step-profit .profit-label {
+  font-size: 12px;
+  color: #065f46;
+  font-weight: 600;
+}
+
+.step-profit .profit-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: #047857;
+}
+
+.step-profit .profit-rate {
+  font-size: 12px;
+  color: #059669;
+  margin-left: auto;
 }
 
 /* 투자 팁 */
@@ -768,6 +1016,7 @@ onMounted(async () => {
   font-size: 14px;
   color: #92400e;
   line-height: 1.6;
+  flex: 1;
 }
 
 /* 추천 상품 그리드 */
@@ -783,12 +1032,14 @@ onMounted(async () => {
   border-radius: 20px;
   overflow: hidden;
   transition: all 0.3s;
+  display: flex;
+  flex-direction: column;
 }
 
 .recommendation-card:hover {
-  border-color: #667eea;
-  box-shadow: 0 12px 32px rgba(102, 126, 234, 0.15);
-  transform: translateY(-4px);
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
 }
 
 .card-rank {
@@ -796,21 +1047,59 @@ onMounted(async () => {
   justify-content: space-between;
   align-items: center;
   padding: 16px 20px;
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-  border-bottom: 2px solid #e2e8f0;
+  background: #ffffff;
+  border-bottom: 2px solid #f1f5f9;
+}
+
+.rank-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
 }
 
 .rank-badge {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #3b82f6;
   color: white;
   border-radius: 50%;
   font-size: 14px;
   font-weight: 700;
+  flex-shrink: 0;
+}
+
+.bank-logo {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.rank-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.rank-bank {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.rank-product {
+  font-size: 14px;
+  color: #0f172a;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .match-score {
@@ -858,6 +1147,7 @@ onMounted(async () => {
 
 .card-body {
   padding: 24px;
+  flex: 1;
 }
 
 .bank-name {
@@ -871,8 +1161,42 @@ onMounted(async () => {
   font-size: 20px;
   font-weight: 700;
   color: #0f172a;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
   line-height: 1.4;
+}
+
+/* 예상 수익 하이라이트 */
+.profit-highlight {
+  padding: 16px;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 2px solid #e2e8f0;
+  margin-bottom: 20px;
+}
+
+.profit-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.profit-main .profit-label {
+  font-size: 13px;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.profit-main .profit-amount {
+  font-size: 24px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.profit-detail {
+  font-size: 12px;
+  color: #64748b;
+  text-align: right;
 }
 
 .product-rates {
@@ -915,22 +1239,16 @@ onMounted(async () => {
 }
 
 .recommendation-reason {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
   padding: 16px;
-  background: #fffbeb;
+  background: #f8fafc;
   border-radius: 12px;
   margin-bottom: 16px;
-}
-
-.reason-icon {
-  font-size: 20px;
+  border-left: 3px solid #3b82f6;
 }
 
 .recommendation-reason p {
   font-size: 14px;
-  color: #92400e;
+  color: #475569;
   line-height: 1.6;
   margin: 0;
 }
@@ -962,33 +1280,52 @@ onMounted(async () => {
 
 .special-condition {
   padding: 16px;
-  background: #f0fdf4;
+  background: white;
   border-radius: 12px;
-  border-left: 3px solid #10b981;
+  border: 1px solid #e2e8f0;
 }
 
 .condition-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-.condition-icon {
-  font-size: 18px;
+  margin-bottom: 12px;
 }
 
 .condition-title {
   font-size: 13px;
   font-weight: 700;
-  color: #047857;
+  color: #0f172a;
+}
+
+.condition-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.condition-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.condition-bullet {
+  flex-shrink: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #64748b;
+  margin-top: 6px;
 }
 
 .condition-text {
   font-size: 13px;
-  color: #065f46;
+  color: #475569;
   line-height: 1.6;
-  margin: 0;
+  flex: 1;
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
 .card-footer {
@@ -1032,24 +1369,18 @@ onMounted(async () => {
 }
 
 .btn-detail {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #3b82f6;
   color: white;
   border: none;
 }
 
 .btn-detail:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 16px rgba(102, 126, 234, 0.3);
+  background: #2563eb;
 }
 
 .empty-recommendations {
   text-align: center;
   padding: 80px 40px;
-}
-
-.empty-recommendations .empty-icon {
-  font-size: 64px;
-  margin-bottom: 16px;
 }
 
 .empty-recommendations p {

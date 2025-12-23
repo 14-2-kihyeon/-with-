@@ -157,11 +157,11 @@ const onSubmit = async () => {
 
 /* 헤더 */
 .community-header {
-  background: #00C73C;
+  background: #3b82f6;
   border-radius: 16px;
   padding: 20px 28px;
   margin-bottom: 20px;
-  box-shadow: 0 2px 8px rgba(0, 199, 60, 0.15);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15);
 }
 
 .header-content {
@@ -251,8 +251,8 @@ const onSubmit = async () => {
 .form-input:focus,
 .form-textarea:focus {
   outline: none;
-  border-color: #00C73C;
-  box-shadow: 0 0 0 3px rgba(0, 199, 60, 0.1);
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .form-input::placeholder,
@@ -357,15 +357,15 @@ const onSubmit = async () => {
 }
 
 .btn-primary {
-  background: #00C73C;
+  background: #3b82f6;
   color: #ffffff;
-  box-shadow: 0 2px 4px rgba(0, 199, 60, 0.2);
+  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: #00A832;
+  background: #2563eb;
   transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(0, 199, 60, 0.3);
+  box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
 }
 
 .btn-primary:active:not(:disabled) {

@@ -5,7 +5,9 @@
       <div class="mypage-header">
         <h1 class="page-title">마이페이지</h1>
         <div class="user-info">
-          <div class="user-avatar">{{ userInitial }}</div>
+          <div class="user-avatar">
+            <img :src="profileImageUrl" :alt="auth.user?.username" class="avatar-image" />
+          </div>
           <div class="user-details">
             <div class="username">{{ auth.user?.username }}</div>
             <div class="user-email" v-if="auth.user?.email">{{ auth.user.email }}</div>
@@ -54,6 +56,14 @@
             </div>
           </div>
 
+          <div class="profile-image-section">
+            <img
+              :src="getCharacterImage(investmentProfile.risk_type)"
+              :alt="investmentProfile.risk_type_name"
+              class="profile-character-image"
+            />
+          </div>
+
           <div class="profile-stats">
             <div class="stat-item">
               <span class="stat-label">성별</span>
@@ -64,16 +74,20 @@
               <span class="stat-value">{{ investmentProfile.age }}세</span>
             </div>
             <div class="stat-item">
+              <span class="stat-label">투자 성향</span>
+              <span class="stat-value">{{ investmentProfile.risk_type_name }}</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">투자 목표</span>
+              <span class="stat-value">{{ investmentProfile.investment_goal }}</span>
+            </div>
+            <div class="stat-item">
               <span class="stat-label">연 소득</span>
               <span class="stat-value">{{ formatMoney(investmentProfile.income) }}만원</span>
             </div>
             <div class="stat-item">
               <span class="stat-label">현재 저축액</span>
               <span class="stat-value">{{ formatMoney(investmentProfile.savings) }}만원</span>
-            </div>
-            <div class="stat-item">
-              <span class="stat-label">투자 목표</span>
-              <span class="stat-value">{{ investmentProfile.investment_goal }}</span>
             </div>
             <div class="stat-item">
               <span class="stat-label">투자 기간</span>
@@ -159,6 +173,15 @@ import { useRouter } from "vue-router"
 import { useAuthStore } from "@/stores/auth"
 import api from "@/api/axios"
 
+// 투자 성향 결과 이미지 import
+import timidMale from "@/assets/character/timid_male.png"
+import timidFemale from "@/assets/character/timid_female.png"
+import normalMale from "@/assets/character/normal_male.png"
+import normalFemale from "@/assets/character/normal_female.png"
+import speculativeMale from "@/assets/character/speculative_male.png"
+import speculativeFemale from "@/assets/character/speculative_female.png"
+import defaultImage from "@/assets/main/icon/lego.png"
+
 const router = useRouter()
 const auth = useAuthStore()
 
@@ -174,6 +197,28 @@ const bookmarkedProducts = ref([])
 const userInitial = computed(() => {
   const username = auth.user?.username || ""
   return username.charAt(0).toUpperCase()
+})
+
+// 투자 성향 결과 이미지 가져오기
+const getCharacterImage = (riskType) => {
+  if (!riskType) return defaultImage
+
+  const map = {
+    timid_male: timidMale,
+    timid_female: timidFemale,
+    normal_male: normalMale,
+    normal_female: normalFemale,
+    speculative_male: speculativeMale,
+    speculative_female: speculativeFemale,
+  }
+  return map[riskType] || defaultImage
+}
+
+// 프로필 이미지 (원형용)
+const profileImageUrl = computed(() => {
+  return investmentProfile.value
+    ? getCharacterImage(investmentProfile.value.risk_type)
+    : defaultImage
 })
 
 // 투자 성향 정보 가져오기
@@ -316,6 +361,13 @@ onMounted(async () => {
   font-size: 24px;
   font-weight: 900;
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+  overflow: hidden;
+}
+
+.avatar-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .user-details {
@@ -480,6 +532,25 @@ onMounted(async () => {
   margin-bottom: 24px;
   padding-bottom: 20px;
   border-bottom: 1px solid #e2e8f0;
+}
+
+.profile-image-section {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 24px;
+  padding: 20px;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-radius: 12px;
+}
+
+.profile-character-image {
+  max-width: 200px;
+  max-height: 200px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 8px;
 }
 
 .profile-badge {
