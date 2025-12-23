@@ -190,16 +190,18 @@
     <!-- 결과 화면 -->
     <div v-if="showResult" class="result-container">
       <div class="result-card">
-        <div class="result-header" :class="'type-' + getTypeKey(result.risk_type)">
-          <div class="result-icon">{{ getTypeIcon(result.risk_type) }}</div>
+        <div
+          class="result-header"
+          :class="'type-' + getTypeKey(result.risk_type)"
+          :style="{
+            backgroundImage: `url(${getCharacterImage(result.risk_type)})`
+          }"
+        >
           <div class="result-title">
-            <span class="result-label">당신의 투자 성향은</span>
-            <h2 class="result-type">{{ result.risk_type_name }}</h2>
-          </div>
-          <div class="result-badge">
-            <span class="badge-text">{{ getGenderText(result.gender) }}</span>
+            <span class="result-type">당신의 투자 성향</span>
           </div>
         </div>
+
 
         <div class="result-body">
           <div class="result-section">
@@ -253,6 +255,28 @@
 import { ref, computed, onMounted } from "vue"
 import { useRouter } from "vue-router"
 import api from "@/api/axios"
+
+// character images
+import timidMale from "@/assets/character/timid_male.png"
+import timidFemale from "@/assets/character/timid_female.png"
+import normalMale from "@/assets/character/normal_male.png"
+import normalFemale from "@/assets/character/normal_female.png"
+import speculativeMale from "@/assets/character/speculative_male.png"
+import speculativeFemale from "@/assets/character/speculative_female.png"
+
+const getCharacterImage = (riskType) => {
+  const map = {
+    timid_male: timidMale,
+    timid_female: timidFemale,
+    normal_male: normalMale,
+    normal_female: normalFemale,
+    speculative_male: speculativeMale,
+    speculative_female: speculativeFemale,
+  }
+
+  return map[riskType] || normalMale
+}
+
 
 const router = useRouter()
 
@@ -877,10 +901,19 @@ onMounted(() => {
 }
 
 .result-header {
-  padding: 48px 32px;
-  text-align: center;
   position: relative;
+  height: 360px; /* 🔥 빨간 네모 크기 */
+  padding: 32px;
+  border-radius: 24px;
   overflow: hidden;
+
+  background-size: contain;   /* 캐릭터 전체 보이게 */
+  background-position: center bottom;
+  background-repeat: no-repeat;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
 }
 
 .result-header::before {
@@ -895,16 +928,16 @@ onMounted(() => {
   background-size: 30px 30px;
 }
 
-.result-header.type-timid {
-  background: linear-gradient(135deg, #93c5fd 0%, #3b82f6 100%);
-}
-
-.result-header.type-normal {
-  background: linear-gradient(135deg, #a78bfa 0%, #7c3aed 100%);
-}
-
-.result-header.type-speculative {
-  background: linear-gradient(135deg, #fb923c 0%, #ea580c 100%);
+.result-header::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgba(0,0,0,0.25),
+    rgba(0,0,0,0.15),
+    transparent
+  );
 }
 
 .result-icon {
@@ -932,9 +965,9 @@ onMounted(() => {
 }
 
 .result-type {
-  font-size: 40px;
+  font-size: 20px;
   font-weight: 800;
-  color: white;
+  color: rgb(255, 255, 255);
   margin: 0;
   text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
 }
@@ -1098,5 +1131,13 @@ onMounted(() => {
   .result-actions {
     padding: 24px 16px;
   }
+}
+
+.character-image {
+  width: 120px;
+  height: 120px;
+  object-fit: contain;
+  margin-bottom: 20px;
+  animation: bounce 1s ease-in-out;
 }
 </style>
