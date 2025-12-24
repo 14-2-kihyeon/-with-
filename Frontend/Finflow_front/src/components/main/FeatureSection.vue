@@ -13,7 +13,7 @@
 
         <div class="home-feature__actions">
           <button class="home-feature__btn" @click="goTo">
-            기능 바로가기 →
+            바로가기 →
           </button>
         </div>
       </div>
