@@ -19,45 +19,38 @@
       <div class="post-card">
         <!-- 헤더 -->
         <div class="post-header">
-          <h1 class="post-title">{{ p.title }}</h1>
-          
-          <div class="post-info">
-            <div class="author-info">
-              <div class="author-avatar">
-                {{ p.user?.username?.[0]?.toUpperCase() }}
-              </div>
-              <div class="author-details">
-                <div class="author-name">{{ p.user?.username }}</div>
-                <div class="post-date">
-                  <span class="date-icon">🕐</span>
-                  {{ formatDate(p.created_at) }}
-                </div>
-              </div>
-            </div>
+          <div class="header-top">
+            <h1 class="post-title">{{ p.title }}</h1>
 
             <!-- 작성자 버튼 -->
             <div v-if="isOwner" class="post-actions">
-              <RouterLink 
-                :to="`/posts/${p.pk}/edit`" 
+              <RouterLink
+                :to="`/posts/${p.pk}/edit`"
                 class="btn-edit"
               >
-                <span class="btn-icon">✏️</span>
                 수정
               </RouterLink>
-              <button 
-                @click="onDelete" 
+              <button
+                @click="onDelete"
                 class="btn-delete"
               >
-                <span class="btn-icon">🗑️</span>
                 삭제
               </button>
             </div>
+          </div>
+
+          <div class="post-meta">
+            <span class="meta-item">{{ p.user?.username }}</span>
+            <span class="meta-divider">·</span>
+            <span class="meta-item">{{ formatDate(p.created_at) }}</span>
+            <span class="meta-divider">·</span>
+            <span class="meta-item">댓글 {{ p.comments?.length || 0 }}개</span>
           </div>
         </div>
 
         <!-- 본문 -->
         <div class="post-content">
-          <p>{{ p.content }}</p>
+          {{ p.content }}
         </div>
 
         <!-- 좋아요/공유 -->
@@ -77,9 +70,7 @@
       <div class="comments-card">
         <div class="comments-header">
           <h2 class="comments-title">
-            <span class="title-icon">💬</span>
-            댓글
-            <span class="comment-count">{{ p.comments?.length || 0 }}</span>
+            댓글 {{ p.comments?.length || 0 }}개
           </h2>
         </div>
 
@@ -95,12 +86,11 @@
             ></textarea>
             <div class="comment-form-footer">
               <div class="char-count">{{ comment.length }}/200</div>
-              <button 
-                @click="onCreateComment" 
+              <button
+                @click="onCreateComment"
                 class="btn-primary"
                 :disabled="!comment.trim()"
               >
-                <span class="btn-icon">📤</span>
                 댓글 작성
               </button>
             </div>
@@ -131,31 +121,25 @@
               :key="c.pk"
               class="comment-item"
             >
-              <div class="comment-author">
-                <div class="comment-avatar">
-                  {{ c.user?.username?.[0]?.toUpperCase() }}
-                </div>
+              <div class="comment-header">
                 <div class="comment-meta">
-                  <div class="comment-username">{{ c.user?.username }}</div>
-                  <div class="comment-date">
-                    {{ formatDate(c.created_at) }}
-                  </div>
+                  <span class="comment-username">{{ c.user?.username }}</span>
+                  <span class="meta-divider">·</span>
+                  <span class="comment-date">{{ formatDate(c.created_at) }}</span>
                 </div>
+                <!-- 댓글 삭제 버튼 -->
+                <button
+                  v-if="c.user?.pk === auth.user?.pk"
+                  @click="onDeleteComment(c.pk)"
+                  class="btn-delete-comment"
+                >
+                  삭제
+                </button>
               </div>
 
               <div class="comment-content">
                 {{ c.content }}
               </div>
-
-              <!-- 댓글 삭제 버튼 -->
-              <button
-                v-if="c.user?.pk === auth.user?.pk"
-                @click="onDeleteComment(c.pk)"
-                class="btn-delete-comment"
-              >
-                <span class="btn-icon">🗑️</span>
-                삭제
-              </button>
             </div>
           </div>
         </div>
@@ -243,10 +227,9 @@ const onDeleteComment = async (commentPk) => {
 <style scoped>
 /* 페이지 래퍼 */
 .community-page {
-  max-width: 900px;
+  max-width: 980px;
   margin: 0 auto;
-  padding: 20px;
-  background: #f9fafb;
+  padding: 40px 20px;
   min-height: 100vh;
 }
 
@@ -307,104 +290,83 @@ const onDeleteComment = async (commentPk) => {
 }
 
 .post-header {
-  padding: 28px;
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  color: #ffffff;
+  padding: 24px 28px;
+  border-bottom: 1px solid #e5e8eb;
+}
+
+.header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 12px;
 }
 
 .post-title {
-  margin: 0 0 20px 0;
-  font-size: 1.5rem;
-  font-weight: 700;
+  margin: 0;
+  font-size: 24px;
+  font-weight: 800;
   line-height: 1.4;
+  color: #0f172a;
+  flex: 1;
 }
 
-.post-info {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-}
-
-.author-info {
+.post-meta {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
-.author-avatar {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.3rem;
-  font-weight: 700;
-  color: #ffffff;
+.meta-item {
+  font-size: 0.9rem;
+  color: #64748b;
 }
 
-.author-details {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.author-name {
-  font-size: 1rem;
-  font-weight: 600;
-}
-
-.post-date {
-  font-size: 0.85rem;
-  opacity: 0.9;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.date-icon {
+.meta-divider {
+  color: #cbd5e1;
   font-size: 0.9rem;
 }
 
 .post-actions {
   display: flex;
-  gap: 8px;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
 .btn-edit,
 .btn-delete {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 8px 14px;
-  border-radius: 8px;
+  padding: 6px 12px;
+  border-radius: 6px;
   font-size: 0.85rem;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s ease;
   text-decoration: none;
+  border: 1.5px solid #d1d5db;
 }
 
 .btn-edit {
-  background: rgba(255, 255, 255, 0.2);
-  color: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: #ffffff;
+  color: #6b7280;
 }
 
 .btn-edit:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: #f8fafc;
+  border-color: #9ca3af;
 }
 
 .btn-delete {
-  background: rgba(239, 68, 68, 0.2);
-  color: #ffffff;
-  border: 1px solid rgba(239, 68, 68, 0.3);
+  background: #ffffff;
+  color: #ef4444;
+  border-color: #fecaca;
 }
 
 .btn-delete:hover {
-  background: rgba(239, 68, 68, 0.3);
+  background: #fef2f2;
+  border-color: #fca5a5;
 }
 
 .post-content {
@@ -613,30 +575,17 @@ const onDeleteComment = async (commentPk) => {
   background: #f1f3f5;
 }
 
-.comment-author {
+.comment-header {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 10px;
   margin-bottom: 10px;
-}
-
-.comment-avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: #3b82f6;
-  color: #ffffff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.95rem;
-  font-weight: 700;
 }
 
 .comment-meta {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: center;
+  gap: 8px;
 }
 
 .comment-username {
@@ -646,7 +595,7 @@ const onDeleteComment = async (commentPk) => {
 }
 
 .comment-date {
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   color: #9ca3af;
 }
 
@@ -654,20 +603,15 @@ const onDeleteComment = async (commentPk) => {
   font-size: 0.95rem;
   line-height: 1.6;
   color: #4b5563;
-  padding-right: 60px;
 }
 
 .btn-delete-comment {
-  position: absolute;
-  top: 16px;
-  right: 16px;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 6px 12px;
-  background: #fee2e2;
-  color: #991b1b;
-  border: 1px solid #fecaca;
+  padding: 5px 10px;
+  background: #ffffff;
+  color: #ef4444;
+  border: 1.5px solid #fecaca;
   border-radius: 6px;
   font-size: 0.8rem;
   font-weight: 500;
@@ -676,7 +620,8 @@ const onDeleteComment = async (commentPk) => {
 }
 
 .btn-delete-comment:hover {
-  background: #fecaca;
+  background: #fef2f2;
+  border-color: #fca5a5;
 }
 
 /* 버튼 */
@@ -722,11 +667,6 @@ const onDeleteComment = async (commentPk) => {
     font-size: 1.3rem;
   }
 
-  .post-info {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
   .post-content {
     padding: 24px 20px;
   }
@@ -736,17 +676,6 @@ const onDeleteComment = async (commentPk) => {
   .comments-body {
     padding: 16px 20px;
   }
-
-  .comment-content {
-    padding-right: 0;
-    margin-bottom: 40px;
-  }
-
-  .btn-delete-comment {
-    top: auto;
-    bottom: 12px;
-    right: 12px;
-  }
 }
 
 @media (max-width: 640px) {
@@ -754,21 +683,26 @@ const onDeleteComment = async (commentPk) => {
     font-size: 1.2rem;
   }
 
-  .author-avatar {
-    width: 40px;
-    height: 40px;
-    font-size: 1.1rem;
+  .header-top {
+    flex-direction: column;
   }
 
   .post-actions {
     width: 100%;
-    flex-direction: column;
+    flex-direction: row;
+    justify-content: flex-end;
   }
 
   .btn-edit,
   .btn-delete {
-    width: 100%;
+    flex: 1;
     justify-content: center;
+  }
+
+  .comment-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
   }
 }
 </style>

@@ -111,7 +111,7 @@ const onSubmit = async () => {
   errorMsg.value = ""
   try {
     await auth.login(username.value, password.value)
-    router.push({ name: "mypage" })
+    router.push({ name: "main" })
   } catch (err) {
     errorMsg.value = JSON.stringify(err.response?.data || err.message)
     console.error("로그인 오류:", err)

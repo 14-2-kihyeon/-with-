@@ -270,47 +270,9 @@ const riskTypeLabel = computed(() => {
   return labels[riskType.value] || '일반'
 })
 
-
-
-// 성향별 챗봇 이미지 설정 (public/assets/chatbot/ 폴더에 아래 이미지 파일들을 추가하세요)
-const CHATBOT_IMAGES = {
-  // 위젯 버튼용 이미지 (플로팅 버튼에 표시)
-  widget: {
-    'guest': '/assets/chatbot/guest-widget.png',        // 비로그인 사용자용 위젯 이미지
-    'timid': '/assets/chatbot/timid-widget.png',        // 안정형 위젯 이미지
-    'normal': '/assets/chatbot/normal-widget.png',      // 중립형 위젯 이미지
-    'speculative': '/assets/chatbot/speculative-widget.png',  // 공격형 위젯 이미지
-  },
-  // 프로필/아바타용 이미지 (헤더와 메시지에 표시)
-  profile: {
-    'guest': '/assets/chatbot/guest-profile.png',       // 비로그인 사용자용 프로필 이미지
-    'timid': '/assets/chatbot/timid-profile.png',       // 안정형 프로필 이미지
-    'normal': '/assets/chatbot/normal-profile.png',     // 중립형 프로필 이미지
-    'speculative': '/assets/chatbot/speculative-profile.png',  // 공격형 프로필 이미지
-  }
-}
-
-const avatarImage = computed(() => {
-  // 비로그인 상태면 게스트 이미지 사용 (없으면 normal)
-  if (!authStore.isLogin) {
-    return CHATBOT_IMAGES.profile.guest || CHATBOT_IMAGES.profile.normal
-  }
-  // 프로필 이미지 반환 (헤더, 메시지, 환영 메시지용)
-  const image = CHATBOT_IMAGES.profile[avatarType.value]
-  console.log('avatarImage:', avatarType.value, '→', image)
-  return image || CHATBOT_IMAGES.profile.normal
-})
-
-const widgetImage = computed(() => {
-  // 비로그인 상태면 게스트 이미지 사용 (없으면 normal)
-  if (!authStore.isLogin) {
-    return CHATBOT_IMAGES.widget.guest || CHATBOT_IMAGES.widget.normal
-  }
-  // 위젯 버튼 이미지 반환 (플로팅 버튼용)
-  const image = CHATBOT_IMAGES.widget[avatarType.value]
-  console.log('widgetImage:', avatarType.value, '→', image)
-  return image || CHATBOT_IMAGES.widget.normal
-})
+// 모든 아바타 이미지를 lego.png로 통일
+const avatarImage = computed(() => legoImage)
+const widgetImage = computed(() => legoImage)
 
 const chatContainerStyle = computed(() => {
   const pos = dragPosition.value

@@ -9,14 +9,42 @@
 
       <!-- Center: Menus -->
       <div class="menu">
-        <RouterLink :to="{ name: 'fin_home' }" class="nav-link">예적금</RouterLink>
-        <RouterLink :to="{ name: 'stocks_home' }" class="nav-link">Stocks</RouterLink>
-        <RouterLink :to="{ name: 'naver_news' }" class="nav-link">News</RouterLink>
-        <RouterLink :to="{ name: 'bank_map' }" class="nav-link">Map</RouterLink>
-        <RouterLink :to="{ name: 'youtube_search' }" class="nav-link">YouTube</RouterLink>
-        <RouterLink v-if="auth.isLogin" :to="{ name: 'investment_survey' }" class="nav-link">투자 성향 검사</RouterLink>
-        <RouterLink v-if="auth.isLogin" :to="{ name: 'recommendations' }" class="nav-link">맞춤 추천</RouterLink>
-        <RouterLink :to="{ name: 'post_list' }" class="nav-link">커뮤니티</RouterLink>
+        <!-- 항상 표시되는 주요 메뉴 -->
+        <RouterLink :to="{ name: 'fin_home' }" class="nav-link main-menu">예적금</RouterLink>
+        <RouterLink :to="{ name: 'stocks_home' }" class="nav-link main-menu">주식</RouterLink>
+        <RouterLink :to="{ name: 'naver_news' }" class="nav-link main-menu">뉴스</RouterLink>
+        <RouterLink :to="{ name: 'post_list' }" class="nav-link main-menu">커뮤니티</RouterLink>
+
+        <!-- 작은 화면에서 숨겨지는 메뉴 -->
+        <RouterLink :to="{ name: 'bank_map' }" class="nav-link hide-mobile">지도</RouterLink>
+        <RouterLink :to="{ name: 'youtube_search' }" class="nav-link hide-mobile">유튜브</RouterLink>
+        <RouterLink v-if="auth.isLogin" :to="{ name: 'investment_survey' }" class="nav-link hide-mobile">투자 성향 검사</RouterLink>
+        <RouterLink v-if="auth.isLogin" :to="{ name: 'recommendations' }" class="nav-link hide-mobile">맞춤 추천</RouterLink>
+
+        <!-- 더보기 드롭다운 (작은 화면에서만 표시) -->
+        <div class="more-menu" ref="moreArea">
+          <button class="nav-link more-btn" @click="toggleMoreMenu">
+            더보기
+            <span class="chev" :class="{ open: isMoreOpen }">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none">
+                <path
+                  d="M7 10l5 5 5-5"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </span>
+          </button>
+
+          <div v-if="isMoreOpen" class="more-dropdown">
+            <RouterLink :to="{ name: 'bank_map' }" class="dropdown-item" @click="closeMoreMenu">지도</RouterLink>
+            <RouterLink :to="{ name: 'youtube_search' }" class="dropdown-item" @click="closeMoreMenu">유튜브</RouterLink>
+            <RouterLink v-if="auth.isLogin" :to="{ name: 'investment_survey' }" class="dropdown-item" @click="closeMoreMenu">투자 성향 검사</RouterLink>
+            <RouterLink v-if="auth.isLogin" :to="{ name: 'recommendations' }" class="dropdown-item" @click="closeMoreMenu">맞춤 추천</RouterLink>
+          </div>
+        </div>
       </div>
 
       <!-- Right: Auth -->
@@ -94,12 +122,21 @@ const router = useRouter()
 
 const isOpen = ref(false)
 const userArea = ref(null)
+const isMoreOpen = ref(false)
+const moreArea = ref(null)
 
 const toggleDropdown = () => {
   isOpen.value = !isOpen.value
 }
 const closeDropdown = () => {
   isOpen.value = false
+}
+
+const toggleMoreMenu = () => {
+  isMoreOpen.value = !isMoreOpen.value
+}
+const closeMoreMenu = () => {
+  isMoreOpen.value = false
 }
 
 const onLogout = async () => {
@@ -110,8 +147,12 @@ const onLogout = async () => {
 
 // 바깥 클릭 시 드롭다운 닫기
 const onClickOutside = (e) => {
-  if (!userArea.value) return
-  if (!userArea.value.contains(e.target)) closeDropdown()
+  if (userArea.value && !userArea.value.contains(e.target)) {
+    closeDropdown()
+  }
+  if (moreArea.value && !moreArea.value.contains(e.target)) {
+    closeMoreMenu()
+  }
 }
 
 onMounted(() => {
@@ -122,10 +163,13 @@ onBeforeUnmount(() => {
   window.removeEventListener("click", onClickOutside)
 })
 
-// 라우트 이동 시 드롭다운 닫기
+// 라우트 이동 시 모든 드롭다운 닫기
 watch(
   () => router.currentRoute.value.fullPath,
-  () => closeDropdown()
+  () => {
+    closeDropdown()
+    closeMoreMenu()
+  }
 )
 
 defineProps({
@@ -342,12 +386,158 @@ defineProps({
   box-shadow: inset 0 1px 2px rgba(239, 68, 68, 0.15);
 }
 
-/* 모바일에서 메뉴가 너무 길면 줄바꿈/스크롤 등 추가 조정 필요 */
-@media (max-width: 900px) {
+/* 더보기 메뉴 */
+.more-menu {
+  position: relative;
+  display: none; /* 기본적으로 숨김 */
+}
+
+.more-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.more-dropdown {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 10px);
+  min-width: 200px;
+  z-index: 100;
+
+  /* 드롭다운 스타일 통일 */
+  background: linear-gradient(145deg, #ffffff, #f8fafc);
+  border: 1.5px solid;
+  border-image: linear-gradient(135deg, #94a3b8, #cbd5e1, #e2e8f0) 1;
+  border-radius: 4px;
+  box-shadow:
+    0 8px 24px rgba(15, 23, 42, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  overflow: hidden;
+  padding: 6px;
+}
+
+/* 반응형: 큰 화면 (1140px 초과) - 모든 메뉴 표시 */
+@media (min-width: 1141px) {
+  .hide-mobile {
+    display: block;
+  }
+  .more-menu {
+    display: none;
+  }
+}
+
+/* 반응형: 1140px 이하 - 주요 메뉴 4개 + 더보기 */
+@media (max-width: 1140px) {
+  .menu {
+    flex-wrap: nowrap;
+    overflow: visible;
+  }
+
+  .nav-link {
+    white-space: nowrap;
+  }
+
+  .hide-mobile {
+    display: none;
+  }
+
+  .more-menu {
+    display: block;
+  }
+}
+
+/* 중간 화면 (683px ~ 1140px) */
+@media (min-width: 683px) and (max-width: 1140px) {
+  .nav-inner {
+    gap: 40px;
+  }
+
   .menu {
     gap: 10px;
-    overflow-x: auto;
-    white-space: nowrap;
+  }
+
+  .nav-link {
+    font-size: 13px;
+    padding: 6px 6px;
+  }
+}
+
+/* 작은 화면 (481px ~ 682px) - 사용자 이름 숨김 */
+@media (min-width: 481px) and (max-width: 682px) {
+  .nav-inner {
+    gap: 20px;
+    padding: 0 12px;
+  }
+
+  .brand-logo {
+    height: 18px;
+    max-width: 150px;
+  }
+
+  .menu {
+    gap: 6px;
+  }
+
+  .nav-link {
+    font-size: 11px;
+    padding: 5px 4px;
+  }
+
+  .user-name {
+    display: none;
+  }
+
+  .user-btn {
+    padding: 7px 10px;
+  }
+
+  .auth-link {
+    font-size: 11px;
+    padding: 5px 6px;
+  }
+}
+
+/* 초소형 화면 (480px 이하) */
+@media (max-width: 480px) {
+  .nav-inner {
+    gap: 12px;
+    padding: 0 10px;
+  }
+
+  .brand-logo {
+    height: 16px;
+    max-width: 120px;
+  }
+
+  .menu {
+    gap: 5px;
+  }
+
+  .nav-link {
+    font-size: 10px;
+    padding: 4px 3px;
+  }
+
+  .more-btn {
+    font-size: 10px;
+  }
+
+  .user-name {
+    display: none;
+  }
+
+  .user-btn {
+    padding: 6px 8px;
+  }
+
+  .auth-link {
+    font-size: 10px;
+    padding: 4px 5px;
   }
 }
 </style>

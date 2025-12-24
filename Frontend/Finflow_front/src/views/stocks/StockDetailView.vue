@@ -26,8 +26,8 @@
 
       <div class="card">
         <div class="row-between">
-          <h2 class="card-title">뉴스</h2>
-          <div class="pagination-btns" v-if="totalNewsPages > 1">
+          <h2 class="card-title"> 📈 뉴스</h2>
+          <div class="pagination-btns" v-if="totalNewsPages > 0">
             <button class="btn ghost" :disabled="currentNewsPage === 1" @click="prevNewsPage">이전</button>
             <span class="page-info">{{ currentNewsPage }} / {{ totalNewsPages }}</span>
             <button class="btn ghost" :disabled="currentNewsPage === totalNewsPages" @click="nextNewsPage">다음</button>
@@ -35,7 +35,7 @@
         </div>
 
         <p class="small" v-if="store.news?.news_fetch">
-          fetch: {{ store.news.news_fetch.reason }} / saved: {{ store.news.news_fetch.saved }}
+          <!-- fetch: {{ store.news.news_fetch.reason }} / saved: {{ store.news.news_fetch.saved }} -->
         </p>
 
         <StockNewsList :items="paginatedNews" />
@@ -90,7 +90,7 @@ const code = route.params.code
 
 // 뉴스 페이지네이션
 const currentNewsPage = ref(1)
-const newsPerPage = 3
+const newsPerPage = 1
 
 // AI 설명 타이핑 애니메이션
 const isTyping = ref(false)

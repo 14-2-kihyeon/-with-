@@ -4,61 +4,52 @@
     <div class="community-header">
       <div class="header-content">
         <div class="title-group">
-          <span class="icon">💬</span>
-          <div>
-            <h1 class="title">금융 커뮤니티</h1>
-            <p class="subtitle">금융 상품에 대한 궁금증을 나누고 조언을 구해보세요</p>
-          </div>
+          <h1 class="title">커뮤니티</h1>
+          <p class="subtitle">다른 사람들과 금융 상품에 대한 경험을 공유해보세요</p>
         </div>
-        <div v-if="auth.isLogin">
-          <RouterLink to="/posts/create" class="btn-primary">
-            <span class="btn-icon">✏️</span>
-            글쓰기
-          </RouterLink>
+        <div class="header-stats">
+          <div class="stat-item">
+            <span class="stat-value">{{ store.posts.length }}</span>
+            <span class="stat-label">게시글</span>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat-item">
+            <span class="stat-value">{{ totalComments }}</span>
+            <span class="stat-label">댓글</span>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- 통계 카드 -->
-    <div class="stats-grid">
-      <div class="stat-card stat-primary">
-        <div class="stat-number">{{ store.posts.length }}</div>
-        <div class="stat-label">전체 게시글</div>
+    <!-- 컨트롤 바 -->
+    <div class="control-bar">
+      <div class="sort-tabs">
+        <button
+          class="sort-tab"
+          :class="{ active: sortBy === 'latest' }"
+          @click="sortBy = 'latest'"
+        >
+          최신순
+        </button>
+        <button
+          class="sort-tab"
+          :class="{ active: sortBy === 'comments' }"
+          @click="sortBy = 'comments'"
+        >
+          댓글순
+        </button>
       </div>
-      <div class="stat-card stat-success">
-        <div class="stat-number">{{ totalComments }}</div>
-        <div class="stat-label">전체 댓글</div>
-      </div>
-      <div class="stat-card stat-info">
-        <div class="stat-number">{{ activeUsers }}</div>
-        <div class="stat-label">활동 중인 회원</div>
-      </div>
+      <RouterLink
+        v-if="auth.isLogin"
+        to="/posts/create"
+        class="btn-write"
+      >
+        글쓰기
+      </RouterLink>
     </div>
 
     <!-- 게시글 목록 카드 -->
     <div class="posts-card">
-      <div class="card-header">
-        <h2 class="card-title">
-          <span class="title-icon">📋</span>
-          게시글 목록
-        </h2>
-        <div class="sort-buttons">
-          <button
-            class="sort-btn"
-            :class="{ active: sortBy === 'latest' }"
-            @click="sortBy = 'latest'"
-          >
-            최신순
-          </button>
-          <button
-            class="sort-btn"
-            :class="{ active: sortBy === 'comments' }"
-            @click="sortBy = 'comments'"
-          >
-            댓글순
-          </button>
-        </div>
-      </div>
 
       <div class="card-body">
         <!-- 빈 상태 -->
@@ -101,15 +92,14 @@
 
               <div class="post-meta">
                 <span class="meta-item">
-                  <span class="meta-icon">👤</span>
                   {{ p.user?.username }}
                 </span>
+                <span class="meta-divider">·</span>
                 <span class="meta-item">
-                  <span class="meta-icon">🕐</span>
                   {{ formatDate(p.created_at) }}
                 </span>
+                <span class="meta-divider">·</span>
                 <span class="meta-item">
-                  <span class="meta-icon">💬</span>
                   댓글 {{ p.comments_count }}개
                 </span>
               </div>
@@ -148,11 +138,6 @@ const sortBy = ref('latest')
 
 const totalComments = computed(() => {
   return store.posts.reduce((sum, post) => sum + (post.comments_count || 0), 0)
-})
-
-const activeUsers = computed(() => {
-  const users = new Set(store.posts.map(post => post.user?.username))
-  return users.size
 })
 
 const sortedPosts = computed(() => {
@@ -200,162 +185,143 @@ onMounted(() => {
 <style scoped>
 /* 페이지 래퍼 */
 .community-page {
-  max-width: 1280px;
+  max-width: 980px;
   margin: 0 auto;
-  padding: 20px;
-  background: #f9fafb;
+  padding: 40px 20px;
   min-height: 100vh;
 }
 
 /* 헤더 */
 .community-header {
-  background: #3b82f6;
-  border-radius: 16px;
-  padding: 24px 28px;
-  margin-bottom: 20px;
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15);
+  margin-bottom: 32px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
 }
 
 .header-content {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-end;
   gap: 20px;
 }
 
 .title-group {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.title-group .icon {
-  font-size: 2rem;
+  flex: 1;
 }
 
 .title {
-  margin: 0;
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #ffffff;
+  margin: 0 0 8px 0;
+  font-size: 32px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.02em;
 }
 
 .subtitle {
-  margin: 4px 0 0 0;
-  font-size: 0.95rem;
-  color: rgba(255, 255, 255, 0.9);
+  margin: 0;
+  font-size: 15px;
+  color: #64748b;
+  font-weight: 400;
 }
 
-/* 통계 카드 */
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-  margin-bottom: 20px;
-}
-
-.stat-card {
-  background: #ffffff;
+.header-stats {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 12px 20px;
+  background: rgba(255, 255, 255, 0.8);
   border-radius: 12px;
-  padding: 20px;
-  text-align: center;
-  border: 2px solid;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0, 0, 0, 0.06);
 }
 
-.stat-card.stat-primary {
-  border-color: #3b82f6;
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
 }
 
-.stat-card.stat-success {
-  border-color: #10b981;
-}
-
-.stat-card.stat-info {
-  border-color: #3b82f6;
-}
-
-.stat-number {
-  font-size: 1.8rem;
+.stat-value {
+  font-size: 20px;
   font-weight: 700;
-  margin-bottom: 4px;
-}
-
-.stat-card.stat-primary .stat-number {
-  color: #3b82f6;
-}
-
-.stat-card.stat-success .stat-number {
-  color: #10b981;
-}
-
-.stat-card.stat-info .stat-number {
-  color: #3b82f6;
+  color: #0f172a;
 }
 
 .stat-label {
-  font-size: 0.9rem;
-  color: #6b7280;
+  font-size: 12px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.stat-divider {
+  width: 1px;
+  height: 28px;
+  background: rgba(0, 0, 0, 0.08);
+}
+
+/* 컨트롤 바 */
+.control-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.sort-tabs {
+  display: flex;
+  gap: 4px;
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 10px;
+  padding: 4px;
+}
+
+.sort-tab {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.sort-tab:hover {
+  color: #0f172a;
+}
+
+.sort-tab.active {
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.btn-write {
+  padding: 10px 20px;
+  background: #0f172a;
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-write:hover {
+  background: #1e293b;
+  transform: translateY(-1px);
 }
 
 /* 게시글 카드 */
 .posts-card {
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.85);
   border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-  border: 1px solid #e5e8eb;
-  margin-bottom: 20px;
-}
-
-.card-header {
-  padding: 20px 24px;
-  border-bottom: 1px solid #e5e8eb;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.card-title {
-  margin: 0;
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: #191f28;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.title-icon {
-  font-size: 1.2rem;
-}
-
-.sort-buttons {
-  display: flex;
-  gap: 8px;
-}
-
-.sort-btn {
-  padding: 8px 16px;
-  border-radius: 20px;
-  border: 1.5px solid #d1d5db;
-  background: #ffffff;
-  color: #6b7280;
-  font-size: 0.9rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.sort-btn:hover {
-  border-color: #3b82f6;
-  color: #3b82f6;
-}
-
-.sort-btn.active {
-  background: #3b82f6;
-  color: #ffffff;
-  border-color: #3b82f6;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  margin-bottom: 24px;
 }
 
 .card-body {
@@ -460,15 +426,13 @@ onMounted(() => {
 }
 
 .meta-item {
-  display: flex;
-  align-items: center;
-  gap: 4px;
   font-size: 0.85rem;
   color: #9ca3af;
 }
 
-.meta-icon {
-  font-size: 0.9rem;
+.meta-divider {
+  color: #d1d5db;
+  font-size: 0.85rem;
 }
 
 .post-arrow {
@@ -554,11 +518,7 @@ onMounted(() => {
 /* 반응형 */
 @media (max-width: 968px) {
   .community-page {
-    padding: 12px;
-  }
-
-  .community-header {
-    padding: 20px;
+    padding: 20px 12px;
   }
 
   .header-content {
@@ -566,19 +526,17 @@ onMounted(() => {
     align-items: flex-start;
   }
 
+  .header-stats {
+    width: 100%;
+    justify-content: center;
+  }
+
   .title {
-    font-size: 1.3rem;
+    font-size: 24px;
   }
 
-  .stats-grid {
-    grid-template-columns: 1fr;
-    gap: 12px;
-  }
-
-  .card-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
+  .subtitle {
+    font-size: 14px;
   }
 
   .post-item {
@@ -591,28 +549,43 @@ onMounted(() => {
 }
 
 @media (max-width: 640px) {
-  .title-group .icon {
-    font-size: 1.5rem;
+  .community-page {
+    padding: 16px 12px;
   }
 
   .title {
-    font-size: 1.2rem;
+    font-size: 22px;
   }
 
   .subtitle {
-    font-size: 0.85rem;
+    font-size: 13px;
   }
 
-  .stat-number {
-    font-size: 1.5rem;
+  .stat-value {
+    font-size: 18px;
+  }
+
+  .stat-label {
+    font-size: 11px;
+  }
+
+  .control-bar {
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+  }
+
+  .btn-write {
+    width: 100%;
+    justify-content: center;
   }
 
   .post-title {
     font-size: 0.95rem;
   }
 
-  .post-meta {
-    gap: 8px;
+  .post-preview {
+    font-size: 0.9rem;
   }
 
   .meta-item {

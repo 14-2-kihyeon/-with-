@@ -183,8 +183,10 @@
 import { ref, computed } from "vue"
 import axios from "axios"
 import { useRouter } from "vue-router"
+import { useAuthStore } from "@/stores/auth"
 
 const router = useRouter()
+const authStore = useAuthStore()
 const username = ref("")
 const email = ref("")
 const password1 = ref("")
@@ -298,9 +300,14 @@ const onSubmit = async () => {
   if (email.value) payload.email = email.value
 
   try {
+    // 회원가입
     await axios.post(`${API}/accounts/registration/`, payload)
-    alert("회원가입이 완료되었습니다! 로그인해주세요.")
-    router.push({ name: "login" })
+
+    // 자동 로그인
+    await authStore.login(username.value, password1.value)
+
+    alert("회원가입이 완료되었습니다!")
+    router.push({ name: "main" })
   } catch (err) {
     errorMsg.value = JSON.stringify(err.response?.data || err.message)
     console.error("회원가입 오류:", err)
