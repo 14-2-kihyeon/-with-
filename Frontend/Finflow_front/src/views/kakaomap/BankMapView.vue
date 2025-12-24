@@ -221,6 +221,7 @@ onMounted(async () => {
     await requestMyLocation()
   } catch (e) {
     // 조용히 실패 (사용자가 권한 거부 시 에러 창 띄우지 않음)
+  }
 
   // 위치 권한 모달 표시 여부 확인
   checkLocationPermission()
