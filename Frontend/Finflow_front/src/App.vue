@@ -5,16 +5,23 @@
 </template>
 
 <script setup>
-import NavBar from "@/components/common/NavBar.vue"
 import ChatbotWidget from "@/components/common/ChatbotWidget.vue"
 import { onMounted } from "vue"
 import { useAuthStore } from "@/stores/auth"
 
 const auth = useAuthStore()
 
-onMounted(() => {
-  // access가 있으면 user 복구
-  if (auth.isLogin && !auth.user) auth.fetchUser()
+onMounted(async () => {
+  // access가 있으면 user 복구 시도, 실패하면 로그아웃
+  if (auth.isLogin && !auth.user) {
+    try {
+      await auth.fetchUser()
+    } catch (err) {
+      // 서버가 응답하지 않거나 토큰이 무효하면 자동 로그아웃
+      console.warn("토큰 검증 실패, 자동 로그아웃:", err.message)
+      auth.clearTokens()
+    }
+  }
 })
 </script>
 

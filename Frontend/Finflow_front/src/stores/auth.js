@@ -25,6 +25,8 @@ export const useAuthStore = defineStore("auth", () => {
     user.value = null
     localStorage.removeItem("access")
     localStorage.removeItem("refresh")
+    // 팝업 "오늘 하루 보지 않기" 설정도 삭제
+    localStorage.removeItem("pb_promo_hide_until")
   }
 
   // ✅ 로그인 (dj-rest-auth)

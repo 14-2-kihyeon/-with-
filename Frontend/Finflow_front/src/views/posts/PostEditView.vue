@@ -1,19 +1,14 @@
 <template>
   <div class="community-page">
     <!-- 헤더 -->
-    <div class="community-header">
-      <div class="header-content">
-        <div class="title-group">
-          <span class="icon">✏️</span>
-          <div>
-            <h1 class="title">게시글 수정</h1>
-            <p class="subtitle">내용을 수정하고 저장하세요</p>
-          </div>
-        </div>
-        <button @click="router.back()" class="btn-back">
-          ← 뒤로가기
-        </button>
+    <div class="page-header">
+      <div class="header-left">
+        <h1 class="title">게시글 수정</h1>
+        <p class="subtitle">내용을 수정하고 저장하세요</p>
       </div>
+      <button @click="router.back()" class="btn-back">
+        ← 뒤로가기
+      </button>
     </div>
 
     <!-- 로딩 상태 -->
@@ -155,58 +150,49 @@ const onSubmit = async () => {
 <style scoped>
 /* 페이지 래퍼 */
 .community-page {
-  max-width: 900px;
+  max-width: 980px;
   margin: 0 auto;
-  padding: 20px;
-  background: #f9fafb;
+  padding: 40px 20px;
   min-height: 100vh;
 }
 
 /* 헤더 */
-.community-header {
-  background: #3b82f6;
-  border-radius: 16px;
-  padding: 20px 28px;
-  margin-bottom: 20px;
-  box-shadow: 0 2px 8px rgba(0, 199, 60, 0.15);
-}
-
-.header-content {
+.page-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  gap: 20px;
+  align-items: flex-end;
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
 }
 
-.title-group {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.title-group .icon {
-  font-size: 2rem;
+.header-left {
+  flex: 1;
 }
 
 .title {
-  margin: 0;
-  font-size: 1.4rem;
-  font-weight: 700;
-  color: #ffffff;
+  margin: 0 0 8px 0;
+  font-size: 28px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.02em;
 }
 
 .subtitle {
-  margin: 4px 0 0 0;
-  font-size: 0.95rem;
-  color: rgba(255, 255, 255, 0.9);
+  margin: 0;
+  font-size: 15px;
+  color: #64748b;
+  font-weight: 400;
 }
 
 .btn-back {
+  display: inline-flex;
+  align-items: center;
   padding: 10px 18px;
-  background: rgba(255, 255, 255, 0.15);
-  color: #ffffff;
-  border: none;
+  background: #ffffff;
+  border: 1.5px solid #d1d5db;
   border-radius: 8px;
+  color: #6b7280;
   font-size: 0.9rem;
   font-weight: 500;
   cursor: pointer;
@@ -214,7 +200,8 @@ const onSubmit = async () => {
 }
 
 .btn-back:hover {
-  background: rgba(255, 255, 255, 0.25);
+  border-color: #9ca3af;
+  background: #f8fafc;
 }
 
 /* 로딩 상태 */

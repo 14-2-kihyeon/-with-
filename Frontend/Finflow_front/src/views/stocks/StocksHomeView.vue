@@ -2,7 +2,7 @@
   <section class="stocks-home">
     <header class="stocks-header">
       <h1 class="title">주식</h1>
-      <p class="sub">검색 / 추천 / 뉴스 / AI 설명</p>
+      <p class="sub">주식 데이터를 한 눈에 확인해보세요</p>
     </header>
     
     <!-- ✅ KRX 대시보드 -->
@@ -11,7 +11,7 @@
 
     <header class="stocks-header">
       <h1 class="title">주식 검색</h1>
-      <p class="sub">검색 / 추천 / 뉴스 / AI 설명</p>
+      <p class="sub">관심있는 종목을 검색하고 궁금한 점을 챗봇에 질문에보세요</p>
     </header>
 
     <div class="card">
@@ -50,12 +50,7 @@
     </div>
 
     <div class="card">
-      <div class="row-between">
-        <h2 class="card-title">오늘의 추천</h2>
-        <button class="btn ghost" @click="store.fetchRecommendations({ top: 5, auto: 1, include_news: 1 })">
-          새로고침
-        </button>
-      </div>
+      <h2 class="card-title">오늘의 추천</h2>
 
       <div v-if="store.reco.detail" class="hint">{{ store.reco.detail }}</div>
 
