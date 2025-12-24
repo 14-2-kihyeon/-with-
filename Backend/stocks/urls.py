@@ -28,6 +28,8 @@ urlpatterns = [
 
     # ✅ 새로 추가
     path("<str:code>/explain/", views.stock_explain),
+    path("<str:code>/realtime/", views.stock_realtime_price),
+    path("<str:code>/intraday/", views.stock_intraday_prices),
 
     # ✅ 마지막
     path("<str:code>/", views.stock_detail),
