@@ -235,7 +235,7 @@ onMounted(async () => {
       console.warn("내 위치 자동 설정 실패 (권한 필요):", e.message || e)
     }
   }
-})
+}})
 </script>
 
 <style scoped>
