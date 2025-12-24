@@ -5,10 +5,11 @@ from rest_framework import status
 from django.shortcuts import get_object_or_404
 
 from .models import (
-    InvestmentProfile, 
-    SurveyQuestion, 
-    SurveyChoice, 
+    InvestmentProfile,
+    SurveyQuestion,
+    SurveyChoice,
     SurveyResponse,
+    ProductRecommendation,
     calculate_risk_type,
     RISK_TYPE_MAPPING
 )
@@ -491,6 +492,336 @@ def get_bookmarked_products(request):
         })
     
     return Response(data)
+
+
+# ==========================================
+# 마이페이지 통합 조회
+# ==========================================
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_mypage_data(request):
+    """
+    마이페이지 전체 데이터 조회
+    - 투자 프로필
+    - 북마크한 상품
+    - 북마크한 뉴스
+    - 유튜브 구독 채널
+    - 나중에 볼 영상
+    """
+    from .models import UserNewsBookmark, UserYouTubeSubscription, UserWatchLater
+    from .serializers import (
+        UserNewsBookmarkSerializer,
+        UserYouTubeSubscriptionSerializer,
+        UserWatchLaterSerializer
+    )
+
+    user = request.user
+
+    # 1. 투자 프로필
+    profile_data = {}
+    try:
+        profile = user.investment_profile
+        profile_data = {
+            'risk_type': profile.risk_type,
+            'risk_score': profile.risk_score,
+            'age': profile.age,
+            'gender': profile.gender,
+            'income': int(profile.income) if profile.income else 0,
+            'savings': int(profile.savings) if profile.savings else 0,
+            'investment_goal': profile.investment_goal,
+            'investment_period': profile.investment_period,
+        }
+    except Exception:
+        profile_data = None
+
+    # 2. 북마크한 금융 상품
+    bookmarked_products = []
+    product_bookmarks = ProductRecommendation.objects.filter(
+        user=user,
+        is_bookmarked=True
+    ).select_related('product')
+
+    for bookmark in product_bookmarks:
+        product = bookmark.product
+        # 최고 금리 옵션 찾기
+        best_option = product.options.order_by('-intr_rate2').first()
+
+        bookmarked_products.append({
+            'fin_prdt_cd': product.fin_prdt_cd,
+            'kor_co_nm': product.kor_co_nm,
+            'fin_prdt_nm': product.fin_prdt_nm,
+            'max_rate': f"{best_option.intr_rate2:.2f}%" if best_option and best_option.intr_rate2 else "정보없음",
+            'bookmarked_at': bookmark.created_at,
+        })
+
+    # 3. 북마크한 뉴스
+    news_bookmarks = UserNewsBookmark.objects.filter(user=user)
+    news_serializer = UserNewsBookmarkSerializer(news_bookmarks, many=True)
+
+    # 4. 유튜브 구독 채널
+    youtube_subscriptions = UserYouTubeSubscription.objects.filter(user=user)
+    youtube_serializer = UserYouTubeSubscriptionSerializer(youtube_subscriptions, many=True)
+
+    # 5. 나중에 볼 영상 (시청하지 않은 것만)
+    watch_later = UserWatchLater.objects.filter(user=user, is_watched=False)
+    watch_later_serializer = UserWatchLaterSerializer(watch_later, many=True)
+
+    return Response({
+        'profile': profile_data,
+        'bookmarked_products': bookmarked_products,
+        'bookmarked_news': news_serializer.data,
+        'youtube_subscriptions': youtube_serializer.data,
+        'watch_later_videos': watch_later_serializer.data,
+    })
+
+
+# ==========================================
+# 북마크 관련 Views
+# ==========================================
+
+@api_view(['POST', 'DELETE'])
+@permission_classes([IsAuthenticated])
+def toggle_news_bookmark(request, news_id):
+    """
+    뉴스 북마크 토글
+    POST: 북마크 추가
+    DELETE: 북마크 제거
+    """
+    from naversearch.models import News
+    from .models import UserNewsBookmark
+    from .serializers import UserNewsBookmarkSerializer
+
+    try:
+        # 뉴스가 존재하는지 확인
+        news = News.objects.get(pk=news_id)
+    except News.DoesNotExist:
+        return Response(
+            {'error': '뉴스를 찾을 수 없습니다.'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    if request.method == 'POST':
+        # 북마크 추가
+        bookmark, created = UserNewsBookmark.objects.get_or_create(
+            user=request.user,
+            news_id=news_id,
+            defaults={
+                'title': news.title,
+                'description': news.description,
+                'link': news.link,
+                'pub_date': news.pub_date,
+            }
+        )
+
+        if created:
+            serializer = UserNewsBookmarkSerializer(bookmark)
+            return Response(
+                {'message': '북마크에 추가되었습니다.', 'bookmark': serializer.data},
+                status=status.HTTP_201_CREATED
+            )
+        else:
+            return Response(
+                {'message': '이미 북마크에 추가된 뉴스입니다.'},
+                status=status.HTTP_200_OK
+            )
+
+    elif request.method == 'DELETE':
+        # 북마크 제거
+        try:
+            bookmark = UserNewsBookmark.objects.get(user=request.user, news_id=news_id)
+            bookmark.delete()
+            return Response(
+                {'message': '북마크에서 제거되었습니다.'},
+                status=status.HTTP_200_OK
+            )
+        except UserNewsBookmark.DoesNotExist:
+            return Response(
+                {'error': '북마크에 없는 뉴스입니다.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_news_bookmarks(request):
+    """사용자의 뉴스 북마크 목록 조회"""
+    from .models import UserNewsBookmark
+    from .serializers import UserNewsBookmarkSerializer
+
+    bookmarks = UserNewsBookmark.objects.filter(user=request.user)
+    serializer = UserNewsBookmarkSerializer(bookmarks, many=True)
+    return Response(serializer.data)
+
+
+@api_view(['POST', 'DELETE'])
+@permission_classes([IsAuthenticated])
+def toggle_youtube_subscription(request, channel_id):
+    """
+    유튜브 채널 구독 토글
+    POST: 구독 추가
+    DELETE: 구독 제거
+    """
+    from .models import UserYouTubeSubscription
+    from .serializers import UserYouTubeSubscriptionSerializer
+
+    if request.method == 'POST':
+        # 요청 데이터 검증
+        if not request.data.get('channel_title'):
+            return Response(
+                {'error': '채널 제목이 필요합니다.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # 구독 추가
+        subscription, created = UserYouTubeSubscription.objects.get_or_create(
+            user=request.user,
+            channel_id=channel_id,
+            defaults={
+                'channel_title': request.data.get('channel_title'),
+                'channel_description': request.data.get('channel_description', ''),
+                'channel_thumbnail': request.data.get('channel_thumbnail', ''),
+            }
+        )
+
+        if created:
+            serializer = UserYouTubeSubscriptionSerializer(subscription)
+            return Response(
+                {'message': '채널 구독이 추가되었습니다.', 'subscription': serializer.data},
+                status=status.HTTP_201_CREATED
+            )
+        else:
+            return Response(
+                {'message': '이미 구독 중인 채널입니다.'},
+                status=status.HTTP_200_OK
+            )
+
+    elif request.method == 'DELETE':
+        # 구독 제거
+        try:
+            subscription = UserYouTubeSubscription.objects.get(user=request.user, channel_id=channel_id)
+            subscription.delete()
+            return Response(
+                {'message': '채널 구독이 취소되었습니다.'},
+                status=status.HTTP_200_OK
+            )
+        except UserYouTubeSubscription.DoesNotExist:
+            return Response(
+                {'error': '구독하지 않은 채널입니다.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_youtube_subscriptions(request):
+    """사용자의 유튜브 채널 구독 목록 조회"""
+    from .models import UserYouTubeSubscription
+    from .serializers import UserYouTubeSubscriptionSerializer
+
+    subscriptions = UserYouTubeSubscription.objects.filter(user=request.user)
+    serializer = UserYouTubeSubscriptionSerializer(subscriptions, many=True)
+    return Response(serializer.data)
+
+
+@api_view(['POST', 'DELETE'])
+@permission_classes([IsAuthenticated])
+def toggle_watch_later(request, video_id):
+    """
+    나중에 볼 영상 토글
+    POST: 목록에 추가
+    DELETE: 목록에서 제거
+    """
+    from .models import UserWatchLater
+    from .serializers import UserWatchLaterSerializer
+
+    if request.method == 'POST':
+        # 요청 데이터 검증
+        if not request.data.get('video_title'):
+            return Response(
+                {'error': '영상 제목이 필요합니다.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # 목록에 추가
+        watch_later, created = UserWatchLater.objects.get_or_create(
+            user=request.user,
+            video_id=video_id,
+            defaults={
+                'video_title': request.data.get('video_title'),
+                'video_description': request.data.get('video_description', ''),
+                'video_thumbnail': request.data.get('video_thumbnail', ''),
+                'channel_title': request.data.get('channel_title', ''),
+                'published_at': request.data.get('published_at', ''),
+            }
+        )
+
+        if created:
+            serializer = UserWatchLaterSerializer(watch_later)
+            return Response(
+                {'message': '나중에 볼 영상에 추가되었습니다.', 'video': serializer.data},
+                status=status.HTTP_201_CREATED
+            )
+        else:
+            return Response(
+                {'message': '이미 나중에 볼 영상 목록에 있습니다.'},
+                status=status.HTTP_200_OK
+            )
+
+    elif request.method == 'DELETE':
+        # 목록에서 제거
+        try:
+            watch_later = UserWatchLater.objects.get(user=request.user, video_id=video_id)
+            watch_later.delete()
+            return Response(
+                {'message': '나중에 볼 영상에서 제거되었습니다.'},
+                status=status.HTTP_200_OK
+            )
+        except UserWatchLater.DoesNotExist:
+            return Response(
+                {'error': '나중에 볼 영상 목록에 없는 영상입니다.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_watch_later_list(request):
+    """사용자의 나중에 볼 영상 목록 조회"""
+    from .models import UserWatchLater
+    from .serializers import UserWatchLaterSerializer
+
+    # 시청 여부 필터링 (선택적)
+    is_watched = request.query_params.get('is_watched')
+
+    watch_later = UserWatchLater.objects.filter(user=request.user)
+
+    if is_watched is not None:
+        watch_later = watch_later.filter(is_watched=(is_watched.lower() == 'true'))
+
+    serializer = UserWatchLaterSerializer(watch_later, many=True)
+    return Response(serializer.data)
+
+
+@api_view(['PATCH'])
+@permission_classes([IsAuthenticated])
+def mark_video_watched(request, video_id):
+    """영상 시청 완료 표시"""
+    from .models import UserWatchLater
+
+    try:
+        watch_later = UserWatchLater.objects.get(user=request.user, video_id=video_id)
+        watch_later.is_watched = request.data.get('is_watched', True)
+        watch_later.save()
+
+        from .serializers import UserWatchLaterSerializer
+        serializer = UserWatchLaterSerializer(watch_later)
+        return Response(serializer.data)
+    except UserWatchLater.DoesNotExist:
+        return Response(
+            {'error': '나중에 볼 영상 목록에 없는 영상입니다.'},
+            status=status.HTTP_404_NOT_FOUND
+        )
 
 
 # ==========================================

@@ -173,7 +173,7 @@ class SurveyResponse(models.Model):
 
 class ProductRecommendation(models.Model):
     """사용자별 상품 추천 기록"""
-    
+
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -183,7 +183,7 @@ class ProductRecommendation(models.Model):
         'finances.DepositProducts',  # 또는 SavingProducts
         on_delete=models.CASCADE
     )
-    
+
     # 추천 근거
     match_score = models.FloatField(
         help_text="매칭 점수 (0~100)"
@@ -191,20 +191,144 @@ class ProductRecommendation(models.Model):
     recommended_reason = models.TextField(
         help_text="추천 이유"
     )
-    
+
     # 사용자 액션
     is_viewed = models.BooleanField(default=False)
     is_bookmarked = models.BooleanField(default=False)
-    
+
     created_at = models.DateTimeField(auto_now_add=True)
-    
+
     def __str__(self):
         return f"{self.user.username} - {self.product.fin_prdt_nm}"
-    
+
     class Meta:
         db_table = 'product_recommendation'
         ordering = ['-match_score', '-created_at']
         unique_together = ('user', 'product')
+
+
+class UserNewsBookmark(models.Model):
+    """사용자별 뉴스 북마크"""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='bookmarked_news'
+    )
+
+    # 뉴스 정보 (naversearch.News 모델 참조하지 않고 직접 저장)
+    news_id = models.IntegerField(
+        help_text="뉴스 ID (naversearch.News의 PK)"
+    )
+    title = models.CharField(max_length=500)
+    description = models.TextField(blank=True)
+    link = models.URLField(max_length=1000)
+    pub_date = models.CharField(max_length=100)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.title[:30]}"
+
+    class Meta:
+        db_table = 'user_news_bookmark'
+        ordering = ['-created_at']
+        unique_together = ('user', 'news_id')
+
+
+class UserYouTubeSubscription(models.Model):
+    """사용자별 유튜브 채널 구독"""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='youtube_subscriptions'
+    )
+
+    # 채널 정보
+    channel_id = models.CharField(
+        max_length=100,
+        help_text="유튜브 채널 ID"
+    )
+    channel_title = models.CharField(
+        max_length=200,
+        help_text="채널명"
+    )
+    channel_description = models.TextField(
+        blank=True,
+        help_text="채널 설명"
+    )
+    channel_thumbnail = models.URLField(
+        max_length=500,
+        blank=True,
+        help_text="채널 썸네일 URL"
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.channel_title}"
+
+    class Meta:
+        db_table = 'user_youtube_subscription'
+        ordering = ['-created_at']
+        unique_together = ('user', 'channel_id')
+
+
+class UserWatchLater(models.Model):
+    """사용자별 나중에 볼 영상"""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='watch_later_videos'
+    )
+
+    # 영상 정보
+    video_id = models.CharField(
+        max_length=100,
+        help_text="유튜브 영상 ID"
+    )
+    video_title = models.CharField(
+        max_length=200,
+        help_text="영상 제목"
+    )
+    video_description = models.TextField(
+        blank=True,
+        help_text="영상 설명"
+    )
+    video_thumbnail = models.URLField(
+        max_length=500,
+        blank=True,
+        help_text="영상 썸네일 URL"
+    )
+    channel_title = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text="채널명"
+    )
+    published_at = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="게시일"
+    )
+
+    # 시청 상태
+    is_watched = models.BooleanField(
+        default=False,
+        help_text="시청 완료 여부"
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.video_title[:30]}"
+
+    class Meta:
+        db_table = 'user_watch_later'
+        ordering = ['-created_at']
+        unique_together = ('user', 'video_id')
 
 
 # ==========================================
