@@ -11,8 +11,8 @@
       <div class="menu">
         <RouterLink :to="{ name: 'fin_home' }" class="nav-link">예적금</RouterLink>
         <RouterLink :to="{ name: 'stocks_home' }" class="nav-link">Stocks</RouterLink>
-        <RouterLink :to="{ name: 'naver_news' }" class="nav-link">Naver News</RouterLink>
-        <RouterLink :to="{ name: 'bank_map' }" class="nav-link">KaKao Map</RouterLink>
+        <RouterLink :to="{ name: 'naver_news' }" class="nav-link">News</RouterLink>
+        <RouterLink :to="{ name: 'bank_map' }" class="nav-link">Map</RouterLink>
         <RouterLink :to="{ name: 'youtube_search' }" class="nav-link">YouTube</RouterLink>
         <RouterLink v-if="auth.isLogin" :to="{ name: 'investment_survey' }" class="nav-link">투자 성향 검사</RouterLink>
         <RouterLink v-if="auth.isLogin" :to="{ name: 'recommendations' }" class="nav-link">맞춤 추천</RouterLink>
@@ -140,7 +140,7 @@ defineProps({
   top: 0;
   z-index: 1000;
 
-  /* ✅ 항상 흰색 */
+  /* 항상 흰색 */
   background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(10px);
 
@@ -165,7 +165,7 @@ defineProps({
 
   display: flex;
   align-items: center;
-  gap: 96px; /* 로고와 메뉴 사이 간격 확대 */
+  gap: 120px; /* 로고와 메뉴 사이 간격 확대 */
 }
 
 /* 로고 */

@@ -43,8 +43,20 @@
           게시글 목록
         </h2>
         <div class="sort-buttons">
-          <button class="sort-btn active">최신순</button>
-          <button class="sort-btn">댓글순</button>
+          <button
+            class="sort-btn"
+            :class="{ active: sortBy === 'latest' }"
+            @click="sortBy = 'latest'"
+          >
+            최신순
+          </button>
+          <button
+            class="sort-btn"
+            :class="{ active: sortBy === 'comments' }"
+            @click="sortBy = 'comments'"
+          >
+            댓글순
+          </button>
         </div>
       </div>
 
@@ -68,7 +80,7 @@
         <!-- 게시글 리스트 -->
         <div v-else class="posts-list">
           <RouterLink
-            v-for="p in store.posts"
+            v-for="p in sortedPosts"
             :key="p.pk"
             :to="`/posts/${p.pk}`"
             class="post-item"
@@ -126,12 +138,13 @@
 </template>
 
 <script setup>
-import { computed, onMounted } from "vue"
+import { computed, onMounted, ref } from "vue"
 import { usePostsStore } from "@/stores/posts"
 import { useAuthStore } from "@/stores/auth"
 
 const store = usePostsStore()
 const auth = useAuthStore()
+const sortBy = ref('latest')
 
 const totalComments = computed(() => {
   return store.posts.reduce((sum, post) => sum + (post.comments_count || 0), 0)
@@ -140,6 +153,23 @@ const totalComments = computed(() => {
 const activeUsers = computed(() => {
   const users = new Set(store.posts.map(post => post.user?.username))
   return users.size
+})
+
+const sortedPosts = computed(() => {
+  const posts = [...store.posts]
+
+  if (sortBy.value === 'latest') {
+    // 최신순: created_at 기준 내림차순
+    return posts.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+  } else {
+    // 댓글순: comments_count 기준 내림차순, 같으면 최신순
+    return posts.sort((a, b) => {
+      if (b.comments_count !== a.comments_count) {
+        return b.comments_count - a.comments_count
+      }
+      return new Date(b.created_at) - new Date(a.created_at)
+    })
+  }
 })
 
 const truncateContent = (content, maxLength) => {
@@ -179,11 +209,11 @@ onMounted(() => {
 
 /* 헤더 */
 .community-header {
-  background: #00C73C;
+  background: #3b82f6;
   border-radius: 16px;
   padding: 24px 28px;
   margin-bottom: 20px;
-  box-shadow: 0 2px 8px rgba(0, 199, 60, 0.15);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15);
 }
 
 .header-content {
@@ -234,7 +264,7 @@ onMounted(() => {
 }
 
 .stat-card.stat-primary {
-  border-color: #00C73C;
+  border-color: #3b82f6;
 }
 
 .stat-card.stat-success {
@@ -252,7 +282,7 @@ onMounted(() => {
 }
 
 .stat-card.stat-primary .stat-number {
-  color: #00C73C;
+  color: #3b82f6;
 }
 
 .stat-card.stat-success .stat-number {
@@ -318,14 +348,14 @@ onMounted(() => {
 }
 
 .sort-btn:hover {
-  border-color: #00C73C;
-  color: #00C73C;
+  border-color: #3b82f6;
+  color: #3b82f6;
 }
 
 .sort-btn.active {
-  background: #00C73C;
+  background: #3b82f6;
   color: #ffffff;
-  border-color: #00C73C;
+  border-color: #3b82f6;
 }
 
 .card-body {
@@ -408,7 +438,7 @@ onMounted(() => {
   min-width: 20px;
   height: 20px;
   padding: 0 6px;
-  background: #00C73C;
+  background: #3b82f6;
   color: #ffffff;
   border-radius: 10px;
   font-size: 0.75rem;
@@ -452,7 +482,7 @@ onMounted(() => {
 }
 
 .post-item:hover .arrow-icon {
-  color: #00C73C;
+  color: #3b82f6;
   transform: translateX(4px);
 }
 
@@ -495,7 +525,7 @@ onMounted(() => {
   align-items: center;
   gap: 6px;
   padding: 12px 20px;
-  background: #00C73C;
+  background: #3b82f6;
   color: #ffffff;
   border: none;
   border-radius: 10px;
@@ -504,13 +534,13 @@ onMounted(() => {
   text-decoration: none;
   cursor: pointer;
   transition: all 0.15s ease;
-  box-shadow: 0 2px 4px rgba(0, 199, 60, 0.2);
+  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
 }
 
 .btn-primary:hover {
-  background: #00A832;
+  background: #2563eb;
   transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(0, 199, 60, 0.3);
+  box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
 }
 
 .btn-primary:active {

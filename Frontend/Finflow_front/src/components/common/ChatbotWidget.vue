@@ -179,6 +179,7 @@ import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import api from '@/api/axios'
+import legoImage from '@/assets/main/icon/lego.png'
 
 const router = useRouter()
 const authStore = useAuthStore()

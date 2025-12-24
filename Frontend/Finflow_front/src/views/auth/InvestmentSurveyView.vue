@@ -52,7 +52,7 @@
               :class="{ selected: basicInfo.gender === 'M' }"
               @click="basicInfo.gender = 'M'"
             >
-              <span class="gender-icon">👨</span>
+              <span class="gender-icon">🧑🏻</span>
               <span class="gender-text">남성</span>
             </button>
             <button
@@ -61,7 +61,7 @@
               :class="{ selected: basicInfo.gender === 'F' }"
               @click="basicInfo.gender = 'F'"
             >
-              <span class="gender-icon">👩</span>
+              <span class="gender-icon">👧🏻</span>
               <span class="gender-text">여성</span>
             </button>
           </div>
@@ -117,8 +117,8 @@
             <option value="주택구매">🏡 주택 구매</option>
             <option value="결혼자금">💒 결혼 자금</option>
             <option value="자녀교육">🎓 자녀 교육비</option>
-            <option value="노후준비">🌅 노후 준비</option>
-            <option value="기타">📌 기타</option>
+            <option value="노후준비">🎅🏻 노후 준비</option>
+            <option value="기타">🎸 기타</option>
           </select>
         </div>
 
@@ -190,27 +190,29 @@
     <!-- 결과 화면 -->
     <div v-if="showResult" class="result-container">
       <div class="result-card">
-        <div class="result-header" :class="'type-' + getTypeKey(result.risk_type)">
-          <div class="result-icon">{{ getTypeIcon(result.risk_type) }}</div>
+        <div
+          class="result-header"
+          :class="'type-' + getTypeKey(result.risk_type)"
+          :style="{
+            backgroundImage: `url(${getCharacterImage(result.risk_type)})`
+          }"
+        >
           <div class="result-title">
-            <span class="result-label">당신의 투자 성향은</span>
-            <h2 class="result-type">{{ result.risk_type_name }}</h2>
-          </div>
-          <div class="result-badge">
-            <span class="badge-text">{{ getGenderText(result.gender) }}</span>
+            <!-- <span class="result-type">당신의 투자 성향</span> -->
           </div>
         </div>
 
+
         <div class="result-body">
           <div class="result-section">
-            <div class="section-icon">💡</div>
-            <h3>투자 성향 설명</h3>
+            <div class="section-icon"></div>
+            <h3>💡 투자 성향 설명</h3>
             <p class="section-text">{{ result.description }}</p>
           </div>
 
           <div class="result-section">
-            <div class="section-icon">⭐</div>
-            <h3>주요 특징</h3>
+            <div class="section-icon"></div>
+            <h3>⭐ 주요 특징</h3>
             <ul class="characteristics-list">
               <li v-for="(char, index) in result.characteristics" :key="index">
                 <span class="char-icon">✓</span>
@@ -220,8 +222,8 @@
           </div>
 
           <div class="result-section recommendation-section">
-            <div class="section-icon">🎯</div>
-            <h3>추천 금융 상품</h3>
+            <div class="section-icon"></div>
+            <h3>🎯 추천 금융 상품</h3>
             <div class="products-tags">
               <span
                 v-for="(product, index) in result.recommended_products?.split(', ') || []"
@@ -253,6 +255,28 @@
 import { ref, computed, onMounted } from "vue"
 import { useRouter } from "vue-router"
 import api from "@/api/axios"
+
+// character images
+import timidMale from "@/assets/character/timid_male.png"
+import timidFemale from "@/assets/character/timid_female.png"
+import normalMale from "@/assets/character/normal_male.png"
+import normalFemale from "@/assets/character/normal_female.png"
+import speculativeMale from "@/assets/character/speculative_male.png"
+import speculativeFemale from "@/assets/character/speculative_female.png"
+
+const getCharacterImage = (riskType) => {
+  const map = {
+    timid_male: timidMale,
+    timid_female: timidFemale,
+    normal_male: normalMale,
+    normal_female: normalFemale,
+    speculative_male: speculativeMale,
+    speculative_female: speculativeFemale,
+  }
+
+  return map[riskType] || normalMale
+}
+
 
 const router = useRouter()
 
@@ -436,7 +460,7 @@ onMounted(() => {
 .header-badge {
   display: inline-block;
   padding: 6px 16px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #667eea 0%, #3d66eb 100%);
   color: white;
   font-size: 12px;
   font-weight: 700;
@@ -449,7 +473,7 @@ onMounted(() => {
   font-size: 36px;
   font-weight: 800;
   margin-bottom: 16px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #667eea 0%, #0e0d0d 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -482,7 +506,7 @@ onMounted(() => {
 .progress-fill {
   position: relative;
   height: 100%;
-  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(90deg, #667eea 0%, #3d66eb 100%);
   transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   border-radius: 100px;
 }
@@ -702,7 +726,7 @@ onMounted(() => {
   display: inline-block;
   padding: 6px 14px;
   background: #f3f0ff;
-  color: #7c3aed;
+  color: #3d66eb;
   font-size: 12px;
   font-weight: 700;
   border-radius: 20px;
@@ -822,7 +846,7 @@ onMounted(() => {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #667eea 0%, #3d66eb 100%);
   color: white;
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
@@ -877,10 +901,19 @@ onMounted(() => {
 }
 
 .result-header {
-  padding: 48px 32px;
-  text-align: center;
   position: relative;
+  height: 360px; /* 🔥 빨간 네모 크기 */
+  padding: 32px;
+  border-radius: 24px;
   overflow: hidden;
+
+  background-size: contain;   /* 캐릭터 전체 보이게 */
+  background-position: center bottom;
+  background-repeat: no-repeat;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
 }
 
 .result-header::before {
@@ -895,16 +928,16 @@ onMounted(() => {
   background-size: 30px 30px;
 }
 
-.result-header.type-timid {
-  background: linear-gradient(135deg, #93c5fd 0%, #3b82f6 100%);
-}
-
-.result-header.type-normal {
-  background: linear-gradient(135deg, #a78bfa 0%, #7c3aed 100%);
-}
-
-.result-header.type-speculative {
-  background: linear-gradient(135deg, #fb923c 0%, #ea580c 100%);
+.result-header::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgba(0,0,0,0),
+    rgba(0,0,0,0),
+    transparent
+  );
 }
 
 .result-icon {
@@ -932,9 +965,9 @@ onMounted(() => {
 }
 
 .result-type {
-  font-size: 40px;
+  font-size: 20px;
   font-weight: 800;
-  color: white;
+  color: rgb(19, 18, 18);
   margin: 0;
   text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
 }
@@ -1013,7 +1046,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #10b981;
+  background: #3d66eb;
   color: white;
   border-radius: 50%;
   font-size: 12px;
@@ -1098,5 +1131,13 @@ onMounted(() => {
   .result-actions {
     padding: 24px 16px;
   }
+}
+
+.character-image {
+  width: 120px;
+  height: 120px;
+  object-fit: contain;
+  margin-bottom: 20px;
+  animation: bounce 1s ease-in-out;
 }
 </style>

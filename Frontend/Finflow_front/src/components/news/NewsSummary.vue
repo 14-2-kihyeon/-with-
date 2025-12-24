@@ -1,11 +1,19 @@
 <template>
   <div class="naver-news-summary">
-    <button class="naver-summary-btn" :disabled="disabled || loading" @click="$emit('summarize')">
-      {{ loading ? "요약 중..." : "요약 보기" }}
-    </button>
-    <div class="naver-summary-content">
-      {{ summary }}
+    <div v-if="summary" class="summary-box">
+      <span class="summary-label">AI 요약</span>
+      <p class="naver-summary-content">{{ summary }}</p>
     </div>
+    
+    <button 
+      v-else 
+      class="naver-summary-btn" 
+      :disabled="disabled || loading" 
+      @click="$emit('summarize')"
+    >
+      <span v-if="loading">요약 생성 중...</span>
+      <span v-else>🔮 AI 요약하기</span>
+    </button>
   </div>
 </template>
 

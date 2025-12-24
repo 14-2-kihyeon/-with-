@@ -61,7 +61,7 @@
         </div>
 
         <!-- 좋아요/공유 -->
-        <div class="post-footer">
+        <!-- <div class="post-footer">
           <button class="action-btn">
             <span class="action-icon">👍</span>
             좋아요
@@ -70,7 +70,7 @@
             <span class="action-icon">🔗</span>
             공유
           </button>
-        </div>
+        </div> -->
       </div>
 
       <!-- 댓글 섹션 -->
@@ -308,7 +308,7 @@ const onDeleteComment = async (commentPk) => {
 
 .post-header {
   padding: 28px;
-  background: linear-gradient(135deg, #00C73C 0%, #00A832 100%);
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
   color: #ffffff;
 }
 
@@ -440,8 +440,8 @@ const onDeleteComment = async (commentPk) => {
 }
 
 .action-btn:hover {
-  border-color: #00C73C;
-  color: #00C73C;
+  border-color: #3b82f6;
+  color: #3b82f6;
 }
 
 .action-icon {
@@ -483,7 +483,7 @@ const onDeleteComment = async (commentPk) => {
   min-width: 24px;
   height: 24px;
   padding: 0 8px;
-  background: #00C73C;
+  background: #3b82f6;
   color: #ffffff;
   border-radius: 12px;
   font-size: 0.8rem;
@@ -520,7 +520,7 @@ const onDeleteComment = async (commentPk) => {
 
 .comment-input:focus {
   outline: none;
-  border-color: #00C73C;
+  border-color: #3b82f6;
   box-shadow: 0 0 0 3px rgba(0, 199, 60, 0.1);
 }
 
@@ -561,7 +561,7 @@ const onDeleteComment = async (commentPk) => {
 }
 
 .notice-link {
-  color: #00C73C;
+  color: #3b82f6;
   font-weight: 600;
   text-decoration: none;
 }
@@ -624,7 +624,7 @@ const onDeleteComment = async (commentPk) => {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: #00C73C;
+  background: #3b82f6;
   color: #ffffff;
   display: flex;
   align-items: center;
@@ -685,7 +685,7 @@ const onDeleteComment = async (commentPk) => {
   align-items: center;
   gap: 6px;
   padding: 10px 18px;
-  background: #00C73C;
+  background: #3b82f6;
   color: #ffffff;
   border: none;
   border-radius: 8px;
@@ -696,7 +696,7 @@ const onDeleteComment = async (commentPk) => {
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: #00A832;
+  background: #2563eb;
 }
 
 .btn-primary:disabled {

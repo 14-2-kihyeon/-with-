@@ -1,47 +1,40 @@
 <template>
   <div class="yt-page">
-    <!-- 헤더 -->
-    <div class="yt-header">
-      <div class="yt-header-content">
-        <div class="yt-title-group">
-          <span class="yt-title-icon">⭐</span>
-          <h2 class="yt-title">구독 채널</h2>
-        </div>
-        <a class="yt-back" href="javascript:void(0)" @click="goBack">← 뒤로가기</a>
-      </div>
-    </div>
+    <header class="yt-header">
+      <button class="btn-back-icon" @click="goBack" aria-label="뒤로가기">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+      </button>
+      <h2 class="yt-header-title">
+        <span class="yt-header-emoji">⭐</span> 구독한 채널
+      </h2>
+    </header>
 
-    <!-- 빈 상태 -->
     <div v-if="channels.length === 0" class="yt-empty">
-      <div class="yt-empty-text">구독한 채널이 없습니다</div>
-      <div class="yt-empty-hint">관심있는 채널을 구독해보세요</div>
+      <div class="yt-empty-icon">📺</div>
+      <div class="yt-empty-text">구독 중인 채널이 없습니다</div>
+      <p style="color:#8B95A1; margin-top:8px;">자주 보는 채널을 구독하고 모아보세요.</p>
     </div>
 
-    <!-- 채널 리스트 -->
-    <div v-else style="display:flex; flex-direction:column; gap:12px;">
+    <div v-else style="display:flex; flex-direction:column; gap:16px;">
       <div 
         v-for="c in channels" 
         :key="c.channelId" 
-        style="background:#ffffff; border-radius:12px; padding:16px 20px; box-shadow:0 1px 3px rgba(0,0,0,0.04); border:1px solid #e5e8eb;"
+        class="channel-item"
       >
-        <div style="display:flex; justify-content:space-between; gap:16px; align-items:center; flex-wrap:wrap;">
-          <div style="flex:1; min-width:200px;">
-            <div style="font-weight:700; font-size:1.05rem; color:#191f28; margin-bottom:4px;">
-              {{ c.channelTitle }}
-            </div>
-            <div style="font-size:0.85rem; color:#6b7280;">
-              구독중인 채널
-            </div>
-          </div>
+        <div class="channel-info">
+          <div class="channel-name">{{ c.channelTitle }}</div>
+          <div class="channel-status">구독중</div>
+        </div>
 
-          <div class="yt-actions" style="margin:0; flex-shrink:0;">
-            <button class="yt-btn soft" @click="goSearch(c)">
-              🔍 영상 보기
-            </button>
-            <button class="yt-btn danger" @click="remove(c.channelId)">
-              🗑️ 구독 취소
-            </button>
-          </div>
+        <div class="yt-actions">
+          <button class="yt-btn soft" @click="goSearch(c)">
+            🔍 채널 영상 검색
+          </button>
+          <button class="yt-btn danger" @click="remove(c.channelId)">
+            구독 취소
+          </button>
         </div>
       </div>
     </div>
@@ -65,6 +58,7 @@ const load = () => {
 }
 
 const remove = (channelId) => {
+  if (!confirm("구독을 취소하시겠습니까?")) return
   const next = channels.value.filter((c) => c.channelId !== channelId)
   localStorage.setItem(key, JSON.stringify(next))
   channels.value = next
@@ -81,3 +75,53 @@ const goBack = () => router.back()
 
 onMounted(load)
 </script>
+
+<style scoped>
+/* 이 페이지 전용 스타일 */
+.channel-item {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+  border: 1px solid #F2F4F6;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  transition: transform 0.2s;
+}
+.channel-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(0,0,0,0.06);
+}
+
+.channel-info {
+  flex: 1;
+  min-width: 200px;
+}
+.channel-name {
+  font-weight: 700;
+  font-size: 18px;
+  color: #191F28;
+  margin-bottom: 4px;
+}
+.channel-status {
+  font-size: 14px;
+  color: #3182F6; /* Toss Blue */
+  font-weight: 500;
+}
+
+@media (max-width: 600px) {
+  .channel-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .yt-actions {
+    width: 100%;
+  }
+  .yt-actions button {
+    flex: 1;
+  }
+}
+</style>
