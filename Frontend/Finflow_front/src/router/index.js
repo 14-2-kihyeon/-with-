@@ -34,6 +34,8 @@ import RecommendationsView from "@/views/auth/RecommendationsView.vue"
 import Gold_SilverView from "@/views/finances/gold_silvers/Gold_SilverView.vue"
 // Stocks
 import StocksHomeView from "@/views/stocks/StocksHomeView.vue"
+import StocksGlobalView from "@/views/stocks/StocksGlobalView.vue"
+import StocksCryptoView from "@/views/stocks/StocksCryptoView.vue"
 import StockDetailView from "@/views/stocks/StockDetailView.vue"
 
 
@@ -131,14 +133,13 @@ const router = createRouter({
             { path: "channels", name: "youtube_channels", component: () => import("@/views/youtube/ChannelsView.vue") },
           ],
         },
-        // ✅ stocks
+        // ✅ stocks (국내/해외/암호화폐)
         {
           path: "stocks",
           children: [
             { path: "", name: "stocks_home", component: StocksHomeView },
-            // 필요하면 따로 추천뷰도 만들 수 있음(지금은 home에 포함되어 있어서 생략 가능)
-            // { path: "recommendations", name: "stocks_recommendations", component: StocksRecoView },
-
+            { path: "global", name: "stocks_global", component: StocksGlobalView },
+            { path: "crypto", name: "stocks_crypto", component: StocksCryptoView },
             { path: ":code", name: "stock_detail", component: StockDetailView, props: true },
           ],
         },

@@ -70,6 +70,10 @@ const props = defineProps({
   refreshInterval: {
     type: Number,
     default: 60000 // 1분
+  },
+  isInternational: {
+    type: Boolean,
+    default: false
   }
 })
 
@@ -237,7 +241,11 @@ const renderChart = () => {
               }
               if (context.datasetIndex === 0) {
                 // 가격
-                label += context.parsed.y.toLocaleString('ko-KR') + '원'
+                if (props.isInternational) {
+                  label += '$' + context.parsed.y.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                } else {
+                  label += context.parsed.y.toLocaleString('ko-KR') + '원'
+                }
               } else {
                 // 거래량
                 label += context.parsed.y.toLocaleString('ko-KR')
@@ -259,10 +267,13 @@ const renderChart = () => {
           position: 'left',
           title: {
             display: true,
-            text: '가격 (원)'
+            text: props.isInternational ? '가격 (USD)' : '가격 (원)'
           },
           ticks: {
             callback: function(value) {
+              if (props.isInternational) {
+                return '$' + value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+              }
               return value.toLocaleString('ko-KR')
             }
           }
