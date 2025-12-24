@@ -2,36 +2,56 @@
 <template>
   <section
     ref="sectionEl"
-    class="home-feature"
-    :class="[{ 'is-reverse': reverse, 'is-visible': visible }]"
+    class="feature-section"
+    :class="[{ 'is-reverse': reverse, 'is-visible': visible, 'is-dark': dark }]"
   >
-    <div class="home-feature__inner">
-      <!-- 텍스트 -->
-      <div class="home-feature__text">
-        <h2 class="home-feature__title">{{ title }}</h2>
-        <p class="home-feature__desc">{{ description }}</p>
+    <!-- 배경 그라디언트 요소 -->
+    <div class="bg-gradient-orb"></div>
 
-        <div class="home-feature__actions">
-          <button class="home-feature__btn" @click="goTo">
-            바로가기 →
-          </button>
+    <div class="feature-container">
+      <!-- 텍스트 영역 -->
+      <div class="feature-content">
+        <div class="content-inner">
+          <div class="feature-badge">
+            <span class="badge-text">{{ title }}</span>
+            <div class="badge-shine"></div>
+          </div>
+
+          <h2 class="feature-title">
+            <span v-for="(word, idx) in descriptionWords" :key="idx" class="title-word" :style="{ transitionDelay: `${idx * 0.08}s` }">
+              {{ word }}&nbsp;
+            </span>
+          </h2>
+
+          <div class="feature-actions">
+            <button class="btn-experience" @click="goTo">
+              <span class="btn-text">체험하기</span>
+              <svg class="btn-arrow" width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <path d="M7 3L14 10L7 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <div class="btn-glow"></div>
+            </button>
+          </div>
         </div>
       </div>
 
-      <!-- 이미지(캐러셀) -->
-      <div class="home-feature__preview">
-        <ScreenshotCarousel
-          :images="images"
-          :alt="title"
-          :interval-ms="intervalMs"
-        />
+      <!-- 이미지 프리뷰 영역 -->
+      <div class="feature-preview">
+        <div class="preview-wrapper">
+          <div class="preview-glow"></div>
+          <ScreenshotCarousel
+            :images="images"
+            :alt="title"
+            :interval-ms="intervalMs"
+          />
+        </div>
       </div>
     </div>
   </section>
 </template>
 
 <script setup>
-import { onBeforeUnmount, onMounted, ref } from "vue"
+import { computed, onBeforeUnmount, onMounted, ref } from "vue"
 import { useRouter } from "vue-router"
 import ScreenshotCarousel from "@/components/main/ScreenshotCarousel.vue"
 
@@ -40,6 +60,7 @@ const props = defineProps({
   description: { type: String, default: "" },
   images: { type: Array, default: () => [] },
   reverse: { type: Boolean, default: false },
+  dark: { type: Boolean, default: false }, // 다크 모드 옵션
   routeName: { type: String, default: "main" },
   intervalMs: { type: Number, default: 2600 },
 })
@@ -49,6 +70,11 @@ const sectionEl = ref(null)
 const visible = ref(false)
 
 let io = null
+
+// 단어별로 분리하여 각각 애니메이션 적용
+const descriptionWords = computed(() => {
+  return props.description.split(' ')
+})
 
 const goTo = () => {
   router.push({ name: props.routeName })
@@ -61,7 +87,7 @@ onMounted(() => {
         if (e.isIntersecting) visible.value = true
       }
     },
-    { threshold: 0.2 }
+    { threshold: 0.15 }
   )
   if (sectionEl.value) io.observe(sectionEl.value)
 })
@@ -74,134 +100,415 @@ onBeforeUnmount(() => {
 
 <style scoped>
 /* =========================
-   Section base
+   Section Base
 ========================= */
-.home-feature {
-  min-height: clamp(520px, 78vh, 820px);
+.feature-section {
+  position: relative;
+  min-height: 100vh;
   display: flex;
   align-items: center;
-  padding: 28px 18px;
-  scroll-snap-align: start;
-  box-sizing: border-box;
+  padding: 100px 40px;
+  background: #ffffff;
+  overflow: hidden;
+  transition: background-color 0.6s ease;
 }
 
-.home-feature__inner {
-  width: 100%;
-  max-width: 1100px;
-  margin: 0 auto;
+/* 배경 그라디언트 요소 */
+.bg-gradient-orb {
+  position: absolute;
+  width: 800px;
+  height: 800px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, rgba(59, 130, 246, 0) 70%);
+  filter: blur(80px);
+  pointer-events: none;
+  top: 50%;
+  left: 20%;
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  transition: opacity 1.2s cubic-bezier(0.16, 1, 0.3, 1) 0.4s;
+}
 
+.feature-section.is-visible .bg-gradient-orb {
+  opacity: 1;
+}
+
+/* 짝수 섹션 배경색 교차 */
+.feature-section.is-reverse {
+  background: #f9fafb;
+}
+
+.feature-section.is-reverse .bg-gradient-orb {
+  left: 80%;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.12) 0%, rgba(59, 130, 246, 0) 70%);
+}
+
+/* 다크 모드 */
+.feature-section.is-dark {
+  background: #121417;
+}
+
+.feature-section.is-dark .bg-gradient-orb {
+  background: radial-gradient(circle, rgba(96, 165, 250, 0.25) 0%, rgba(96, 165, 250, 0) 70%);
+}
+
+.feature-section.is-dark .feature-badge {
+  color: #60a5fa;
+}
+
+.feature-section.is-dark .feature-title {
+  color: #ffffff;
+}
+
+.feature-section.is-dark .btn-experience {
+  background: #ffffff;
+  color: #121417;
+  box-shadow: 0 8px 20px rgba(255, 255, 255, 0.15);
+}
+
+.feature-section.is-dark .btn-experience:hover {
+  background: #f1f5f9;
+  box-shadow: 0 12px 28px rgba(255, 255, 255, 0.25);
+}
+
+.feature-section.is-dark .btn-experience .btn-arrow {
+  color: #121417;
+}
+
+.feature-section.is-dark .preview-wrapper {
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.feature-section.is-dark .preview-wrapper:hover {
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+}
+
+/* 컨테이너 */
+.feature-container {
+  position: relative;
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
   display: grid;
-  grid-template-columns: 1fr 1.35fr; /* 텍스트(좁게) + 이미지(넓게) */
-  gap: 26px;
+  grid-template-columns: 1fr 1fr;
+  gap: 100px;
   align-items: center;
 }
 
-/* reverse(이미지 왼쪽, 텍스트 오른쪽) */
-.home-feature.is-reverse .home-feature__inner {
-  grid-template-columns: 1.35fr 1fr;
+/* Reverse 레이아웃 */
+.feature-section.is-reverse .feature-container {
+  grid-template-columns: 1fr 1fr;
 }
 
-.home-feature.is-reverse .home-feature__text {
+.feature-section.is-reverse .feature-content {
   order: 2;
 }
-.home-feature.is-reverse .home-feature__preview {
+
+.feature-section.is-reverse .feature-preview {
   order: 1;
 }
 
 /* =========================
-   Text styles
+   Content (Text Area)
 ========================= */
-.home-feature__title {
-  font-size: 34px;
-  line-height: 1.15;
-  margin: 0 0 10px;
+.feature-content {
+  max-width: 560px;
 }
 
-.home-feature__desc {
-  margin: 0 0 14px;
-  font-size: 16px;
-  line-height: 1.7;
-  opacity: 0.88;
+.content-inner {
+  max-width: 560px;
 }
 
-.home-feature__actions {
-  display: flex;
-  gap: 10px;
-}
-
-.home-feature__btn {
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.08);
-  padding: 10px 14px;
-  border-radius: 12px;
-  cursor: pointer;
-}
-
-.home-feature__preview {
-  justify-self: center;
-  width: min(720px, 100%);
-}
-
-/* =========================
-   Appear animation
-========================= */
-.home-feature__text,
-.home-feature__preview {
+/* Badge */
+.feature-badge {
+  position: relative;
+  display: inline-block;
+  padding: 10px 20px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #3b82f6;
+  margin-bottom: 24px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(59, 130, 246, 0.05) 100%);
+  border: 1.5px solid rgba(59, 130, 246, 0.3);
+  border-radius: 20px;
   opacity: 0;
-  transform: translateY(16px);
-  transition: opacity 500ms ease, transform 500ms ease;
+  transform: translateY(80px) scale(0.9);
+  transition: all 1s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
 }
 
-.home-feature.is-visible .home-feature__text,
-.home-feature.is-visible .home-feature__preview {
+.badge-text {
+  position: relative;
+  z-index: 2;
+}
+
+.badge-shine {
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+  animation: shine 3s infinite;
+}
+
+@keyframes shine {
+  0%, 100% { left: -100%; }
+  50% { left: 100%; }
+}
+
+.feature-section.is-visible .feature-badge {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+/* Title */
+.feature-title {
+  font-size: clamp(36px, 4.5vw, 64px);
+  font-weight: 800;
+  line-height: 1.2;
+  margin: 0 0 48px 0;
+  color: #0f172a;
+  letter-spacing: -0.04em;
+  word-break: keep-all;
+}
+
+.title-word {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(100px) rotateX(90deg);
+  transform-origin: bottom center;
+  transition: all 1s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.feature-section.is-visible .title-word {
+  opacity: 1;
+  transform: translateY(0) rotateX(0deg);
+}
+
+/* Actions */
+.feature-actions {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  opacity: 0;
+  transform: translateY(60px);
+  transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.2s;
+}
+
+.feature-section.is-visible .feature-actions {
   opacity: 1;
   transform: translateY(0);
 }
 
+/* Experience Button */
+.btn-experience {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 20px 44px;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  border: none;
+  border-radius: 50px;
+  font-size: 18px;
+  font-weight: 700;
+  color: #ffffff;
+  cursor: pointer;
+  overflow: hidden;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 10px 30px rgba(59, 130, 246, 0.3), 0 4px 12px rgba(59, 130, 246, 0.2);
+}
+
+.btn-text {
+  position: relative;
+  z-index: 2;
+  transition: transform 0.3s ease;
+}
+
+.btn-arrow {
+  position: relative;
+  z-index: 2;
+  transition: transform 0.3s ease;
+  opacity: 0.9;
+}
+
+.btn-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s ease, height 0.6s ease;
+}
+
+.btn-experience:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 16px 40px rgba(59, 130, 246, 0.4), 0 8px 16px rgba(59, 130, 246, 0.3);
+}
+
+.btn-experience:hover .btn-text {
+  transform: translateX(-2px);
+}
+
+.btn-experience:hover .btn-arrow {
+  transform: translateX(4px);
+  opacity: 1;
+}
+
+.btn-experience:hover .btn-glow {
+  width: 300px;
+  height: 300px;
+}
+
+.btn-experience:active {
+  transform: translateY(-2px) scale(0.98);
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.3);
+}
+
 /* =========================
-   ✅ Mobile: ALWAYS stack
-   (reverse 섹션도 무조건 아래로 내려가게!)
+   Preview (Image Area)
 ========================= */
-@media (max-width: 980px) {
-  .home-feature {
+.feature-preview {
+  position: relative;
+  opacity: 0;
+  transform: translateY(80px) scale(0.95);
+  transition: all 1s cubic-bezier(0.16, 1, 0.3, 1) 0.3s;
+}
+
+.feature-section.is-visible .feature-preview {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+/* Preview Wrapper */
+.preview-wrapper {
+  position: relative;
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: 0 25px 70px rgba(15, 23, 42, 0.15), 0 10px 30px rgba(15, 23, 42, 0.1);
+  transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
+}
+
+.preview-glow {
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.3) 0%, transparent 60%);
+  opacity: 0;
+  transition: opacity 0.6s ease;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.preview-wrapper:hover {
+  transform: translateY(-12px) scale(1.02) rotateX(2deg);
+  box-shadow: 0 35px 90px rgba(15, 23, 42, 0.2), 0 15px 40px rgba(59, 130, 246, 0.15);
+}
+
+.preview-wrapper:hover .preview-glow {
+  opacity: 1;
+}
+
+.preview-wrapper:active {
+  transform: translateY(-8px) scale(1.01);
+}
+
+/* =========================
+   Responsive Design
+========================= */
+@media (max-width: 1280px) {
+  .feature-container {
+    gap: 80px;
+  }
+
+  .feature-section {
+    padding: 80px 32px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .feature-container {
+    gap: 60px;
+  }
+
+  .feature-title {
+    font-size: clamp(32px, 4vw, 48px);
+    margin-bottom: 36px;
+  }
+}
+
+@media (max-width: 768px) {
+  .feature-section {
     min-height: auto;
-    padding: 22px 16px;
+    padding: 60px 24px;
   }
 
-  /* 기본 섹션 1열 */
-  .home-feature__inner {
+  .feature-container {
     grid-template-columns: 1fr;
-    gap: 14px;
-    justify-items: center;
+    gap: 48px;
   }
 
-  /* ✅ 핵심: reverse가 이기는 문제를 reverse 선택자로 다시 덮어쓰기 */
-  .home-feature.is-reverse .home-feature__inner {
+  .feature-section.is-reverse .feature-container {
     grid-template-columns: 1fr;
   }
 
-  /* 텍스트 가운데 + 버튼 가운데 */
-  .home-feature__text {
+  .feature-content {
     order: 1;
     text-align: center;
   }
-  .home-feature__actions {
+
+  .feature-section.is-reverse .feature-content {
+    order: 1;
+  }
+
+  .feature-preview {
+    order: 2;
+  }
+
+  .feature-section.is-reverse .feature-preview {
+    order: 2;
+  }
+
+  .content-inner {
+    max-width: 100%;
+  }
+
+  .feature-badge {
+    margin: 0 auto 16px;
+  }
+
+  .feature-title {
+    margin-bottom: 32px;
+  }
+
+  .feature-actions {
     justify-content: center;
   }
+}
 
-  /* 이미지 아래로 */
-  .home-feature__preview {
-    order: 2;
-    width: min(720px, 100%);
+@media (max-width: 480px) {
+  .feature-section {
+    padding: 48px 20px;
   }
 
-  /* ✅ reverse 섹션도 강제로 동일하게 */
-  .home-feature.is-reverse .home-feature__text {
-    order: 1;
-    text-align: center;
+  .feature-title {
+    font-size: 32px;
+    margin-bottom: 28px;
   }
-  .home-feature.is-reverse .home-feature__preview {
-    order: 2;
+
+  .btn-experience {
+    width: 100%;
+    padding: 16px 32px;
   }
 }
 </style>

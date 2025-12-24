@@ -1,14 +1,18 @@
 <template>
-  <RouterView />
-  <!-- 모든 페이지에서 챗봇 위젯 표시 -->
-  <ChatbotWidget />
+  <div class="fontfont">
+    <RouterView />
+    <!-- 모든 페이지에서 챗봇 위젯 표시 -->
+    <ChatbotWidget />
+    <!-- 맨 위로 가기 버튼 -->
+    <ScrollToTop />
+  </div>
 </template>
 
 <script setup>
 import ChatbotWidget from "@/components/common/ChatbotWidget.vue"
+import ScrollToTop from "@/components/common/ScrollToTop.vue"
 import { onMounted } from "vue"
 import { useAuthStore } from "@/stores/auth"
-
 const auth = useAuthStore()
 
 onMounted(async () => {
@@ -26,5 +30,8 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-
+  /* font-weight : 100 ~ 900 각 뷰에서 설정 */
+.fontfont {
+  font-family: 'Pretendard';
+}
 </style>
