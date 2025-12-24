@@ -1,6 +1,58 @@
 """
 yfinance를 사용한 실시간 주가 및 인트라데이 데이터 조회 서비스
 """
+import os
+import sys
+import shutil
+from pathlib import Path
+
+# curl_cffi의 한글 경로 문제 해결
+# Windows 환경에서 사용자 이름에 한글이 포함되어 있으면 SSL 인증서를 찾지 못하는 문제 발생
+# 해결: certifi의 인증서를 프로젝트 내 안전한 경로로 자동 복사
+def setup_ssl_cert():
+    """SSL 인증서를 한글이 없는 경로로 설정"""
+    try:
+        import certifi
+        import tempfile
+
+        # Windows의 경우 시스템 임시 폴더 사용 (보통 C:\Windows\Temp 또는 C:\Temp)
+        # 한글이 없는 안전한 경로
+        if sys.platform == 'win32':
+            # ProgramData는 보통 C:\ProgramData로 한글이 없음
+            cert_dir = Path(os.environ.get('PROGRAMDATA', 'C:/ProgramData')) / 'finflow_ssl'
+        else:
+            # Linux/Mac은 /tmp 사용
+            cert_dir = Path('/tmp/finflow_ssl')
+
+        cert_file = cert_dir / 'cacert.pem'
+
+        # 디렉토리가 없으면 생성
+        cert_dir.mkdir(exist_ok=True, parents=True)
+
+        # 인증서가 없으면 복사
+        if not cert_file.exists():
+            original_cert = Path(certifi.where())
+            shutil.copy(original_cert, cert_file)
+            # 첫 실행 시에만 로그 출력 (Django 환경에서 logger 사용)
+            try:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.info(f"SSL 인증서를 안전한 경로로 복사했습니다: {cert_file}")
+            except:
+                pass  # 로깅 실패해도 계속 진행
+
+        # 환경변수 설정 (절대 경로, forward slash 사용)
+        cert_path_str = str(cert_file.absolute()).replace('\\', '/')
+        os.environ['CURL_CA_BUNDLE'] = cert_path_str
+        os.environ['SSL_CERT_FILE'] = cert_path_str
+
+    except Exception as e:
+        print(f"[YFinance] SSL 인증서 설정 실패: {e}")
+        # 실패해도 yfinance는 시도해볼 수 있으므로 계속 진행
+
+# 모듈 로드 시 자동 실행
+setup_ssl_cert()
+
 import yfinance as yf
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any
