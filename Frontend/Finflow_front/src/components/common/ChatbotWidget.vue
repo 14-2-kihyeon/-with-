@@ -1,21 +1,37 @@
 <template>
-  <div class="chatbot-widget">
+  <div class="chatbot-widget" :class="{ 'dragging': isDragging }" :style="widgetPositionStyle">
+    <!-- 로그인 안내 말풍선 -->
+    <transition name="fade">
+      <div v-if="showLoginTooltip" class="login-tooltip">
+        <button @click="closeTooltip" class="tooltip-close-btn">&times;</button>
+        <div class="tooltip-content">
+          <div class="tooltip-icon">🔒</div>
+          <h4 class="tooltip-title">로그인이 필요합니다</h4>
+          <p class="tooltip-message">AI 챗봇을 사용하려면<br>로그인이 필요해요</p>
+          <button @click="goToLogin" class="tooltip-login-btn">
+            로그인하러 가기 →
+          </button>
+        </div>
+      </div>
+    </transition>
+
     <!-- 플로팅 버튼 -->
     <transition name="bounce">
       <button
         v-if="!isOpen"
-        @click="toggleChat"
+        @click="handleWidgetClick"
+        @mousedown="startDrag"
         class="chatbot-floating-btn"
-        :class="{ 'pulse': hasNewRecommendation }"
+        :class="{ 'pulse': hasNewRecommendation, 'dragging': isDragging }"
       >
-        <img :src="avatarImage" alt="AI 챗봇" class="chatbot-avatar-icon" @error="handleImageError" />
+        <img :src="widgetImage" alt="AI 챗봇" class="chatbot-avatar-icon" @error="handleImageError" />
         <span v-if="hasNewRecommendation" class="notification-badge">!</span>
       </button>
     </transition>
 
     <!-- 채팅 창 -->
     <transition name="slide-up">
-      <div v-if="isOpen" class="chatbot-container" ref="chatContainer" :style="containerStyle">
+      <div v-if="isOpen" class="chatbot-container" ref="chatContainer" :style="chatContainerStyle">
         <!-- 리사이즈 핸들 -->
         <div class="resize-handle resize-handle-top" @mousedown="startResize('top', $event)"></div>
         <div class="resize-handle resize-handle-left" @mousedown="startResize('left', $event)"></div>
@@ -64,8 +80,10 @@
           >
             <div class="message" :class="msg.isUser ? 'user-message' : 'ai-message'">
               <img v-if="!msg.isUser" :src="avatarImage" alt="AI" class="message-avatar" />
-              <div class="message-content">
-                <p v-html="formatMessage(msg.text)"></p>
+              <div class="message-bubble">
+                <div v-if="!msg.isUser" class="ai-name">Finflow AI</div>
+                <div class="message-content">
+                  <p v-html="formatMessage(msg.text)"></p>
 
                 <!-- AI 추천 상품 카드 -->
                 <div
@@ -103,8 +121,9 @@
                     </div>
                   </div>
                 </div>
+                </div>
+                <span class="message-time">{{ msg.time }}</span>
               </div>
-              <span class="message-time">{{ msg.time }}</span>
             </div>
           </div>
 
@@ -112,11 +131,14 @@
           <div v-if="isLoading" class="message-wrapper ai-message-wrapper">
             <div class="message ai-message">
               <img :src="avatarImage" alt="AI" class="message-avatar" />
-              <div class="message-content">
-                <div class="typing-indicator">
-                  <span></span>
-                  <span></span>
-                  <span></span>
+              <div class="message-bubble">
+                <div class="ai-name">Finflow AI</div>
+                <div class="message-content">
+                  <div class="typing-indicator">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -204,6 +226,25 @@ const containerHeight = ref(700)
 const isResizing = ref(false)
 const resizeDirection = ref(null)
 
+// 드래그 관련 상태
+const isDragging = ref(false)
+const dragPosition = ref(loadDragPosition())
+const wasRecentlyDragging = ref(false)
+
+// 위젯 위치 로드/저장 (픽셀 단위)
+function loadDragPosition() {
+  const saved = localStorage.getItem('chatbot_widget_drag_position')
+  if (saved) {
+    return JSON.parse(saved)
+  }
+  // 기본값: 오른쪽 하단
+  return { bottom: 30, right: 30, top: null, left: null }
+}
+
+function saveDragPosition(position) {
+  localStorage.setItem('chatbot_widget_drag_position', JSON.stringify(position))
+}
+
 // 챗봇 아바타 정보
 const avatarType = ref('normal')
 const riskType = ref(null)
@@ -229,17 +270,162 @@ const riskTypeLabel = computed(() => {
   return labels[riskType.value] || '일반'
 })
 
+
+
+// 성향별 챗봇 이미지 설정 (public/assets/chatbot/ 폴더에 아래 이미지 파일들을 추가하세요)
+const CHATBOT_IMAGES = {
+  // 위젯 버튼용 이미지 (플로팅 버튼에 표시)
+  widget: {
+    'guest': '/assets/chatbot/guest-widget.png',        // 비로그인 사용자용 위젯 이미지
+    'timid': '/assets/chatbot/timid-widget.png',        // 안정형 위젯 이미지
+    'normal': '/assets/chatbot/normal-widget.png',      // 중립형 위젯 이미지
+    'speculative': '/assets/chatbot/speculative-widget.png',  // 공격형 위젯 이미지
+  },
+  // 프로필/아바타용 이미지 (헤더와 메시지에 표시)
+  profile: {
+    'guest': '/assets/chatbot/guest-profile.png',       // 비로그인 사용자용 프로필 이미지
+    'timid': '/assets/chatbot/timid-profile.png',       // 안정형 프로필 이미지
+    'normal': '/assets/chatbot/normal-profile.png',     // 중립형 프로필 이미지
+    'speculative': '/assets/chatbot/speculative-profile.png',  // 공격형 프로필 이미지
+  }
+}
+
 const avatarImage = computed(() => {
-  return legoImage
+  // 비로그인 상태면 게스트 이미지 사용 (없으면 normal)
+  if (!authStore.isLogin) {
+    return CHATBOT_IMAGES.profile.guest || CHATBOT_IMAGES.profile.normal
+  }
+  // 프로필 이미지 반환 (헤더, 메시지, 환영 메시지용)
+  const image = CHATBOT_IMAGES.profile[avatarType.value]
+  console.log('avatarImage:', avatarType.value, '→', image)
+  return image || CHATBOT_IMAGES.profile.normal
 })
 
-const containerStyle = computed(() => ({
-  width: `${containerWidth.value}px`,
-  height: `${containerHeight.value}px`,
-}))
+const widgetImage = computed(() => {
+  // 비로그인 상태면 게스트 이미지 사용 (없으면 normal)
+  if (!authStore.isLogin) {
+    return CHATBOT_IMAGES.widget.guest || CHATBOT_IMAGES.widget.normal
+  }
+  // 위젯 버튼 이미지 반환 (플로팅 버튼용)
+  const image = CHATBOT_IMAGES.widget[avatarType.value]
+  console.log('widgetImage:', avatarType.value, '→', image)
+  return image || CHATBOT_IMAGES.widget.normal
+})
+
+const chatContainerStyle = computed(() => {
+  const pos = dragPosition.value
+  const style = {
+    width: `${containerWidth.value}px`,
+    height: `${containerHeight.value}px`,
+  }
+
+  // navbar 높이 (일반적으로 60-80px, 여유있게 100px로 설정)
+  const navbarHeight = 100
+  const margin = 30
+  const chatWidth = containerWidth.value
+  const chatHeight = containerHeight.value
+  const widgetSize = 70
+
+  // 위젯의 실제 픽셀 위치 계산
+  let widgetX, widgetY
+
+  if (pos.left !== null) {
+    widgetX = pos.left
+  } else {
+    widgetX = window.innerWidth - pos.right - widgetSize
+  }
+
+  if (pos.top !== null) {
+    widgetY = pos.top
+  } else {
+    widgetY = window.innerHeight - pos.bottom - widgetSize
+  }
+
+  // 가로축: 위젯의 위치에 맞춰 채팅창 배치 (화면 경계 고려)
+  let chatX = widgetX
+
+  // 채팅창이 화면 오른쪽을 넘어가는지 체크
+  if (chatX + chatWidth > window.innerWidth - margin) {
+    // 화면 오른쪽을 넘어가면 오른쪽에 맞춤
+    style.right = `${margin}px`
+    style.left = 'auto'
+  } else if (chatX < margin) {
+    // 화면 왼쪽을 넘어가면 왼쪽에 맞춤
+    style.left = `${margin}px`
+    style.right = 'auto'
+  } else {
+    // 정상 범위 내에 있으면 위젯의 가로 위치에 맞춤
+    style.left = `${chatX}px`
+    style.right = 'auto'
+  }
+
+  // 세로축: navbar와 화면 하단 고려
+  const minTop = navbarHeight + margin
+  let chatY = widgetY
+
+  // 채팅창이 화면 아래를 넘어가는지 체크
+  if (chatY + chatHeight > window.innerHeight - margin) {
+    // 화면 아래를 넘어가면 화면 하단에 맞춤
+    style.bottom = `${margin}px`
+    style.top = 'auto'
+  } else if (chatY < minTop) {
+    // navbar와 겹치면 navbar 아래로 배치
+    style.top = `${minTop}px`
+    style.bottom = 'auto'
+  } else {
+    // 정상 범위 내에 있으면 위젯의 세로 위치에 맞춤
+    style.top = `${chatY}px`
+    style.bottom = 'auto'
+  }
+
+  return style
+})
+
+const widgetPositionStyle = computed(() => {
+  const pos = dragPosition.value
+  const style = {}
+
+  if (pos.top !== null) {
+    style.top = `${pos.top}px`
+    style.bottom = 'auto'
+  } else {
+    style.bottom = `${pos.bottom}px`
+    style.top = 'auto'
+  }
+
+  if (pos.left !== null) {
+    style.left = `${pos.left}px`
+    style.right = 'auto'
+  } else {
+    style.right = `${pos.right}px`
+    style.left = 'auto'
+  }
+
+  return style
+})
+
+// 로그인 안내 말풍선 상태
+const showLoginTooltip = ref(false)
 
 // Methods
+const handleWidgetClick = (e) => {
+  // 드래그 직후라면 클릭 이벤트 무시
+  if (wasRecentlyDragging.value) {
+    e.preventDefault()
+    e.stopPropagation()
+    return
+  }
+  toggleChat()
+}
+
 const toggleChat = () => {
+  // 로그인 상태 확인
+  if (!authStore.isLogin) {
+    // 비로그인 상태면 말풍선 표시
+    showLoginTooltip.value = !showLoginTooltip.value
+    return
+  }
+
   isOpen.value = !isOpen.value
   if (isOpen.value) {
     // 채팅창을 열 때 메시지가 없으면 환영 메시지 표시, 있으면 유지
@@ -248,6 +434,15 @@ const toggleChat = () => {
       scrollToBottom()
     })
   }
+}
+
+const goToLogin = () => {
+  showLoginTooltip.value = false
+  router.push('/login')
+}
+
+const closeTooltip = () => {
+  showLoginTooltip.value = false
 }
 
 const handleEnter = (e) => {
@@ -352,9 +547,17 @@ const clearHistory = async () => {
 const fetchAvatarInfo = async () => {
   try {
     const response = await api.get('/chatbot/avatar/')
-    avatarType.value = response.data.avatar || 'normal'
+    // 백엔드에서 받은 avatar 값을 소문자로 변환 (Timid -> timid)
+    const avatarValue = response.data.avatar || 'normal'
+    avatarType.value = avatarValue.toLowerCase()
     riskType.value = response.data.risk_type
     riskScore.value = response.data.risk_score
+
+    console.log('아바타 정보 로드:', {
+      avatar: avatarType.value,
+      riskType: riskType.value,
+      riskScore: riskScore.value
+    })
   } catch (error) {
     console.error('아바타 정보 로드 실패:', error)
     avatarType.value = 'normal'
@@ -428,10 +631,23 @@ const scrollToBottom = () => {
 }
 
 const handleImageError = (e) => {
-  // 이미지 로드 실패 시 기본 아이콘 표시
+  // 이미지 로드 실패 시 기본 아이콘 표시 (이모지로 대체)
+  console.warn('이미지 로드 실패:', e.target.src)
   e.target.style.display = 'none'
-  e.target.parentElement.style.background = 'linear-gradient(135deg, #3b82f6 0%, #10b981 100%)'
-  e.target.parentElement.innerHTML = '<span style="color: white; font-size: 32px;">🤖</span>'
+
+  // 부모 요소에 이모지 아이콘 추가
+  const parent = e.target.parentElement
+  parent.style.display = 'flex'
+  parent.style.alignItems = 'center'
+  parent.style.justifyContent = 'center'
+
+  // 기존 내용 제거하고 이모지만 표시
+  const emoji = document.createElement('span')
+  emoji.style.fontSize = '40px'
+  emoji.textContent = '🤖'
+
+  parent.innerHTML = ''
+  parent.appendChild(emoji)
 }
 
 // 리사이즈 함수
@@ -477,6 +693,99 @@ const startResize = (direction, e) => {
   document.addEventListener('mouseup', handleMouseUp)
 }
 
+// 드래그 함수
+const startDrag = (e) => {
+  const startX = e.clientX
+  const startY = e.clientY
+  const currentPos = { ...dragPosition.value }
+
+  // 현재 위젯의 실제 위치 계산
+  let widgetStartX, widgetStartY
+  if (currentPos.left !== null) {
+    widgetStartX = currentPos.left
+  } else {
+    widgetStartX = window.innerWidth - currentPos.right - 70 // 70은 위젯 크기
+  }
+
+  if (currentPos.top !== null) {
+    widgetStartY = currentPos.top
+  } else {
+    widgetStartY = window.innerHeight - currentPos.bottom - 70
+  }
+
+  let hasMoved = false
+
+  const handleMouseMove = (moveEvent) => {
+    const deltaX = moveEvent.clientX - startX
+    const deltaY = moveEvent.clientY - startY
+
+    // 5px 이상 이동하면 드래그로 간주
+    if (Math.abs(deltaX) > 5 || Math.abs(deltaY) > 5) {
+      hasMoved = true
+      isDragging.value = true
+
+      // 새 위치 계산
+      let newX = widgetStartX + deltaX
+      let newY = widgetStartY + deltaY
+
+      // 화면 경계 체크
+      const maxX = window.innerWidth - 70
+      const maxY = window.innerHeight - 70
+
+      newX = Math.max(0, Math.min(newX, maxX))
+      newY = Math.max(0, Math.min(newY, maxY))
+
+      // 화면 중앙을 기준으로 어느 쪽에 가까운지 판단하여 위치 설정
+      const centerX = window.innerWidth / 2
+      const centerY = window.innerHeight / 2
+
+      if (newX < centerX) {
+        // 왼쪽
+        dragPosition.value = {
+          left: newX,
+          right: null,
+          top: newY < centerY ? newY : null,
+          bottom: newY < centerY ? null : window.innerHeight - newY - 70
+        }
+      } else {
+        // 오른쪽
+        dragPosition.value = {
+          left: null,
+          right: window.innerWidth - newX - 70,
+          top: newY < centerY ? newY : null,
+          bottom: newY < centerY ? null : window.innerHeight - newY - 70
+        }
+      }
+    }
+  }
+
+  const handleMouseUp = (upEvent) => {
+    document.removeEventListener('mousemove', handleMouseMove)
+    document.removeEventListener('mouseup', handleMouseUp)
+
+    if (hasMoved) {
+      // 드래그가 발생했으면 현재 위치 저장하고 클릭 이벤트 방지
+      e.preventDefault()
+      upEvent.preventDefault()
+      saveDragPosition(dragPosition.value)
+      isDragging.value = false
+      wasRecentlyDragging.value = true
+
+      // 200ms 후 플래그 해제 (클릭 이벤트가 발생하지 않도록)
+      setTimeout(() => {
+        wasRecentlyDragging.value = false
+      }, 200)
+    } else {
+      // 드래그가 아니면 일반 클릭으로 처리 (toggleChat이 자동으로 실행됨)
+      isDragging.value = false
+      wasRecentlyDragging.value = false
+    }
+  }
+
+  document.addEventListener('mousemove', handleMouseMove)
+  document.addEventListener('mouseup', handleMouseUp)
+}
+
 // Lifecycle
 onMounted(() => {
   if (authStore.isLogin) {
@@ -509,9 +818,96 @@ watch(() => authStore.isLogin, (newVal) => {
 <style scoped>
 .chatbot-widget {
   position: fixed;
-  bottom: 30px;
-  right: 30px;
   z-index: 9999;
+}
+
+.chatbot-widget:not(.dragging) {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 로그인 안내 말풍선 */
+.login-tooltip {
+  position: absolute;
+  bottom: 90px;
+  right: 0;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  padding: 24px;
+  min-width: 280px;
+  z-index: 10000;
+}
+
+.login-tooltip::after {
+  content: '';
+  position: absolute;
+  bottom: -10px;
+  right: 25px;
+  width: 0;
+  height: 0;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-top: 10px solid white;
+}
+
+.tooltip-close-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #95a5a6;
+  cursor: pointer;
+  line-height: 1;
+  padding: 4px;
+  transition: color 0.2s;
+}
+
+.tooltip-close-btn:hover {
+  color: #2c3e50;
+}
+
+.tooltip-content {
+  text-align: center;
+}
+
+.tooltip-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+
+.tooltip-title {
+  margin: 0 0 8px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.tooltip-message {
+  margin: 0 0 20px 0;
+  font-size: 14px;
+  color: #6c757d;
+  line-height: 1.5;
+}
+
+.tooltip-login-btn {
+  width: 100%;
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #3b82f6 0%, #10b981 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.tooltip-login-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
 }
 
 /* 플로팅 버튼 */
@@ -533,6 +929,12 @@ watch(() => authStore.isLogin, (newVal) => {
 .chatbot-floating-btn:hover {
   transform: scale(1.1);
   box-shadow: 0 12px 32px rgba(59, 130, 246, 0.5);
+}
+
+.chatbot-floating-btn.dragging {
+  cursor: grabbing;
+  opacity: 0.8;
+  transform: scale(1.05);
 }
 
 .chatbot-floating-btn.pulse {
@@ -573,7 +975,7 @@ watch(() => authStore.isLogin, (newVal) => {
 
 /* 채팅 창 */
 .chatbot-container {
-  position: relative;
+  position: fixed;
   background: white;
   border-radius: 20px;
   box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15);
@@ -584,6 +986,7 @@ watch(() => authStore.isLogin, (newVal) => {
   min-height: 400px;
   max-width: 800px;
   max-height: 900px;
+  z-index: 9998;
 }
 
 /* 리사이즈 핸들 */
@@ -676,8 +1079,25 @@ watch(() => authStore.isLogin, (newVal) => {
 .chatbot-messages {
   flex: 1;
   overflow-y: auto;
-  padding: 20px;
-  background: #f7f9fc;
+  padding: 24px 20px;
+  background: linear-gradient(to bottom, #f8fafc 0%, #f1f5f9 100%);
+}
+
+.chatbot-messages::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chatbot-messages::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.chatbot-messages::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.chatbot-messages::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 
 .welcome-message {
@@ -731,8 +1151,20 @@ watch(() => authStore.isLogin, (newVal) => {
 }
 
 .message-wrapper {
-  margin-bottom: 16px;
+  margin-bottom: 20px;
   display: flex;
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .user-message-wrapper {
@@ -744,30 +1176,60 @@ watch(() => authStore.isLogin, (newVal) => {
 }
 
 .message {
-  max-width: 75%;
+  max-width: 80%;
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  gap: 8px;
 }
 
 .message-avatar {
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
-  margin-right: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.message-bubble {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.ai-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: #3b82f6;
+  padding-left: 4px;
 }
 
 .message-content {
-  padding: 12px 16px;
-  border-radius: 16px;
-  font-size: 14px;
-  line-height: 1.5;
+  padding: 14px 18px;
+  border-radius: 18px;
+  font-size: 15px;
+  line-height: 1.6;
+  word-wrap: break-word;
+}
+
+.message-content p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.user-message {
+  flex-direction: row-reverse;
+}
+
+.user-message .message-bubble {
+  align-items: flex-end;
 }
 
 .user-message .message-content {
   background: linear-gradient(135deg, #3b82f6 0%, #10b981 100%);
   color: white;
-  border-bottom-right-radius: 4px;
+  border-bottom-right-radius: 6px;
+  box-shadow: 0 2px 12px rgba(59, 130, 246, 0.3);
 }
 
 .ai-message {
@@ -779,13 +1241,14 @@ watch(() => authStore.isLogin, (newVal) => {
   background: white;
   color: #2c3e50;
   border: 1px solid #e0e6ed;
-  border-bottom-left-radius: 4px;
+  border-bottom-left-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .message-time {
   font-size: 11px;
   color: #95a5a6;
-  margin-top: 4px;
+  padding: 0 4px;
   align-self: flex-end;
 }
 
@@ -1049,6 +1512,16 @@ watch(() => authStore.isLogin, (newVal) => {
 
 .slide-up-leave-to {
   transform: translateY(100px);
+  opacity: 0;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
   opacity: 0;
 }
 

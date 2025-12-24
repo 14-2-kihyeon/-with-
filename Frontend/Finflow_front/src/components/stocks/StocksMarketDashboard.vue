@@ -1,6 +1,13 @@
 <template>
   <section class="krx-wrap">
-    <div class="krx-grid">
+    <!-- 로딩 오버레이 -->
+    <div v-if="initialLoading" class="loading-overlay">
+      <div class="loading-spinner"></div>
+      <div class="loading-text">시장 데이터를 불러오는 중...</div>
+    </div>
+
+    <!-- 메인 컨텐츠 -->
+    <div v-show="!initialLoading" class="krx-grid">
       <!-- 좌: 차트 -->
       <div class="krx-card krx-main">
         <div class="krx-head">
@@ -95,7 +102,7 @@
     </div>
 
     <!-- 시장 요약 -->
-    <div class="krx-card krx-summary">
+    <div v-show="!initialLoading" class="krx-card krx-summary">
       <div class="sum-head">
         <div class="t1">시장 요약</div>
 
@@ -166,6 +173,7 @@ const selectedLabel = ref("KOSPI")
 const interval = ref("day")
 const range = ref("all")
 const summaryMarket = ref("ALL")
+const initialLoading = ref(true) // 최초 로딩 상태
 
 function setSymbol(sym, label) {
   symbol.value = sym
@@ -404,10 +412,15 @@ function buildOrUpdateChart() {
 }
 
 onMounted(async () => {
-  await marketStore.fetchIndexSeries(symbol.value)
-  await marketStore.fetchMarketSummary(summaryMarket.value)
-  await marketStore.fetchFx()
-  buildOrUpdateChart()
+  try {
+    await marketStore.fetchIndexSeries(symbol.value)
+    await marketStore.fetchMarketSummary(summaryMarket.value)
+    await marketStore.fetchFx()
+    buildOrUpdateChart()
+  } finally {
+    // 모든 데이터 로드 및 차트 렌더링 완료 후 로딩 해제
+    initialLoading.value = false
+  }
 })
 
 watch(symbol, async () => {
@@ -503,7 +516,46 @@ function fmtWonCompact(n) {
 </script>
 
 <style scoped>
-.krx-wrap { max-width: 1120px; margin: 0 auto; padding: 20px; }
+.krx-wrap {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 20px;
+  position: relative;
+  min-height: 500px;
+}
+
+/* 로딩 오버레이 */
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 18px;
+  z-index: 10;
+  gap: 16px;
+}
+
+.loading-spinner {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 4px solid rgba(37, 99, 235, 0.15);
+  border-top-color: rgba(37, 99, 235, 0.95);
+  animation: spin 0.8s linear infinite;
+}
+
+.loading-text {
+  font-size: 14px;
+  font-weight: 900;
+  color: rgba(15, 23, 42, 0.70);
+}
+
 .krx-grid { display: grid; grid-template-columns: 1.35fr 0.65fr; gap: 14px; align-items: start; }
 .krx-card { background: rgba(255,255,255,0.9); border-radius: 16px; padding: 16px; border: 1px solid rgba(0,0,0,0.06); overflow: visible; }
 .krx-main { min-height: 360px; }
@@ -581,7 +633,7 @@ function fmtWonCompact(n) {
 .sum-grid.sum-grid-3{
   margin-top: 12px;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: 0.8fr 1.1fr 1.1fr;
   gap: 12px;
 }
 .sum-card {

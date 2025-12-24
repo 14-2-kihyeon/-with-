@@ -1,9 +1,12 @@
 <template>
   <RouterView />
+  <!-- 모든 페이지에서 챗봇 위젯 표시 -->
+  <ChatbotWidget />
 </template>
 
 <script setup>
 import NavBar from "@/components/common/NavBar.vue"
+import ChatbotWidget from "@/components/common/ChatbotWidget.vue"
 import { onMounted } from "vue"
 import { useAuthStore } from "@/stores/auth"
 
