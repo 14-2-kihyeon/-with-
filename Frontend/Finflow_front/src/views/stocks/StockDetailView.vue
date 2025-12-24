@@ -16,9 +16,31 @@
     </div>
 
     <div class="grid">
+      <!-- 실시간 주가 카드 -->
+      <div class="card realtime-card">
+        <RealtimeStockPrice
+          :code="code"
+          :auto-refresh="true"
+          :refresh-interval="60000"
+          ref="realtimePriceRef"
+        />
+      </div>
+
+      <!-- 인트라데이 차트 -->
+      <div class="card intraday-card">
+        <h2 class="card-title">실시간 차트</h2>
+        <IntradayChart
+          :code="code"
+          :auto-refresh="true"
+          :refresh-interval="60000"
+          ref="intradayChartRef"
+        />
+      </div>
+
+      <!-- 일봉 차트 -->
       <div class="card">
         <div class="row-between">
-          <h2 class="card-title">가격 차트</h2>
+          <h2 class="card-title">일봉 차트</h2>
           <button class="btn ghost" @click="reloadPrices">새로고침</button>
         </div>
         <StockChart :prices="store.prices" />
@@ -81,12 +103,18 @@ import { useRoute } from "vue-router"
 import { useStocksStore } from "@/stores/stocks"
 import StockChart from "@/components/stocks/StockChart.vue"
 import StockNewsList from "@/components/stocks/StockNewsList.vue"
+import RealtimeStockPrice from "@/components/stocks/RealtimeStockPrice.vue"
+import IntradayChart from "@/components/stocks/IntradayChart.vue"
 
 const route = useRoute()
 const store = useStocksStore()
 const question = ref("왜 이 종목이 추천됐어?")
 
 const code = route.params.code
+
+// 실시간 주가 및 차트 컴포넌트 참조
+const realtimePriceRef = ref(null)
+const intradayChartRef = ref(null)
 
 // 뉴스 페이지네이션
 const currentNewsPage = ref(1)
@@ -183,6 +211,9 @@ const showAnswer = async () => {
 }
 
 onMounted(() => {
+  console.log('[StockDetailView] Mounted with code:', code)
+  console.log('[StockDetailView] RealtimePrice ref:', realtimePriceRef.value)
+  console.log('[StockDetailView] IntradayChart ref:', intradayChartRef.value)
   reloadAll()
 })
 </script>
@@ -201,6 +232,8 @@ onMounted(() => {
 .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .card { background: rgba(255,255,255,0.85); border-radius: 14px; padding: 16px; }
 .card.full { grid-column: 1 / -1; }
+.card.realtime-card { padding: 0; background: transparent; border: none; box-shadow: none; }
+.card.intraday-card { grid-column: 1 / -1; }
 .row-between { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
 .card-title { font-size: 18px; font-weight: 900; margin: 0; }
 .btns { display: flex; gap: 8px; }

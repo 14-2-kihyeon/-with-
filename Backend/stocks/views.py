@@ -20,6 +20,7 @@ from stocks.services.naver_news_client import NaverNewsClient
 
 from stocks.services.llm_client import gms_chat
 from stocks.services.explain import build_explain_messages
+from stocks.services.yfinance_client import YFinanceClient
 
 
 # -------------------------
@@ -1199,3 +1200,234 @@ def fx_latest(request):
         {"endpoint": "fx", "as_of": as_of, "count": len(items), "items": items, "detail": None, "error": None},
         status=drf_status.HTTP_200_OK,
     )
+
+
+# -------------------------
+# yfinance 실시간 주가 API
+# -------------------------
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def stock_realtime_price(request, code: str):
+    """
+    GET /api/stocks/{code}/realtime/
+    yfinance를 사용한 실시간 주가 조회 (15-20분 지연)
+
+    Returns:
+        {
+            "endpoint": "realtime",
+            "code": "005930",
+            "data": {
+                "code": "005930",
+                "name": "삼성전자",
+                "current_price": 70000,
+                "previous_close": 69500,
+                "open": 69800,
+                "high": 70500,
+                "low": 69300,
+                "volume": 12345678,
+                "change": 500,
+                "change_percent": 0.72,
+                "market_cap": 1234567890000,
+                "updated_at": "2025-12-24 15:30:00",
+                "market_state": "REGULAR"
+            },
+            "market_status": {
+                "is_open": true,
+                "current_time": "2025-12-24 14:30:00",
+                "next_open": null,
+                "next_close": "2025-12-24 15:30:00"
+            },
+            "detail": null,
+            "error": null
+        }
+    """
+    try:
+        # Stock 조회하여 market 정보 가져오기
+        stock = Stock.objects.filter(code=code).first()
+
+        if not stock:
+            return Response(
+                {
+                    "endpoint": "realtime",
+                    "code": code,
+                    "data": None,
+                    "market_status": YFinanceClient.get_market_hours_status(),
+                    "detail": "종목을 찾을 수 없습니다.",
+                    "error": "STOCK_NOT_FOUND"
+                },
+                status=drf_status.HTTP_404_NOT_FOUND,
+            )
+
+        # 실시간 주가 조회
+        realtime_data = YFinanceClient.get_realtime_price(code, stock.market)
+
+        if not realtime_data:
+            return Response(
+                {
+                    "endpoint": "realtime",
+                    "code": code,
+                    "data": None,
+                    "market_status": YFinanceClient.get_market_hours_status(),
+                    "detail": "실시간 주가를 가져올 수 없습니다.",
+                    "error": "YFINANCE_ERROR"
+                },
+                status=drf_status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        # 시장 상태 정보
+        market_status = YFinanceClient.get_market_hours_status()
+
+        return Response(
+            {
+                "endpoint": "realtime",
+                "code": code,
+                "data": realtime_data,
+                "market_status": market_status,
+                "detail": None,
+                "error": None
+            },
+            status=drf_status.HTTP_200_OK,
+        )
+
+    except Exception as e:
+        return Response(
+            {
+                "endpoint": "realtime",
+                "code": code,
+                "data": None,
+                "market_status": None,
+                "detail": f"오류가 발생했습니다: {str(e)}",
+                "error": "INTERNAL_ERROR"
+            },
+            status=drf_status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def stock_intraday_prices(request, code: str):
+    """
+    GET /api/stocks/{code}/intraday/?interval=5m&days=1
+    yfinance를 사용한 인트라데이 차트 데이터 조회
+
+    Query Parameters:
+        - interval: 시간 간격 (1m, 5m, 15m, 30m, 1h) - default: 5m
+        - days: 조회 일수 (1, 5, 30, 60) - default: 1
+
+    Returns:
+        {
+            "endpoint": "intraday",
+            "code": "005930",
+            "name": "삼성전자",
+            "interval": "5m",
+            "days": 1,
+            "count": 78,
+            "prices": [
+                {
+                    "datetime": "2025-12-24 09:00:00",
+                    "open": 69800,
+                    "high": 70000,
+                    "low": 69700,
+                    "close": 69900,
+                    "volume": 123456
+                },
+                ...
+            ],
+            "detail": null,
+            "error": null
+        }
+    """
+    try:
+        # Query parameters
+        interval = request.query_params.get("interval", "5m")
+        days = int(request.query_params.get("days", "1"))
+
+        # Validate interval
+        if not YFinanceClient.validate_interval(interval):
+            return Response(
+                {
+                    "endpoint": "intraday",
+                    "code": code,
+                    "name": None,
+                    "interval": interval,
+                    "days": days,
+                    "count": 0,
+                    "prices": [],
+                    "detail": "유효하지 않은 interval입니다. (1m, 5m, 15m, 30m, 1h 중 선택)",
+                    "error": "INVALID_INTERVAL"
+                },
+                status=drf_status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Stock 조회하여 market 정보 가져오기
+        stock = Stock.objects.filter(code=code).first()
+
+        if not stock:
+            return Response(
+                {
+                    "endpoint": "intraday",
+                    "code": code,
+                    "name": None,
+                    "interval": interval,
+                    "days": days,
+                    "count": 0,
+                    "prices": [],
+                    "detail": "종목을 찾을 수 없습니다.",
+                    "error": "STOCK_NOT_FOUND"
+                },
+                status=drf_status.HTTP_404_NOT_FOUND,
+            )
+
+        # 인트라데이 데이터 조회
+        intraday_data = YFinanceClient.get_intraday_prices(
+            code,
+            stock.market,
+            interval=interval,
+            days=days
+        )
+
+        return Response(
+            {
+                "endpoint": "intraday",
+                "code": code,
+                "name": stock.name,
+                "interval": interval,
+                "days": days,
+                "count": len(intraday_data),
+                "prices": intraday_data,
+                "detail": None,
+                "error": None
+            },
+            status=drf_status.HTTP_200_OK,
+        )
+
+    except ValueError as e:
+        return Response(
+            {
+                "endpoint": "intraday",
+                "code": code,
+                "name": None,
+                "interval": interval,
+                "days": 0,
+                "count": 0,
+                "prices": [],
+                "detail": f"유효하지 않은 파라미터입니다: {str(e)}",
+                "error": "INVALID_PARAMETER"
+            },
+            status=drf_status.HTTP_400_BAD_REQUEST,
+        )
+    except Exception as e:
+        return Response(
+            {
+                "endpoint": "intraday",
+                "code": code,
+                "name": None,
+                "interval": None,
+                "days": 0,
+                "count": 0,
+                "prices": [],
+                "detail": f"오류가 발생했습니다: {str(e)}",
+                "error": "INTERNAL_ERROR"
+            },
+            status=drf_status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )

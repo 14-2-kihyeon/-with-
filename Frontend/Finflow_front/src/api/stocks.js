@@ -24,6 +24,14 @@ export const apiGetStockNews = (code, params = {}) =>
 export const apiPostStockExplain = (code, body = {}, params = {}) =>
   api.post(`${STOCKS}/${code}/explain/`, body, { params, timeout: 130000 })
 
+// yfinance 실시간 주가
+export const apiGetRealtimePrice = (code) =>
+  api.get(`${STOCKS}/${code}/realtime/`)
+
+// yfinance 인트라데이 차트
+export const apiGetIntradayPrices = (code, params = {}) =>
+  api.get(`${STOCKS}/${code}/intraday/`, { params })
+
 // ----------------------
 // Market (지수/시장요약/환율)
 // ----------------------
