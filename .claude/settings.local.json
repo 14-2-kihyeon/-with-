@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(venv/Scripts/python.exe manage.py shell:*)",
+      "Bash(venv/Scripts/python.exe:*)",
+      "Bash(del init_survey.py)",
+      "Bash(start /B venvScriptspython.exe manage.py runserver --noreload)",
+      "Bash(curl:*)",
+      "Bash(python -c:*)",
+      "Bash(dir \"C:\\\\ProgramData\\\\finflow_ssl\"\")",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(venvScriptspython.exe manage.py check)",
+      "Bash(timeout /t 3 /nobreak)",
+      "Bash(cat:*)"
+    ]
+  }
+}

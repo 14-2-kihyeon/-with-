@@ -18,6 +18,8 @@ import 'bootstrap/dist/css/bootstrap.min.css'
 // ✅ Bootstrap JS 추가 (드롭다운, 모달 등 사용 시)
 import 'bootstrap/dist/js/bootstrap.bundle.min.js'
 import 'bootstrap-icons/font/bootstrap-icons.css'
+import '@/assets/styles/font.css'
+
 
 const app = createApp(App)
 

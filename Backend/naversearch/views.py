@@ -29,41 +29,98 @@ def news_search(request):
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def news_list(request):
-    qs = News.objects.all().order_by("-id")
+    """뉴스 목록 조회 - 로그인한 사용자의 경우 북마크 상태 포함"""
+    from accounts.models import UserNewsBookmark
 
+    qs = News.objects.all().order_by("-id")
+    serializer = NewsSerializer(qs, many=True)
+    news_list = serializer.data
+
+    # 로그인한 사용자의 경우 북마크 상태 추가
+    if request.user.is_authenticated:
+        bookmarked_news_ids = set(
+            UserNewsBookmark.objects.filter(user=request.user)
+            .values_list('news_id', flat=True)
+        )
+
+        for news in news_list:
+            news['is_bookmarked'] = news['id'] in bookmarked_news_ids
+    else:
+        # 비로그인 사용자는 모두 북마크되지 않음
+        for news in news_list:
+            news['is_bookmarked'] = False
+
+    # 북마크 필터링 (선택적)
     bookmarked = request.query_params.get("bookmarked")
     if bookmarked in ("1", "true", "True"):
-        qs = qs.filter(is_bookmarked=True)
+        news_list = [n for n in news_list if n.get('is_bookmarked')]
 
-    serializer = NewsSerializer(qs, many=True)
-    return Response(serializer.data, status=status.HTTP_200_OK)
+    return Response(news_list, status=status.HTTP_200_OK)
 
 
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def news_detail(request, pk):
+    """뉴스 상세 조회 - 로그인한 사용자의 경우 북마크 상태 포함"""
+    from accounts.models import UserNewsBookmark
+
     try:
         news = News.objects.get(pk=pk)
     except News.DoesNotExist:
         return Response({"detail": "존재하지 않는 기사입니다."},
                         status=status.HTTP_404_NOT_FOUND)
 
-    return Response(NewsSerializer(news).data, status=status.HTTP_200_OK)
+    news_data = NewsSerializer(news).data
+
+    # 로그인한 사용자의 경우 북마크 상태 추가
+    if request.user.is_authenticated:
+        is_bookmarked = UserNewsBookmark.objects.filter(
+            user=request.user,
+            news_id=news.id
+        ).exists()
+        news_data['is_bookmarked'] = is_bookmarked
+    else:
+        news_data['is_bookmarked'] = False
+
+    return Response(news_data, status=status.HTTP_200_OK)
 
 
 @api_view(["POST"])
-@permission_classes([IsAuthenticated])  # 원하면 AllowAny로 바꿔도 됨
+@permission_classes([IsAuthenticated])
 def toggle_bookmark(request, pk):
+    """뉴스 북마크 토글 - 사용자별로 관리"""
+    from accounts.models import UserNewsBookmark
+
     try:
         news = News.objects.get(pk=pk)
     except News.DoesNotExist:
         return Response({"detail": "존재하지 않는 기사입니다."},
                         status=status.HTTP_404_NOT_FOUND)
 
-    news.is_bookmarked = not news.is_bookmarked
-    news.save()
+    # 사용자별 북마크 토글
+    bookmark, created = UserNewsBookmark.objects.get_or_create(
+        user=request.user,
+        news_id=news.id,
+        defaults={
+            'title': news.title,
+            'description': news.description,
+            'link': news.link,
+            'pub_date': news.pub_date,
+        }
+    )
 
-    return Response(NewsSerializer(news).data, status=status.HTTP_200_OK)
+    # 이미 존재하면 삭제 (토글)
+    if not created:
+        bookmark.delete()
+        is_bookmarked = False
+    else:
+        is_bookmarked = True
+
+    # 응답 데이터에 북마크 상태 포함
+    news_data = NewsSerializer(news).data
+    news_data['is_bookmarked'] = is_bookmarked
+
+    return Response(news_data, status=status.HTTP_200_OK)
 
 
 @api_view(["POST"])

@@ -1,160 +1,126 @@
 <template>
-  <div class="container py-5">
+  <div class="community-page">
     <!-- 헤더 -->
-    <div class="row mb-4">
-      <div class="col-12">
-        <div class="d-flex justify-content-between align-items-center">
-          <div>
-            <h1 class="display-5 fw-bold mb-2">💬 금융 커뮤니티</h1>
-            <p class="text-muted">금융 상품에 대한 궁금증을 나누고 조언을 구해보세요</p>
+    <div class="community-header">
+      <div class="header-content">
+        <div class="title-group">
+          <h1 class="title">커뮤니티</h1>
+          <p class="subtitle">다른 사람들과 금융 상품에 대한 경험을 공유해보세요</p>
+        </div>
+        <div class="header-stats">
+          <div class="stat-item">
+            <span class="stat-value">{{ store.posts.length }}</span>
+            <span class="stat-label">게시글</span>
           </div>
-          <div v-if="auth.isLogin">
-            <RouterLink 
-              to="/posts/create" 
-              class="btn btn-primary btn-lg"
-            >
-              <i class="bi bi-pencil-square"></i> 글쓰기
-            </RouterLink>
+          <div class="stat-divider"></div>
+          <div class="stat-item">
+            <span class="stat-value">{{ totalComments }}</span>
+            <span class="stat-label">댓글</span>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- 통계 카드 -->
-    <div class="row mb-4">
-      <div class="col-md-4">
-        <div class="card border-primary">
-          <div class="card-body text-center">
-            <h3 class="text-primary mb-0">{{ store.posts.length }}</h3>
-            <p class="text-muted mb-0">전체 게시글</p>
-          </div>
-        </div>
+    <!-- 컨트롤 바 -->
+    <div class="control-bar">
+      <div class="sort-tabs">
+        <button
+          class="sort-tab"
+          :class="{ active: sortBy === 'latest' }"
+          @click="sortBy = 'latest'"
+        >
+          최신순
+        </button>
+        <button
+          class="sort-tab"
+          :class="{ active: sortBy === 'comments' }"
+          @click="sortBy = 'comments'"
+        >
+          댓글순
+        </button>
       </div>
-      <div class="col-md-4">
-        <div class="card border-success">
-          <div class="card-body text-center">
-            <h3 class="text-success mb-0">{{ totalComments }}</h3>
-            <p class="text-muted mb-0">전체 댓글</p>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-4">
-        <div class="card border-info">
-          <div class="card-body text-center">
-            <h3 class="text-info mb-0">{{ activeUsers }}</h3>
-            <p class="text-muted mb-0">활동 중인 회원</p>
-          </div>
-        </div>
-      </div>
+      <RouterLink
+        v-if="auth.isLogin"
+        to="/posts/create"
+        class="btn-write"
+      >
+        글쓰기
+      </RouterLink>
     </div>
 
-    <!-- 게시글 목록 -->
-    <div class="row">
-      <div class="col-12">
-        <div class="card shadow-sm">
-          <div class="card-header bg-white py-3">
-            <div class="d-flex justify-content-between align-items-center">
-              <h5 class="mb-0">
-                <i class="bi bi-list-ul"></i> 게시글 목록
-              </h5>
-              <div class="btn-group" role="group">
-                <button 
-                  type="button" 
-                  class="btn btn-sm btn-outline-secondary active"
-                >
-                  최신순
-                </button>
-                <button 
-                  type="button" 
-                  class="btn btn-sm btn-outline-secondary"
-                >
-                  댓글순
-                </button>
+    <!-- 게시글 목록 카드 -->
+    <div class="posts-card">
+
+      <div class="card-body">
+        <!-- 빈 상태 -->
+        <div v-if="store.posts.length === 0" class="empty-state">
+          <div class="empty-icon">📭</div>
+          <div class="empty-text">아직 작성된 게시글이 없습니다</div>
+          <div class="empty-hint">첫 게시글을 작성해보세요!</div>
+          <RouterLink 
+            v-if="auth.isLogin" 
+            to="/posts/create" 
+            class="btn-primary"
+            style="margin-top: 16px;"
+          >
+            <span class="btn-icon">✏️</span>
+            첫 게시글 작성하기
+          </RouterLink>
+        </div>
+
+        <!-- 게시글 리스트 -->
+        <div v-else class="posts-list">
+          <RouterLink
+            v-for="p in sortedPosts"
+            :key="p.pk"
+            :to="`/posts/${p.pk}`"
+            class="post-item"
+          >
+            <div class="post-content">
+              <div class="post-header">
+                <h3 class="post-title">
+                  {{ p.title }}
+                  <span v-if="p.comments_count > 0" class="comment-badge">
+                    {{ p.comments_count }}
+                  </span>
+                </h3>
+              </div>
+
+              <p class="post-preview">
+                {{ truncateContent(p.content, 100) }}
+              </p>
+
+              <div class="post-meta">
+                <span class="meta-item">
+                  {{ p.user?.username }}
+                </span>
+                <span class="meta-divider">·</span>
+                <span class="meta-item">
+                  {{ formatDate(p.created_at) }}
+                </span>
+                <span class="meta-divider">·</span>
+                <span class="meta-item">
+                  댓글 {{ p.comments_count }}개
+                </span>
               </div>
             </div>
-          </div>
-          
-          <div class="card-body p-0">
-            <!-- 게시글 없을 때 -->
-            <div v-if="store.posts.length === 0" class="text-center py-5">
-              <i class="bi bi-inbox display-1 text-muted"></i>
-              <p class="text-muted mt-3">아직 작성된 게시글이 없습니다.</p>
-              <RouterLink 
-                v-if="auth.isLogin" 
-                to="/posts/create" 
-                class="btn btn-primary"
-              >
-                첫 게시글 작성하기
-              </RouterLink>
-            </div>
 
-            <!-- 게시글 목록 -->
-            <div class="list-group list-group-flush">
-              <RouterLink
-                v-for="p in store.posts"
-                :key="p.pk"
-                :to="`/posts/${p.pk}`"
-                class="list-group-item list-group-item-action py-4"
-              >
-                <div class="d-flex w-100 justify-content-between align-items-start">
-                  <div class="flex-grow-1">
-                    <!-- 제목 -->
-                    <h5 class="mb-2">
-                      {{ p.title }}
-                      <span 
-                        v-if="p.comments_count > 0" 
-                        class="badge bg-primary ms-2"
-                      >
-                        {{ p.comments_count }}
-                      </span>
-                    </h5>
-                    
-                    <!-- 내용 미리보기 -->
-                    <p class="mb-2 text-muted">
-                      {{ truncateContent(p.content, 100) }}
-                    </p>
-                    
-                    <!-- 메타 정보 -->
-                    <div class="d-flex align-items-center gap-3 text-muted small">
-                      <span>
-                        <i class="bi bi-person-circle"></i>
-                        {{ p.user?.username }}
-                      </span>
-                      <span>
-                        <i class="bi bi-clock"></i>
-                        {{ formatDate(p.created_at) }}
-                      </span>
-                      <span>
-                        <i class="bi bi-chat-dots"></i>
-                        댓글 {{ p.comments_count }}개
-                      </span>
-                    </div>
-                  </div>
-                  
-                  <!-- 오른쪽 화살표 -->
-                  <div class="ms-3">
-                    <i class="bi bi-chevron-right text-muted"></i>
-                  </div>
-                </div>
-              </RouterLink>
+            <div class="post-arrow">
+              <span class="arrow-icon">→</span>
             </div>
-          </div>
+          </RouterLink>
         </div>
       </div>
     </div>
 
-    <!-- 하단 안내 -->
-    <div class="row mt-4">
-      <div class="col-12">
-        <div class="alert alert-info d-flex align-items-center" role="alert">
-          <i class="bi bi-info-circle-fill me-3 fs-4"></i>
-          <div>
-            <strong>커뮤니티 이용 안내</strong>
-            <p class="mb-0">
-              금융 상품에 대한 궁금증과 경험을 자유롭게 공유해주세요. 
-              타인을 존중하는 건강한 토론 문화를 만들어갑시다.
-            </p>
-          </div>
+    <!-- 안내 메시지 -->
+    <div class="info-card">
+      <div class="info-icon">ℹ️</div>
+      <div class="info-content">
+        <div class="info-title">커뮤니티 이용 안내</div>
+        <div class="info-text">
+          금융 상품에 대한 궁금증과 경험을 자유롭게 공유해주세요. 
+          타인을 존중하는 건강한 토론 문화를 만들어갑시다.
         </div>
       </div>
     </div>
@@ -162,25 +128,35 @@
 </template>
 
 <script setup>
-import { computed, onMounted } from "vue"
+import { computed, onMounted, ref } from "vue"
 import { usePostsStore } from "@/stores/posts"
 import { useAuthStore } from "@/stores/auth"
 
 const store = usePostsStore()
 const auth = useAuthStore()
+const sortBy = ref('latest')
 
-// 전체 댓글 수 계산
 const totalComments = computed(() => {
   return store.posts.reduce((sum, post) => sum + (post.comments_count || 0), 0)
 })
 
-// 활동 중인 회원 수 (중복 제거)
-const activeUsers = computed(() => {
-  const users = new Set(store.posts.map(post => post.user?.username))
-  return users.size
+const sortedPosts = computed(() => {
+  const posts = [...store.posts]
+
+  if (sortBy.value === 'latest') {
+    // 최신순: created_at 기준 내림차순
+    return posts.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+  } else {
+    // 댓글순: comments_count 기준 내림차순, 같으면 최신순
+    return posts.sort((a, b) => {
+      if (b.comments_count !== a.comments_count) {
+        return b.comments_count - a.comments_count
+      }
+      return new Date(b.created_at) - new Date(a.created_at)
+    })
+  }
 })
 
-// 내용 자르기
 const truncateContent = (content, maxLength) => {
   if (!content) return ''
   return content.length > maxLength 
@@ -188,29 +164,16 @@ const truncateContent = (content, maxLength) => {
     : content
 }
 
-// 날짜 포맷팅
 const formatDate = (dateString) => {
   const date = new Date(dateString)
   const now = new Date()
   const diff = now - date
   
-  // 1분 미만
-  if (diff < 60000) {
-    return '방금 전'
-  }
-  // 1시간 미만
-  if (diff < 3600000) {
-    return `${Math.floor(diff / 60000)}분 전`
-  }
-  // 24시간 미만
-  if (diff < 86400000) {
-    return `${Math.floor(diff / 3600000)}시간 전`
-  }
-  // 7일 미만
-  if (diff < 604800000) {
-    return `${Math.floor(diff / 86400000)}일 전`
-  }
-  // 그 이상
+  if (diff < 60000) return '방금 전'
+  if (diff < 3600000) return `${Math.floor(diff / 60000)}분 전`
+  if (diff < 86400000) return `${Math.floor(diff / 3600000)}시간 전`
+  if (diff < 604800000) return `${Math.floor(diff / 86400000)}일 전`
+  
   return date.toLocaleDateString('ko-KR')
 }
 
@@ -220,39 +183,429 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.list-group-item {
-  border-left: none;
-  border-right: none;
+/* 페이지 래퍼 */
+.community-page {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 40px 20px;
+  min-height: 100vh;
+}
+
+/* 헤더 */
+.community-header {
+  margin-bottom: 32px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 20px;
+}
+
+.title-group {
+  flex: 1;
+}
+
+.title {
+  margin: 0 0 8px 0;
+  font-size: 32px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+}
+
+.subtitle {
+  margin: 0;
+  font-size: 15px;
+  color: #64748b;
+  font-weight: 400;
+}
+
+.header-stats {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 12px 20px;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.stat-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.stat-divider {
+  width: 1px;
+  height: 28px;
+  background: rgba(0, 0, 0, 0.08);
+}
+
+/* 컨트롤 바 */
+.control-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.sort-tabs {
+  display: flex;
+  gap: 4px;
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 10px;
+  padding: 4px;
+}
+
+.sort-tab {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
   transition: all 0.2s ease;
 }
 
-.list-group-item:hover {
-  background-color: #f8f9fa;
-  transform: translateX(5px);
+.sort-tab:hover {
+  color: #0f172a;
 }
 
-.list-group-item:first-child {
-  border-top: none;
+.sort-tab.active {
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
-.card {
+.btn-write {
+  padding: 10px 20px;
+  background: #0f172a;
+  color: #ffffff;
   border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-write:hover {
+  background: #1e293b;
+  transform: translateY(-1px);
+}
+
+/* 게시글 카드 */
+.posts-card {
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  margin-bottom: 24px;
+}
+
+.card-body {
+  padding: 0;
+}
+
+/* 빈 상태 */
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.empty-icon {
+  font-size: 4rem;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.empty-text {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #191f28;
+  margin-bottom: 8px;
+}
+
+.empty-hint {
+  font-size: 0.95rem;
+  color: #6b7280;
+}
+
+/* 게시글 리스트 */
+.posts-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.post-item {
+  padding: 20px 24px;
+  border-bottom: 1px solid #e5e8eb;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.15s ease;
+}
+
+.post-item:last-child {
+  border-bottom: none;
+}
+
+.post-item:hover {
+  background: #f8fafc;
+  transform: translateX(4px);
+}
+
+.post-content {
+  flex: 1;
+}
+
+.post-header {
+  margin-bottom: 8px;
+}
+
+.post-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #191f28;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.comment-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  background: #3b82f6;
+  color: #ffffff;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.post-preview {
+  font-size: 0.95rem;
+  color: #6b7280;
+  margin: 0 0 12px 0;
+  line-height: 1.5;
+}
+
+.post-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.meta-item {
+  font-size: 0.85rem;
+  color: #9ca3af;
+}
+
+.meta-divider {
+  color: #d1d5db;
+  font-size: 0.85rem;
+}
+
+.post-arrow {
+  flex-shrink: 0;
+}
+
+.arrow-icon {
+  font-size: 1.2rem;
+  color: #d1d5db;
+  transition: all 0.15s ease;
+}
+
+.post-item:hover .arrow-icon {
+  color: #3b82f6;
+  transform: translateX(4px);
+}
+
+/* 안내 카드 */
+.info-card {
+  background: #f0f9ff;
+  border: 1px solid #bfdbfe;
   border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
 }
 
-.card-header {
-  border-bottom: 2px solid #f0f0f0;
+.info-icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
 }
 
-.btn-group .btn {
-  border-radius: 20px;
+.info-content {
+  flex: 1;
 }
 
-.btn-group .btn:not(:last-child) {
-  margin-right: 0.5rem;
+.info-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #191f28;
+  margin-bottom: 4px;
 }
 
-.gap-3 {
-  gap: 1rem !important;
+.info-text {
+  font-size: 0.9rem;
+  color: #4b5563;
+  line-height: 1.5;
+}
+
+/* 버튼 */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 20px;
+  background: #3b82f6;
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+}
+
+.btn-primary:hover {
+  background: #2563eb;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn-icon {
+  font-size: 1rem;
+}
+
+/* 반응형 */
+@media (max-width: 968px) {
+  .community-page {
+    padding: 20px 12px;
+  }
+
+  .header-content {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .header-stats {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .title {
+    font-size: 24px;
+  }
+
+  .subtitle {
+    font-size: 14px;
+  }
+
+  .post-item {
+    padding: 16px 20px;
+  }
+
+  .post-arrow {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .community-page {
+    padding: 16px 12px;
+  }
+
+  .title {
+    font-size: 22px;
+  }
+
+  .subtitle {
+    font-size: 13px;
+  }
+
+  .stat-value {
+    font-size: 18px;
+  }
+
+  .stat-label {
+    font-size: 11px;
+  }
+
+  .control-bar {
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+  }
+
+  .btn-write {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .post-title {
+    font-size: 0.95rem;
+  }
+
+  .post-preview {
+    font-size: 0.9rem;
+  }
+
+  .meta-item {
+    font-size: 0.8rem;
+  }
+}
+
+/* 애니메이션 */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.post-item {
+  animation: slideIn 0.3s ease-out;
 }
 </style>

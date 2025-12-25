@@ -25,6 +25,8 @@ export const useAuthStore = defineStore("auth", () => {
     user.value = null
     localStorage.removeItem("access")
     localStorage.removeItem("refresh")
+    // 팝업 "오늘 하루 보지 않기" 설정도 삭제
+    localStorage.removeItem("pb_promo_hide_until")
   }
 
   // ✅ 로그인 (dj-rest-auth)
@@ -55,14 +57,27 @@ export const useAuthStore = defineStore("auth", () => {
       })
       user.value = res.data
     } catch (err) {
+      // 네트워크 에러 (서버 꺼짐) - 토큰 제거하고 에러 던지기
+      if (!err.response) {
+        console.warn("서버 연결 실패, fetchUser 중단")
+        clearTokens()
+        throw err
+      }
+
       // access 만료되면 refresh로 복구 후 재시도
       if (err.response?.status === 401 && refresh.value) {
-        await refreshAccess()
-        const res = await axios.get(`${API}/accounts/user/`, {
-          headers: { Authorization: `Bearer ${access.value}` },
-        })
-        user.value = res.data
-        return
+        try {
+          await refreshAccess()
+          const res = await axios.get(`${API}/accounts/user/`, {
+            headers: { Authorization: `Bearer ${access.value}` },
+          })
+          user.value = res.data
+          return
+        } catch (refreshErr) {
+          // refresh 실패 시에도 토큰 제거
+          clearTokens()
+          throw refreshErr
+        }
       }
       throw err
     }

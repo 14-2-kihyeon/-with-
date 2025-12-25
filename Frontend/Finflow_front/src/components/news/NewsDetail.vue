@@ -1,24 +1,30 @@
 <template>
   <section class="naver-news-detail-section">
     <div v-if="!news" class="naver-news-detail-empty">
-      좌측에서 기사를 선택하면 상세 내용이 여기에 표시됩니다.
+      <div class="empty-icon">📄</div>
+      <p>기사를 선택해 주세요.</p>
     </div>
 
-    <div v-else>
-      <div class="naver-news-detail-title">{{ news.title }}</div>
-      <div class="naver-news-detail-meta">{{ news.pub_date || "" }}</div>
+    <div v-else class="detail-content-wrapper">
+      <div class="detail-header">
+        <h2 class="naver-news-detail-title">{{ news.title }}</h2>
+        <div class="meta-row">
+          <span class="naver-news-detail-date">{{ news.pub_date || "" }}</span>
+          <a
+            v-if="news.link"
+            :href="news.link"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="original-link"
+          >
+            원문 보기 →
+          </a>
+        </div>
+      </div>
 
-      <a
-        v-if="news.link"
-        :href="news.link"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        원문 보기
-      </a>
-
-      <hr />
-      <div class="naver-news-detail-body">{{ news.description || "" }}</div>
+      <div class="naver-news-detail-body">
+        {{ news.description || "" }}
+      </div>
 
       <slot />
     </div>
