@@ -150,7 +150,7 @@
             <div class="message ai-message">
               <img :src="avatarImage" alt="AI" class="message-avatar" />
               <div class="message-bubble">
-                <div class="ai-name">Finflow AI</div>
+                <div class="ai-name">PBTI AI 챗봇</div>
                 <div class="message-content">
                   <div class="typing-indicator">
                     <span></span>
@@ -210,7 +210,7 @@ import speculativeFemale from '@/assets/main/icon/speculative_female.png'
 
 const router = useRouter()
 const authStore = useAuthStore()
-const { chatbotOpenRequested } = useChatbot()
+const { chatbotOpenRequested, chatbotAvatarRefreshRequested } = useChatbot()
 
 // Alert composable
 const { showAlert, alertConfig, success, error } = useAlert()
@@ -277,7 +277,6 @@ function saveDragPosition(position) {
 }
 
 // 챗봇 아바타 정보
-const avatarType = ref('normal')
 const riskType = ref(null)
 const riskScore = ref(null)
 
@@ -564,20 +563,17 @@ const clearHistory = async () => {
 const fetchAvatarInfo = async () => {
   try {
     const response = await api.get('/chatbot/avatar/')
-    // 백엔드에서 받은 avatar 값을 소문자로 변환 (Timid -> timid)
-    const avatarValue = response.data.avatar || 'normal'
-    avatarType.value = avatarValue.toLowerCase()
+    // 백엔드에서 받은 risk_type을 그대로 사용 (예: timid_male, normal_female)
     riskType.value = response.data.risk_type
     riskScore.value = response.data.risk_score
 
     console.log('아바타 정보 로드:', {
-      avatar: avatarType.value,
       riskType: riskType.value,
       riskScore: riskScore.value
     })
   } catch (error) {
     console.error('아바타 정보 로드 실패:', error)
-    avatarType.value = 'normal'
+    riskType.value = null
   }
 }
 
@@ -836,7 +832,6 @@ watch(() => authStore.isLogin, (newVal) => {
     // 로그아웃 시 모든 상태 초기화
     messages.value = []
     isOpen.value = false
-    avatarType.value = 'normal'
     riskType.value = null
     riskScore.value = null
     bookmarkedProducts.value = new Set()
@@ -859,6 +854,14 @@ watch(chatbotOpenRequested, (newVal) => {
       messageInput.value?.focus()
       scrollToBottom()
     })
+  }
+})
+
+// 아바타 새로고침 요청 감지
+watch(chatbotAvatarRefreshRequested, () => {
+  if (authStore.isLogin) {
+    console.log('아바타 새로고침 요청 감지')
+    fetchAvatarInfo()
   }
 })
 </script>

@@ -384,7 +384,6 @@
             </div>
             <div class="channel-info">
               <h3 class="channel-title">{{ channel.channel_title }}</h3>
-              <p class="channel-description">{{ channel.channel_description?.substring(0, 80) }}...</p>
               <div class="channel-footer">
                 <span class="channel-date">구독일: {{ formatDate(channel.created_at) }}</span>
                 <button
