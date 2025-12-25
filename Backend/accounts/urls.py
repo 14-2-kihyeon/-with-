@@ -41,6 +41,16 @@ urlpatterns = [
     path('bookmarks/', views.get_bookmarked_products, name='bookmarked_products'),
 
     # ==========================================
+    # 주식 관심종목 관련
+    # ==========================================
+
+    # 주식 관심종목 추가/제거 (토글)
+    path('stocks/<str:stock_code>/bookmark/', views.bookmark_stock, name='bookmark_stock'),
+
+    # 관심종목 목록 조회
+    path('stocks/bookmarks/', views.get_bookmarked_stocks, name='bookmarked_stocks'),
+
+    # ==========================================
     # 뉴스 북마크 관련
     # ==========================================
 
@@ -54,7 +64,7 @@ urlpatterns = [
     # 유튜브 구독 관련
     # ==========================================
 
-    # 유튜브 채널 구독 토글 (POST: 구독, DELETE: 구독 취소)
+    # 유튜브 채널 구독 토글 (POST 토글: 구독 중이면 취소, 아니면 구독)
     path('youtube/channels/<str:channel_id>/subscribe/', views.toggle_youtube_subscription, name='toggle_youtube_subscription'),
 
     # 내 유튜브 구독 채널 목록 조회
@@ -64,7 +74,7 @@ urlpatterns = [
     # 나중에 볼 영상 관련
     # ==========================================
 
-    # 나중에 볼 영상 토글 (POST: 추가, DELETE: 제거)
+    # 나중에 볼 영상 토글 (POST 토글: 이미 있으면 제거, 없으면 추가)
     path('youtube/videos/<str:video_id>/watch-later/', views.toggle_watch_later, name='toggle_watch_later'),
 
     # 나중에 볼 영상 목록 조회 (?is_watched=true/false)
