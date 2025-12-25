@@ -1,10 +1,12 @@
 # accounts/serializers.py
 from dj_rest_auth.registration.serializers import RegisterSerializer
+from dj_rest_auth.serializers import UserDetailsSerializer
 from rest_framework import serializers
 from .models import (
     UserNewsBookmark,
     UserYouTubeSubscription,
-    UserWatchLater
+    UserWatchLater,
+    InvestmentProfile
 )
 
 class CustomRegisterSerializer(RegisterSerializer):
@@ -16,6 +18,21 @@ class CustomRegisterSerializer(RegisterSerializer):
         # ✅ email이 아예 없어도 키가 생기게
         data["email"] = self.validated_data.get("email", "")
         return data
+
+
+class InvestmentProfileSerializer(serializers.ModelSerializer):
+    """투자 성향 프로필 Serializer"""
+    class Meta:
+        model = InvestmentProfile
+        fields = ['risk_type', 'risk_score', 'investment_period', 'gender', 'age']
+
+
+class CustomUserDetailsSerializer(UserDetailsSerializer):
+    """사용자 정보에 투자 성향 포함"""
+    investment_profile = InvestmentProfileSerializer(read_only=True)
+
+    class Meta(UserDetailsSerializer.Meta):
+        fields = UserDetailsSerializer.Meta.fields + ('investment_profile',)
 
 
 # ============================================

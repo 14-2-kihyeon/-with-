@@ -78,13 +78,68 @@
 <script setup>
 import { onMounted } from "vue"
 import { useStocksStore } from "@/stores/stocks"
+import { useAuthStore } from "@/stores/auth"
 import StocksMarketDashboard from "@/components/stocks/StocksMarketDashboard.vue"
 import StocksMarketTab from "@/components/stocks/StocksMarketTab.vue"
 
 const store = useStocksStore()
+const authStore = useAuthStore()
+
+// 투자 성향을 주식 API 리스크 파라미터로 변환
+const getRiskLevel = () => {
+  const profile = authStore.user?.investment_profile
+  if (!profile || !profile.risk_type) {
+    return "MID" // 기본값
+  }
+
+  // risk_type: timid_*, normal_*, speculative_* → LOW, MID, HIGH
+  if (profile.risk_type.startsWith("timid")) {
+    return "LOW"
+  } else if (profile.risk_type.startsWith("normal")) {
+    return "MID"
+  } else if (profile.risk_type.startsWith("speculative")) {
+    return "HIGH"
+  }
+
+  return "MID" // 기본값
+}
+
+// 투자 기간을 주식 API horizon 파라미터로 변환
+const getHorizon = () => {
+  const profile = authStore.user?.investment_profile
+  if (!profile || !profile.investment_period) {
+    return "MID" // 기본값
+  }
+
+  const months = profile.investment_period
+
+  // 12개월 이하: 단기
+  if (months <= 12) {
+    return "SHORT"
+  }
+  // 24개월 이하: 중기
+  else if (months <= 24) {
+    return "MID"
+  }
+  // 24개월 초과: 장기
+  else {
+    return "LONG"
+  }
+}
 
 onMounted(() => {
-  store.fetchRecommendations({ top: 5, auto: 1, include_news: 1 })
+  const risk = getRiskLevel()
+  const horizon = getHorizon()
+
+  console.log(`[StocksHome] 투자 성향: ${risk}, 투자 기간: ${horizon}`)
+
+  store.fetchRecommendations({
+    risk,
+    horizon,
+    top: 5,
+    auto: 1,
+    include_news: 1
+  })
 })
 </script>
 
