@@ -218,6 +218,7 @@ REST_AUTH = {
     # 옵션(원하면): 로그인 응답에 만료시간 포함
     # "JWT_AUTH_RETURN_EXPIRATION": True,
     "REGISTER_SERIALIZER": "accounts.serializers.CustomRegisterSerializer", #회원가입 시 email 선택사항으로 만들기
+    "USER_DETAILS_SERIALIZER": "accounts.serializers.CustomUserDetailsSerializer", # 사용자 정보에 투자 성향 포함
     "JWT_AUTH_HTTPONLY": False,   # ✅ (중요) refresh/access를 응답 바디로 쓰려면 False로
     "SESSION_LOGIN": False,
     "JWT_AUTH_COOKIE": None,

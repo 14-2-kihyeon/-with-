@@ -434,97 +434,123 @@ class ChatbotService:
 
     def get_stock_context(self, user_profile, limit=15):
         """
-        DB에 저장된 주식 정보 가져오기 (최근 시세, 수익률, 뉴스 포함)
-        사용자 프로필에 따라 필터링
+        recommend_stocks API를 사용하여 주식 정보 가져오기
+        오늘의 추천과 동일한 알고리즘 사용 (투자 성향, 나이, 소득, 투자 목표 등 모든 프로필 고려)
         """
-        # 최근 거래일 찾기
-        latest_date = DailyPrice.objects.aggregate(Max('date'))['date__max']
-        if not latest_date:
-            return []
+        from stocks.services.recommender import recommend_stocks
+        from stocks.services.reco_utils import resolve_best_as_of
 
-        stock_data = []
+        try:
+            # 최근 거래일 자동 결정
+            as_of = resolve_best_as_of()  # 최근 영업일 자동 계산
 
-        # 사용자 위험 성향에 따른 변동성 필터링
-        risk_score = user_profile.get('risk_score', 50) if user_profile.get('has_profile') else 50
+            # 사용자 프로필을 API 파라미터로 변환
+            risk_score = user_profile.get('risk_score', 50) if user_profile.get('has_profile') else 50
 
-        # 최근 데이터가 있는 주식들 가져오기
-        stocks_query = Stock.objects.filter(
-            prices__date=latest_date
-        ).prefetch_related(
-            Prefetch('prices', queryset=DailyPrice.objects.filter(date=latest_date)),
-            Prefetch('features', queryset=FeatureDaily.objects.filter(date=latest_date)),
-            'stock_news'  # 슬라이싱은 나중에 Python에서 처리
-        ).distinct()
-
-        # 위험 성향에 따라 주식 필터링
-        filtered_stocks = []
-        for stock in stocks_query:
-            latest_feature = stock.features.first() if hasattr(stock, 'features') else None
-
-            # 보수적 투자자 (risk_score < 40): 낮은 변동성
+            # risk_type -> risk 파라미터 변환
             if risk_score < 40:
-                if latest_feature and latest_feature.vol20 and latest_feature.vol20 < 3.0:
-                    filtered_stocks.append(stock)
-            # 공격적 투자자 (risk_score > 60): 높은 수익률 가능성
+                risk = "LOW"
             elif risk_score > 60:
-                if latest_feature and latest_feature.r20 and latest_feature.r20 > 0:
-                    filtered_stocks.append(stock)
-            # 중립적 투자자
+                risk = "HIGH"
             else:
-                filtered_stocks.append(stock)
+                risk = "MID"
 
-            if len(filtered_stocks) >= limit:
-                break
+            # investment_period -> horizon 파라미터 변환
+            investment_period = user_profile.get('investment_period') if user_profile.get('has_profile') else None
+            if investment_period:
+                if investment_period <= 12:
+                    horizon = "SHORT"
+                elif investment_period <= 24:
+                    horizon = "MID"
+                else:
+                    horizon = "LONG"
+            else:
+                horizon = "MID"
 
-        for stock in filtered_stocks[:limit]:
-            try:
-                # 최근 시세
-                latest_price = stock.prices.first()
-                # 최근 피처 (수익률, 변동성 등)
-                latest_feature = stock.features.first()
-                # 최근 뉴스 (최대 3개)
-                recent_news = list(stock.stock_news.all()[:3])
-
-                stock_info = {
-                    'type': 'stock',
-                    'name': stock.name,
-                    'code': stock.code,
-                    'market': stock.market,
+            # 전체 프로필 데이터 준비 (챗봇용)
+            profile_data = None
+            if user_profile.get('has_profile'):
+                profile_data = {
+                    'risk_type': user_profile.get('risk_type'),
+                    'risk_score': user_profile.get('risk_score'),
+                    'age': user_profile.get('age'),
+                    'gender': user_profile.get('gender'),
+                    'income': user_profile.get('annual_income'),
+                    'savings': user_profile.get('current_savings'),
+                    'investment_goal': user_profile.get('investment_goal'),
+                    'investment_period': user_profile.get('investment_period'),
                 }
 
-                # 시세 정보 추가
-                if latest_price:
-                    stock_info.update({
-                        'current_price': f"{latest_price.close:,}원",
-                        'date': str(latest_price.date),
-                        'change': f"{((latest_price.close - latest_price.open) / latest_price.open * 100):.2f}%" if latest_price.open > 0 else "0%",
-                    })
+            # recommend_stocks API 호출 (오늘의 추천과 동일한 로직)
+            result = recommend_stocks(
+                as_of=as_of,
+                risk=risk,
+                horizon=horizon,
+                top_n=limit,
+                include_news=True,
+                effort="OPTIMIZE",
+                user_profile=profile_data
+            )
 
-                # 수익률 정보 추가
-                if latest_feature:
-                    stock_info.update({
-                        'return_5d': f"{latest_feature.r5:.2f}%" if latest_feature.r5 else "정보없음",
-                        'return_20d': f"{latest_feature.r20:.2f}%" if latest_feature.r20 else "정보없음",
-                        'volatility_20d': f"{latest_feature.vol20:.2f}%" if latest_feature.vol20 else "정보없음",
-                    })
+            # 결과를 챗봇 포맷으로 변환
+            stock_data = []
+            recommendations = result.get('recommendations', [])
 
-                # 뉴스 정보 추가
-                if recent_news:
-                    stock_info['recent_news'] = [
-                        {
-                            'title': news.title,
-                            'published': news.published_at.strftime('%Y-%m-%d'),
-                        }
-                        for news in recent_news
-                    ]
+            for rec in recommendations:
+                try:
+                    stock_info = {
+                        'type': 'stock',
+                        'name': rec['name'],
+                        'code': rec['code'],
+                        'market': rec.get('market', ''),
+                    }
 
-                stock_data.append(stock_info)
+                    # 시세 정보
+                    if rec.get('close'):
+                        stock_info['current_price'] = f"{rec['close']:,}원"
+                        stock_info['date'] = str(rec.get('date', as_of))
 
-            except Exception as e:
-                print(f"주식 데이터 처리 오류 ({stock.code}): {str(e)}")
-                continue
+                        # 변동률 계산
+                        if rec.get('open') and rec['open'] > 0:
+                            change_pct = ((rec['close'] - rec['open']) / rec['open'] * 100)
+                            stock_info['change'] = f"{change_pct:.2f}%"
+                        else:
+                            stock_info['change'] = "0%"
 
-        return stock_data
+                    # 수익률 정보 (FeatureDaily 기반)
+                    raw_data = rec.get('raw', {})
+                    if raw_data:
+                        stock_info['return_5d'] = f"{raw_data.get('r5_raw', 0):.2f}%" if raw_data.get('r5_raw') else "정보없음"
+                        stock_info['return_20d'] = f"{raw_data.get('r20_raw', 0):.2f}%" if raw_data.get('r20_raw') else "정보없음"
+                        stock_info['volatility_20d'] = f"{raw_data.get('V_raw', 0):.2f}%" if raw_data.get('V_raw') else "정보없음"
+
+                    # 뉴스 정보
+                    news_list = rec.get('news', [])
+                    if news_list:
+                        stock_info['recent_news'] = [
+                            {
+                                'title': news.get('title', ''),
+                                'published': news.get('pub', '')[:10] if news.get('pub') else '',
+                            }
+                            for news in news_list[:3]  # 최대 3개
+                        ]
+
+                    stock_data.append(stock_info)
+
+                except Exception as e:
+                    print(f"주식 데이터 변환 오류 ({rec.get('code', 'unknown')}): {str(e)}")
+                    continue
+
+            print(f"[챗봇 주식 컨텍스트] recommend_stocks API 사용 - {len(stock_data)}개 종목 반환 (risk={risk}, horizon={horizon})")
+            return stock_data
+
+        except Exception as e:
+            print(f"[ERROR] recommend_stocks API 호출 실패: {e}")
+            import traceback
+            traceback.print_exc()
+
+            # 실패 시 빈 리스트 반환 (챗봇이 계속 작동하도록)
+            return []
 
     def analyze_user_question(self, user_message):
         """
@@ -1462,8 +1488,8 @@ class ChatbotService:
             return cleaned
 
         else:
-            # SERVICE 모드: 구조화된 응답 (최대 1200자)
-            max_length = 1200
+            # SERVICE 모드: 구조화된 응답 (최대 800자 - 채팅창에 맞게)
+            max_length = 800
 
             # 불릿 포인트 정리 및 가독성 개선
             lines = ai_response.split('\n')
@@ -1527,7 +1553,7 @@ class ChatbotService:
                 if len(cleaned) > max_length:
                     cleaned = cleaned[:max_length] + "..."
 
-            # 줄 수 제한을 더 유연하게 (최대 20줄)
+            # 줄 수 제한을 더 엄격하게 (최대 12줄 - 채팅창에 맞게)
             all_lines = cleaned.split('\n')
             non_empty_lines = [l for l in all_lines if l.strip()]
 
@@ -1542,11 +1568,11 @@ class ChatbotService:
                 r'더.*필요.*사항',
             ]
 
-            if len(non_empty_lines) > 20:
+            if len(non_empty_lines) > 12:
                 # 중요한 정보 우선 유지 + 마무리 문장 보존
                 result_lines = []
                 content_count = 0
-                max_content = 15  # 15개 컨텐츠까지
+                max_content = 8  # 8개 컨텐츠까지 (줄이기)
                 found_closing = False
 
                 for i, line in enumerate(all_lines):

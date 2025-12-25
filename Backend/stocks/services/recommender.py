@@ -162,10 +162,12 @@ def recommend_stocks(
     top_n: int = 20,
     include_news: bool = True,
     effort: str = "OPTIMIZE",
+    user_profile: Dict[str, Any] = None,
 ) -> Dict[str, Any]:
     """
     FeatureDaily(date=as_of) 기반 추천.
     - include_news=False면 N_raw=0으로 두고 추천(TopK 후보 뽑을 때 사용)
+    - user_profile: 사용자 프로필 정보 (나이, 소득, 투자 목표 등)
     """
     risk = _norm_key(risk, ("LOW", "MID", "HIGH"), "MID")
     horizon = _norm_key(horizon, ("SHORT", "MID", "LONG"), "MID")
@@ -278,11 +280,102 @@ def recommend_stocks(
         })
 
     recs.sort(key=lambda x: x["score"], reverse=True)
+
+    # ===== 사용자 프로필 기반 추가 필터링 및 가중치 조정 =====
+    if user_profile:
+        # 나이 기반 필터링
+        age = user_profile.get('age')
+        if age:
+            # 젊은 투자자 (20-35세): 성장주 선호
+            if age < 35:
+                for rec in recs:
+                    # 높은 추세(T_raw > 5%) 종목에 가산점
+                    if rec["raw"]["T_raw"] > 5.0:
+                        rec["score"] *= 1.1
+            # 중년 투자자 (35-55세): 균형
+            elif age < 55:
+                pass  # 기본 점수 유지
+            # 시니어 투자자 (55세 이상): 안정성 중시
+            else:
+                for rec in recs:
+                    # 낮은 변동성(V_raw < 2%) 종목에 가산점
+                    if rec["raw"]["V_raw"] < 2.0:
+                        rec["score"] *= 1.15
+                    # 높은 변동성(V_raw > 4%) 종목 감점
+                    elif rec["raw"]["V_raw"] > 4.0:
+                        rec["score"] *= 0.85
+
+        # 투자 목표 기반 필터링
+        investment_goal = user_profile.get('investment_goal', '').lower()
+        if investment_goal:
+            # 노후 준비: 안정성 중시
+            if '노후' in investment_goal or '연금' in investment_goal:
+                for rec in recs:
+                    # 낮은 MDD(D_raw < 0.15) 종목에 가산점
+                    if rec["raw"]["D_raw"] < 0.15:
+                        rec["score"] *= 1.1
+            # 단기 수익: 추세 중시
+            elif '단기' in investment_goal or '수익' in investment_goal:
+                for rec in recs:
+                    # 높은 추세(T_raw > 3%) 종목에 가산점
+                    if rec["raw"]["T_raw"] > 3.0:
+                        rec["score"] *= 1.1
+            # 자녀 교육: 중장기 안정
+            elif '자녀' in investment_goal or '교육' in investment_goal:
+                for rec in recs:
+                    # 중간 변동성(2% < V_raw < 3.5%) 종목 선호
+                    if 2.0 < rec["raw"]["V_raw"] < 3.5:
+                        rec["score"] *= 1.05
+
+        # 소득/저축액 기반 필터링
+        income = user_profile.get('income')
+        savings = user_profile.get('savings')
+        if income and savings:
+            try:
+                income_val = float(income)
+                savings_val = float(savings)
+
+                # 고소득/고자산 (연소득 1억 이상 or 저축액 1억 이상)
+                if income_val >= 10000 or savings_val >= 10000:
+                    # 고위험 고수익 종목도 OK
+                    pass
+                # 중소득/중자산
+                elif income_val >= 5000 or savings_val >= 5000:
+                    # 중간 위험 선호
+                    for rec in recs:
+                        # 극단적 변동성 종목 감점
+                        if rec["raw"]["V_raw"] > 5.0 or rec["raw"]["D_raw"] > 0.3:
+                            rec["score"] *= 0.9
+                # 저소득/저자산
+                else:
+                    # 안정성 최우선
+                    for rec in recs:
+                        # 고위험 종목 강력 감점
+                        if rec["raw"]["V_raw"] > 3.5 or rec["raw"]["D_raw"] > 0.2:
+                            rec["score"] *= 0.7
+                        # 안정적 종목 가산점
+                        elif rec["raw"]["V_raw"] < 2.5 and rec["raw"]["D_raw"] < 0.15:
+                            rec["score"] *= 1.2
+            except (ValueError, TypeError):
+                pass  # 변환 실패 시 무시
+
+        # 재정렬 (프로필 가중치 반영 후)
+        recs.sort(key=lambda x: x["score"], reverse=True)
+
     recs = recs[: max(1, int(top_n))]
+
+    # 사용자 프로필 정보를 응답에 포함
+    profile_info = {"risk": risk, "horizon": horizon, "effort": effort}
+    if user_profile:
+        profile_info["user_applied"] = {
+            "age": user_profile.get('age'),
+            "investment_goal": user_profile.get('investment_goal'),
+            "income_level": "high" if (user_profile.get('income', 0) and float(user_profile.get('income', 0)) >= 10000) else "medium" if (user_profile.get('income', 0) and float(user_profile.get('income', 0)) >= 5000) else "low" if user_profile.get('income') else None,
+        }
 
     return {
         "as_of": str(as_of),
-        "profile": {"risk": risk, "horizon": horizon, "effort": effort},
+        "profile": profile_info,
         "include_news": bool(include_news),
         "weights": weights,
         "feature_fields_used": {

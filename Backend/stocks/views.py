@@ -8,7 +8,7 @@ from django.db.models import Q
 from django.utils import timezone
 
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status as drf_status
 
@@ -160,14 +160,34 @@ def fetch_and_store_news(
 # 1) 추천 API (항상 같은 키)
 # -------------------------
 @api_view(["GET"])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])  # 로그인 필요로 변경
 def recommendations(request):
     """
     GET /api/stocks/recommendations/?date=20251218&risk=MID&horizon=MID&top=20&auto=1&include_news=1
     - 프론트 편하게: 항상 같은 키 반환
     - auto=1이면 해당 날짜 데이터 없을 때 최신 as_of로 자동 fallback
+    - 사용자 프로필을 고려한 추천 (나이, 소득, 투자 목표 등)
     """
+    from accounts.models import InvestmentProfile
+
     requested_as_of = get_as_of(request)
+
+    # 사용자 프로필 가져오기
+    user_profile = None
+    try:
+        profile = request.user.investment_profile
+        user_profile = {
+            'risk_type': profile.risk_type,
+            'risk_score': profile.risk_score,
+            'age': profile.age,
+            'gender': profile.gender,
+            'income': profile.income,
+            'savings': profile.savings,
+            'investment_goal': profile.investment_goal,
+            'investment_period': profile.investment_period,
+        }
+    except InvestmentProfile.DoesNotExist:
+        user_profile = None
 
     risk = (request.query_params.get("risk") or "MID").upper()
     horizon = (request.query_params.get("horizon") or "MID").upper()
@@ -179,7 +199,7 @@ def recommendations(request):
     auto_q = request.query_params.get("auto")
     auto = True if auto_q is None else bool_q(auto_q)
 
-    # 1) 먼저 요청 날짜로 추천 시도
+    # 1) 먼저 요청 날짜로 추천 시도 (사용자 프로필 포함)
     as_of_used = requested_as_of
     result = recommend_stocks(
         as_of=as_of_used,
@@ -188,6 +208,7 @@ def recommendations(request):
         top_n=top_n,
         effort="OPTIMIZE",
         include_news=include_news,
+        user_profile=user_profile,  # 사용자 프로필 전달
     )
 
     # 2) 데이터 없으면(auto=1) 최신 as_of로 fallback
@@ -203,6 +224,7 @@ def recommendations(request):
                     top_n=top_n,
                     effort="OPTIMIZE",
                     include_news=include_news,
+                    user_profile=user_profile,  # 사용자 프로필 전달
                 )
 
     # 3) 그래도 데이터 없으면 "표준 형태"로 빈 추천 내려주기
