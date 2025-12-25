@@ -112,23 +112,13 @@ def get_chatbot_avatar(request):
     """
     사용자 투자 성향에 맞는 챗봇 아바타 이미지 경로 반환
     GET /chatbot/avatar/
-    Response: { "avatar": "timid" | "normal" | "speculative" }
+    Response: { "avatar": "timid_male" | "normal_female" | "speculative_male", "risk_type": "...", "risk_score": ... }
     """
     try:
         profile = request.user.investment_profile
-        risk_type = profile.risk_type.lower()
-
-        # risk_type에 따라 아바타 이미지 타입 반환
-        avatar_map = {
-            'timid': 'timid',
-            'normal': 'normal',
-            'speculative': 'speculative',
-        }
-
-        avatar = avatar_map.get(risk_type, 'normal')
-
+        # risk_type 전체를 그대로 반환 (예: timid_male, normal_female, speculative_male)
         return Response({
-            'avatar': avatar,
+            'avatar': profile.risk_type,  # 전체 risk_type 반환
             'risk_type': profile.risk_type,
             'risk_score': profile.risk_score,
         }, status=status.HTTP_200_OK)

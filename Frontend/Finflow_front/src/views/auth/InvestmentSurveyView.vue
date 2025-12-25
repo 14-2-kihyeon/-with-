@@ -274,7 +274,9 @@ import { ref, computed, onMounted } from "vue"
 import { useRouter } from "vue-router"
 import api from "@/api/axios"
 import AlertModal from "@/components/common/AlertModal.vue"
+import ResultVideoPopup from "@/components/common/ResultVideoPopup.vue"
 import { useAlert } from "@/composables/useAlert"
+import { useChatbot } from "@/composables/useChatbot"
 
 // character images
 import timidMale from "@/assets/character/timid_male.png"
@@ -302,6 +304,9 @@ const router = useRouter()
 
 // Alert composable
 const { showAlert, alertConfig, error } = useAlert()
+
+// Chatbot composable
+const { requestRefreshAvatar } = useChatbot()
 
 // 상태
 const loading = ref(false)
@@ -412,6 +417,10 @@ const submitSurvey = async () => {
     // 동영상 팝업 표시
     showVideoPopup.value = true
     console.log('showVideoPopup 설정됨:', showVideoPopup.value)
+
+    // 챗봇 아바타 새로고침 요청
+    requestRefreshAvatar()
+    console.log('챗봇 아바타 새로고침 요청')
 
     // 상단으로 스크롤
     window.scrollTo({ top: 0, behavior: 'smooth' })
