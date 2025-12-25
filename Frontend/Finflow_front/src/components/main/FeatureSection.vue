@@ -54,6 +54,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from "vue"
 import { useRouter } from "vue-router"
 import ScreenshotCarousel from "@/components/main/ScreenshotCarousel.vue"
+import { useChatbot } from "@/composables/useChatbot"
 
 const props = defineProps({
   title: { type: String, default: "" },
@@ -68,6 +69,7 @@ const props = defineProps({
 const router = useRouter()
 const sectionEl = ref(null)
 const visible = ref(false)
+const { requestOpenChatbot } = useChatbot()
 
 let io = null
 
@@ -77,7 +79,12 @@ const descriptionWords = computed(() => {
 })
 
 const goTo = () => {
-  router.push({ name: props.routeName })
+  // 챗봇인 경우 플로팅 챗봇 열기
+  if (props.routeName === 'chatbot_list') {
+    requestOpenChatbot()
+  } else {
+    router.push({ name: props.routeName })
+  }
 }
 
 onMounted(() => {
