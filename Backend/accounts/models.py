@@ -207,6 +207,45 @@ class ProductRecommendation(models.Model):
         unique_together = ('user', 'product')
 
 
+class StockRecommendation(models.Model):
+    """사용자별 주식 추천 및 관심종목"""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='stock_recommendations'
+    )
+    stock = models.ForeignKey(
+        'stocks.Stock',
+        on_delete=models.CASCADE
+    )
+
+    # 추천 근거
+    match_score = models.FloatField(
+        default=0.0,
+        help_text="매칭 점수 (0~100)"
+    )
+    recommended_reason = models.TextField(
+        blank=True,
+        help_text="추천 이유"
+    )
+
+    # 사용자 액션
+    is_viewed = models.BooleanField(default=False)
+    is_bookmarked = models.BooleanField(default=False)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.stock.name}"
+
+    class Meta:
+        db_table = 'stock_recommendation'
+        ordering = ['-match_score', '-created_at']
+        unique_together = ('user', 'stock')
+
+
 class UserNewsBookmark(models.Model):
     """사용자별 뉴스 북마크"""
 

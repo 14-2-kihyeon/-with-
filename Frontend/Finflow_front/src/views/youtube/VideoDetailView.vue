@@ -48,18 +48,24 @@
 </template>
 
 <script setup>
-/* 기존 스크립트 로직은 그대로 유지하되, 일부 함수만 아래처럼 수정하여 사용 */
 import { computed, onMounted, ref, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
-import { getYoutubeVideoDetail } from "@/api/youtube"
+import {
+  getYoutubeVideoDetail,
+  toggleWatchLater,
+  toggleChannelSubscribe,
+  getWatchLaterList,
+  getYoutubeSubscriptions
+} from "@/api/youtube"
+import { useAuthStore } from "@/stores/auth"
 
 const route = useRoute()
 const router = useRouter()
+const authStore = useAuthStore()
+
 const video = ref(null)
 const loading = ref(false)
 const error = ref("")
-
-// ... (나머지 로직 동일)
 
 const videoId = computed(() => route.params.id)
 const embedUrl = computed(() => `https://www.youtube.com/embed/${videoId.value}`)
@@ -70,67 +76,88 @@ const uploadDate = computed(() => {
   return new Date(p).toLocaleDateString()
 })
 
-const safeParse = (key) => {
-  try { return JSON.parse(localStorage.getItem(key) || "[]") } catch { return [] }
-}
-
-const savedKey = "savedVideos"
-const channelsKey = "savedChannels"
-
 const isSaved = ref(false)
 const isChannelSaved = ref(false)
 
-const syncSavedState = () => {
-  const saved = safeParse(savedKey)
-  isSaved.value = saved.some((v) => v.videoId === videoId.value)
-}
-
-const syncChannelSavedState = () => {
-  const channels = safeParse(channelsKey)
-  const cid = video.value?.channelId
-  isChannelSaved.value = !!cid && channels.some((c) => c.channelId === cid)
-}
-
 const fallbackThumb = (id) => `https://i.ytimg.com/vi/${id}/hqdefault.jpg`
 
-const toggleSave = () => {
-  const saved = safeParse(savedKey)
-  const idx = saved.findIndex((v) => v.videoId === videoId.value)
-
-  if (idx >= 0) {
-    saved.splice(idx, 1)
-  } else {
-    saved.push({
-      videoId: videoId.value,
-      title: video.value?.title || "",
-      thumbnail: video.value?.thumbnail || fallbackThumb(videoId.value),
-      channelTitle: video.value?.channelTitle || "",
-    })
+const toggleSave = async () => {
+  if (!authStore.isLogin) {
+    alert("로그인이 필요합니다.")
+    return
   }
-  localStorage.setItem(savedKey, JSON.stringify(saved))
-  syncSavedState()
+
+  try {
+    const videoData = {
+      video_title: video.value?.title || "",
+      video_description: video.value?.description || "",
+      video_thumbnail: video.value?.thumbnail || fallbackThumb(videoId.value),
+      channel_title: video.value?.channelTitle || "",
+      published_at: video.value?.publishedAt || "",
+    }
+
+    const res = await toggleWatchLater(videoId.value, videoData)
+    isSaved.value = res.data.is_saved
+    console.log(res.data.message)
+  } catch (e) {
+    console.error("나중에 볼 영상 토글 실패:", e)
+    error.value = "저장 중 오류가 발생했습니다."
+  }
 }
 
-const toggleChannelSave = () => {
+const toggleChannelSave = async () => {
+  if (!authStore.isLogin) {
+    alert("로그인이 필요합니다.")
+    return
+  }
+
   const cid = video.value?.channelId
   if (!cid) return
-  const channels = safeParse(channelsKey)
-  const idx = channels.findIndex((c) => c.channelId === cid)
 
-  if (idx >= 0) channels.splice(idx, 1)
-  else channels.push({ channelId: cid, channelTitle: video.value?.channelTitle || "" })
+  try {
+    const channelData = {
+      channel_title: video.value?.channelTitle || "",
+      channel_description: video.value?.channelDescription || "",
+      channel_thumbnail: video.value?.channelThumbnail || "",
+    }
 
-  localStorage.setItem(channelsKey, JSON.stringify(channels))
-  syncChannelSavedState()
+    const res = await toggleChannelSubscribe(cid, channelData)
+    isChannelSaved.value = res.data.is_subscribed
+    console.log(res.data.message)
+  } catch (e) {
+    console.error("채널 구독 토글 실패:", e)
+    error.value = "구독 처리 중 오류가 발생했습니다."
+  }
+}
+
+const checkSavedStatus = async () => {
+  if (!authStore.isLogin) {
+    isSaved.value = false
+    isChannelSaved.value = false
+    return
+  }
+
+  try {
+    // 나중에 볼 영상 목록 조회
+    const watchLaterRes = await getWatchLaterList()
+    isSaved.value = watchLaterRes.data.some((v) => v.video_id === videoId.value)
+
+    // 구독 채널 목록 조회
+    const subscriptionsRes = await getYoutubeSubscriptions()
+    const cid = video.value?.channelId
+    isChannelSaved.value = !!cid && subscriptionsRes.data.some((c) => c.channel_id === cid)
+  } catch (e) {
+    console.error("저장 상태 확인 실패:", e)
+  }
 }
 
 const fetchDetail = async () => {
   loading.value = true
+  error.value = ""
   try {
     const res = await getYoutubeVideoDetail(videoId.value)
     video.value = res.data
-    syncSavedState()
-    syncChannelSavedState()
+    await checkSavedStatus()
   } catch (e) {
     error.value = "영상을 불러올 수 없습니다."
   } finally {

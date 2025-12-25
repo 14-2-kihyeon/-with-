@@ -10,6 +10,7 @@ from .models import (
     SurveyChoice,
     SurveyResponse,
     ProductRecommendation,
+    StockRecommendation,
     calculate_risk_type,
     RISK_TYPE_MAPPING
 )
@@ -555,21 +556,42 @@ def get_mypage_data(request):
             'bookmarked_at': bookmark.created_at,
         })
 
-    # 3. 북마크한 뉴스
+    # 3. 북마크한 주식 (관심종목)
+    bookmarked_stocks = []
+    stock_bookmarks = StockRecommendation.objects.filter(
+        user=user,
+        is_bookmarked=True
+    ).select_related('stock')
+
+    for bookmark in stock_bookmarks:
+        stock = bookmark.stock
+        # 최신 가격 정보 가져오기
+        latest_price = stock.prices.first()  # ordering = ['-date'] 기준
+
+        bookmarked_stocks.append({
+            'code': stock.code,
+            'name': stock.name,
+            'market': stock.market,
+            'current_price': float(latest_price.close) if latest_price else None,
+            'bookmarked_at': bookmark.created_at,
+        })
+
+    # 4. 북마크한 뉴스
     news_bookmarks = UserNewsBookmark.objects.filter(user=user)
     news_serializer = UserNewsBookmarkSerializer(news_bookmarks, many=True)
 
-    # 4. 유튜브 구독 채널
+    # 5. 유튜브 구독 채널
     youtube_subscriptions = UserYouTubeSubscription.objects.filter(user=user)
     youtube_serializer = UserYouTubeSubscriptionSerializer(youtube_subscriptions, many=True)
 
-    # 5. 나중에 볼 영상 (시청하지 않은 것만)
+    # 6. 나중에 볼 영상 (시청하지 않은 것만)
     watch_later = UserWatchLater.objects.filter(user=user, is_watched=False)
     watch_later_serializer = UserWatchLaterSerializer(watch_later, many=True)
 
     return Response({
         'profile': profile_data,
         'bookmarked_products': bookmarked_products,
+        'bookmarked_stocks': bookmarked_stocks,
         'bookmarked_news': news_serializer.data,
         'youtube_subscriptions': youtube_serializer.data,
         'watch_later_videos': watch_later_serializer.data,
@@ -654,62 +676,54 @@ def get_news_bookmarks(request):
     return Response(serializer.data)
 
 
-@api_view(['POST', 'DELETE'])
+@api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def toggle_youtube_subscription(request, channel_id):
     """
-    유튜브 채널 구독 토글
-    POST: 구독 추가
-    DELETE: 구독 제거
+    유튜브 채널 구독 토글 (POST만 사용)
+    이미 구독 중이면 구독 취소, 아니면 구독
     """
     from .models import UserYouTubeSubscription
     from .serializers import UserYouTubeSubscriptionSerializer
 
-    if request.method == 'POST':
-        # 요청 데이터 검증
-        if not request.data.get('channel_title'):
-            return Response(
-                {'error': '채널 제목이 필요합니다.'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        # 구독 추가
-        subscription, created = UserYouTubeSubscription.objects.get_or_create(
-            user=request.user,
-            channel_id=channel_id,
-            defaults={
-                'channel_title': request.data.get('channel_title'),
-                'channel_description': request.data.get('channel_description', ''),
-                'channel_thumbnail': request.data.get('channel_thumbnail', ''),
-            }
+    # 요청 데이터 검증
+    if not request.data.get('channel_title'):
+        return Response(
+            {'error': '채널 제목이 필요합니다.'},
+            status=status.HTTP_400_BAD_REQUEST
         )
 
-        if created:
-            serializer = UserYouTubeSubscriptionSerializer(subscription)
-            return Response(
-                {'message': '채널 구독이 추가되었습니다.', 'subscription': serializer.data},
-                status=status.HTTP_201_CREATED
-            )
-        else:
-            return Response(
-                {'message': '이미 구독 중인 채널입니다.'},
-                status=status.HTTP_200_OK
-            )
+    # 토글 처리
+    subscription, created = UserYouTubeSubscription.objects.get_or_create(
+        user=request.user,
+        channel_id=channel_id,
+        defaults={
+            'channel_title': request.data.get('channel_title'),
+            'channel_description': request.data.get('channel_description', ''),
+            'channel_thumbnail': request.data.get('channel_thumbnail', ''),
+        }
+    )
 
-    elif request.method == 'DELETE':
-        # 구독 제거
-        try:
-            subscription = UserYouTubeSubscription.objects.get(user=request.user, channel_id=channel_id)
-            subscription.delete()
-            return Response(
-                {'message': '채널 구독이 취소되었습니다.'},
-                status=status.HTTP_200_OK
-            )
-        except UserYouTubeSubscription.DoesNotExist:
-            return Response(
-                {'error': '구독하지 않은 채널입니다.'},
-                status=status.HTTP_404_NOT_FOUND
-            )
+    # 이미 존재하면 삭제 (토글)
+    if not created:
+        subscription.delete()
+        return Response(
+            {
+                'message': '채널 구독이 취소되었습니다.',
+                'is_subscribed': False
+            },
+            status=status.HTTP_200_OK
+        )
+    else:
+        serializer = UserYouTubeSubscriptionSerializer(subscription)
+        return Response(
+            {
+                'message': '채널 구독이 추가되었습니다.',
+                'is_subscribed': True,
+                'subscription': serializer.data
+            },
+            status=status.HTTP_201_CREATED
+        )
 
 
 @api_view(['GET'])
@@ -724,64 +738,56 @@ def get_youtube_subscriptions(request):
     return Response(serializer.data)
 
 
-@api_view(['POST', 'DELETE'])
+@api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def toggle_watch_later(request, video_id):
     """
-    나중에 볼 영상 토글
-    POST: 목록에 추가
-    DELETE: 목록에서 제거
+    나중에 볼 영상 토글 (POST만 사용)
+    이미 존재하면 삭제, 없으면 추가
     """
     from .models import UserWatchLater
     from .serializers import UserWatchLaterSerializer
 
-    if request.method == 'POST':
-        # 요청 데이터 검증
-        if not request.data.get('video_title'):
-            return Response(
-                {'error': '영상 제목이 필요합니다.'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        # 목록에 추가
-        watch_later, created = UserWatchLater.objects.get_or_create(
-            user=request.user,
-            video_id=video_id,
-            defaults={
-                'video_title': request.data.get('video_title'),
-                'video_description': request.data.get('video_description', ''),
-                'video_thumbnail': request.data.get('video_thumbnail', ''),
-                'channel_title': request.data.get('channel_title', ''),
-                'published_at': request.data.get('published_at', ''),
-            }
+    # 요청 데이터 검증
+    if not request.data.get('video_title'):
+        return Response(
+            {'error': '영상 제목이 필요합니다.'},
+            status=status.HTTP_400_BAD_REQUEST
         )
 
-        if created:
-            serializer = UserWatchLaterSerializer(watch_later)
-            return Response(
-                {'message': '나중에 볼 영상에 추가되었습니다.', 'video': serializer.data},
-                status=status.HTTP_201_CREATED
-            )
-        else:
-            return Response(
-                {'message': '이미 나중에 볼 영상 목록에 있습니다.'},
-                status=status.HTTP_200_OK
-            )
+    # 토글 처리
+    watch_later, created = UserWatchLater.objects.get_or_create(
+        user=request.user,
+        video_id=video_id,
+        defaults={
+            'video_title': request.data.get('video_title'),
+            'video_description': request.data.get('video_description', ''),
+            'video_thumbnail': request.data.get('video_thumbnail', ''),
+            'channel_title': request.data.get('channel_title', ''),
+            'published_at': request.data.get('published_at', ''),
+        }
+    )
 
-    elif request.method == 'DELETE':
-        # 목록에서 제거
-        try:
-            watch_later = UserWatchLater.objects.get(user=request.user, video_id=video_id)
-            watch_later.delete()
-            return Response(
-                {'message': '나중에 볼 영상에서 제거되었습니다.'},
-                status=status.HTTP_200_OK
-            )
-        except UserWatchLater.DoesNotExist:
-            return Response(
-                {'error': '나중에 볼 영상 목록에 없는 영상입니다.'},
-                status=status.HTTP_404_NOT_FOUND
-            )
+    # 이미 존재하면 삭제 (토글)
+    if not created:
+        watch_later.delete()
+        return Response(
+            {
+                'message': '나중에 볼 영상에서 제거되었습니다.',
+                'is_saved': False
+            },
+            status=status.HTTP_200_OK
+        )
+    else:
+        serializer = UserWatchLaterSerializer(watch_later)
+        return Response(
+            {
+                'message': '나중에 볼 영상에 추가되었습니다.',
+                'is_saved': True,
+                'video': serializer.data
+            },
+            status=status.HTTP_201_CREATED
+        )
 
 
 @api_view(['GET'])
@@ -874,3 +880,73 @@ def initialize_survey_data(request):
         'message': f'{created_count}개의 질문이 생성되었습니다.',
         'total_questions': SurveyQuestion.objects.count(),
     })
+
+
+# ==========================================
+# 주식 관심종목 API
+# ==========================================
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def bookmark_stock(request, stock_code):
+    """주식 관심종목 추가/제거 (토글)"""
+    from .models import StockRecommendation
+    from stocks.models import Stock
+
+    try:
+        stock = Stock.objects.get(code=stock_code)
+    except Stock.DoesNotExist:
+        return Response(
+            {'detail': '주식을 찾을 수 없습니다.'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    # 북마크 토글
+    recommendation, created = StockRecommendation.objects.get_or_create(
+        user=request.user,
+        stock=stock,
+        defaults={
+            'match_score': 0,
+            'recommended_reason': '',
+        }
+    )
+
+    if not created:
+        recommendation.is_bookmarked = not recommendation.is_bookmarked
+        recommendation.save()
+    else:
+        recommendation.is_bookmarked = True
+        recommendation.save()
+
+    return Response({
+        'bookmarked': recommendation.is_bookmarked,
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_bookmarked_stocks(request):
+    """사용자의 관심종목 목록 조회"""
+    from .models import StockRecommendation
+
+    bookmarks = StockRecommendation.objects.filter(
+        user=request.user,
+        is_bookmarked=True
+    ).select_related('stock')
+
+    data = []
+    for bookmark in bookmarks:
+        stock = bookmark.stock
+
+        # 최신 가격 정보 가져오기
+        latest_price = stock.prices.first()  # ordering = ['-date'] 기준
+
+        data.append({
+            'code': stock.code,
+            'name': stock.name,
+            'market': stock.market,
+            'current_price': float(latest_price.close) if latest_price else None,
+            'bookmarked_at': bookmark.created_at,
+        })
+
+    return Response(data)

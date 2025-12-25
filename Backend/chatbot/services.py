@@ -9,6 +9,8 @@ from datetime import datetime, timedelta
 from stocks.services.news_on_demand import ensure_stock_news
 from naversearch.utils import search_and_save_news
 from naversearch.models import News
+from .stock_alias import find_stock_by_alias, expand_stock_search_terms
+from .mode_classifier import classify_chat_mode
 
 
 class ChatbotService:
@@ -49,52 +51,197 @@ class ChatbotService:
     def get_financial_products_context(self):
         """
         DB에 저장된 금융 상품 정보 가져오기 (금리 정보 포함)
+        사용자 프로필에 맞춰 필터링 및 정렬
         """
-        # 예금 상품 - 옵션과 함께 가져오기 (최고 금리 기준 상위 15개)
-        deposits = DepositProducts.objects.prefetch_related('options').all()[:15]
+        from django.db.models import Max, F, Q
+
+        # 사용자 프로필 정보
+        user_profile = self.get_user_profile_context()
+        user_gender = user_profile.get('gender') if user_profile.get('has_profile') else None
+        user_age = user_profile.get('age') if user_profile.get('has_profile') else None
+        user_period = user_profile.get('investment_period') if user_profile.get('has_profile') else None
+
+        # 예금 상품 - 최고 금리순으로 정렬하여 가져오기
+        deposits = DepositProducts.objects.annotate(
+            max_rate=Max('options__intr_rate2')
+        ).prefetch_related('options').filter(
+            max_rate__isnull=False
+        ).order_by('-max_rate')  # 최고 금리 내림차순
 
         deposit_data = []
         for d in deposits:
+            # 성별/나이 필터링
+            if not self._is_eligible_for_product(d.join_member, user_gender, user_age):
+                continue
+
             # 각 상품의 옵션 중 최고 금리 찾기
             best_option = d.options.order_by('-intr_rate2').first()
             if best_option:
+                # 사용자 투자 기간과 유사한 옵션 찾기 (있다면)
+                matching_option = best_option
+                if user_period:
+                    period_match = d.options.filter(
+                        save_trm__gte=user_period - 6,
+                        save_trm__lte=user_period + 6
+                    ).order_by('-intr_rate2').first()
+                    if period_match:
+                        matching_option = period_match
+
+                # 예상 수익 계산 (10,000만원 기준)
+                expected_profit = self._calculate_deposit_profit(
+                    10000, matching_option.save_trm, matching_option.intr_rate2
+                )
+
                 deposit_data.append({
                     'type': 'deposit',
                     'bank': d.kor_co_nm,
                     'product_name': d.fin_prdt_nm,
                     'code': d.fin_prdt_cd,
                     'join_way': d.join_way,
+                    'join_member': d.join_member if d.join_member else "제한없음",
                     'special_condition': d.spcl_cnd,
-                    'basic_rate': f"{best_option.intr_rate:.2f}%" if best_option.intr_rate > 0 else "정보없음",
-                    'max_rate': f"{best_option.intr_rate2:.2f}%" if best_option.intr_rate2 > 0 else "정보없음",
-                    'period': f"{best_option.save_trm}개월",
+                    'basic_rate': f"{matching_option.intr_rate:.2f}%" if matching_option.intr_rate > 0 else "정보없음",
+                    'max_rate': f"{matching_option.intr_rate2:.2f}%" if matching_option.intr_rate2 > 0 else "정보없음",
+                    'period': f"{matching_option.save_trm}개월",
+                    'expected_profit': f"{expected_profit:,.0f}만원",
                 })
 
-        # 적금 상품 - 옵션과 함께 가져오기 (최고 금리 기준 상위 15개)
-        savings = SavingProducts.objects.prefetch_related('options').all()[:15]
+                if len(deposit_data) >= 15:
+                    break
+
+        # 적금 상품 - 최고 금리순으로 정렬하여 가져오기
+        savings = SavingProducts.objects.annotate(
+            max_rate=Max('options__intr_rate2')
+        ).prefetch_related('options').filter(
+            max_rate__isnull=False
+        ).order_by('-max_rate')  # 최고 금리 내림차순
 
         saving_data = []
         for s in savings:
+            # 성별/나이 필터링
+            if not self._is_eligible_for_product(s.join_member, user_gender, user_age):
+                continue
+
             # 각 상품의 옵션 중 최고 금리 찾기
             best_option = s.options.order_by('-intr_rate2').first()
             if best_option:
+                # 사용자 투자 기간과 유사한 옵션 찾기
+                matching_option = best_option
+                if user_period:
+                    period_match = s.options.filter(
+                        save_trm__gte=user_period - 6,
+                        save_trm__lte=user_period + 6
+                    ).order_by('-intr_rate2').first()
+                    if period_match:
+                        matching_option = period_match
+
+                # 예상 수익 계산 (매월 100만원 납입 기준)
+                expected_profit = self._calculate_saving_profit(
+                    100, matching_option.save_trm, matching_option.intr_rate2
+                )
+
                 saving_data.append({
                     'type': 'saving',
                     'bank': s.kor_co_nm,
                     'product_name': s.fin_prdt_nm,
                     'code': s.fin_prdt_cd,
                     'join_way': s.join_way,
+                    'join_member': s.join_member if s.join_member else "제한없음",
                     'special_condition': s.spcl_cnd,
-                    'basic_rate': f"{best_option.intr_rate:.2f}%" if best_option.intr_rate > 0 else "정보없음",
-                    'max_rate': f"{best_option.intr_rate2:.2f}%" if best_option.intr_rate2 > 0 else "정보없음",
-                    'period': f"{best_option.save_trm}개월",
-                    'saving_type': best_option.rsrv_type_nm if best_option.rsrv_type_nm else "정보없음",
+                    'basic_rate': f"{matching_option.intr_rate:.2f}%" if matching_option.intr_rate > 0 else "정보없음",
+                    'max_rate': f"{matching_option.intr_rate2:.2f}%" if matching_option.intr_rate2 > 0 else "정보없음",
+                    'period': f"{matching_option.save_trm}개월",
+                    'saving_type': matching_option.rsrv_type_nm if matching_option.rsrv_type_nm else "정보없음",
+                    'expected_profit': f"{expected_profit:,.0f}만원",
                 })
+
+                if len(saving_data) >= 15:
+                    break
 
         return {
             'deposits': deposit_data,
             'savings': saving_data,
         }
+
+    def _is_eligible_for_product(self, join_member, user_gender, user_age):
+        """
+        사용자가 상품 가입 대상인지 확인
+
+        Args:
+            join_member: 상품의 가입 대상 (예: "만18세이상 여성고객")
+            user_gender: 사용자 성별 ('M' or 'F')
+            user_age: 사용자 나이
+
+        Returns:
+            bool: 가입 가능 여부
+        """
+        if not join_member or join_member == "제한없음":
+            return True
+
+        join_member_lower = join_member.lower()
+
+        # 성별 체크
+        if user_gender:
+            if '여성' in join_member and user_gender == 'M':
+                return False
+            if '남성' in join_member and user_gender == 'F':
+                return False
+
+        # 나이 체크 (간단한 파싱)
+        if user_age:
+            import re
+            # "만18세이상", "만19세", "만65세미만" 등 파싱
+            # 더 구체적인 패턴을 먼저 매칭해야 함 (이상/미만이 있는 패턴 우선)
+            age_patterns = [
+                (r'만(\d+)세\s*이상', lambda match: user_age >= int(match.group(1))),
+                (r'만(\d+)세\s*미만', lambda match: user_age < int(match.group(1))),
+                (r'(\d+)세\s*이상', lambda match: user_age >= int(match.group(1))),
+                (r'(\d+)세\s*미만', lambda match: user_age < int(match.group(1))),
+            ]
+
+            for pattern, check_func in age_patterns:
+                match = re.search(pattern, join_member)
+                if match:
+                    if not check_func(match):
+                        return False
+
+        return True
+
+    def _calculate_deposit_profit(self, principal, months, annual_rate):
+        """
+        예금 예상 수익 계산 (단리)
+
+        Args:
+            principal: 원금 (만원)
+            months: 가입 기간 (개월)
+            annual_rate: 연 금리 (%)
+
+        Returns:
+            float: 예상 수익 (만원)
+        """
+        return principal * (annual_rate / 100) * (months / 12)
+
+    def _calculate_saving_profit(self, monthly_deposit, months, annual_rate):
+        """
+        적금 예상 수익 계산 (복리)
+
+        Args:
+            monthly_deposit: 월 납입액 (만원)
+            months: 가입 기간 (개월)
+            annual_rate: 연 금리 (%)
+
+        Returns:
+            float: 예상 수익 (만원)
+        """
+        monthly_rate = annual_rate / 100 / 12
+        total_principal = monthly_deposit * months
+
+        # 적금 복리 계산
+        future_value = 0
+        for i in range(months):
+            future_value += monthly_deposit * ((1 + monthly_rate) ** (months - i))
+
+        return future_value - total_principal
 
     def get_stock_context(self, user_profile, limit=15):
         """
@@ -201,16 +348,32 @@ class ChatbotService:
             'dates': [],
             'is_specific_query': False,
             'is_news_query': False,
-            'news_keywords': []
+            'news_keywords': [],
+            'intent': 'UNKNOWN',  # STOCK, PRODUCT, NEWS, GENERAL
+            'specific_product_name': None,  # 특정 상품명이 언급된 경우
         }
 
-        # 주식 종목명 추출 (DB에 있는 종목만)
-        stocks = Stock.objects.all()
-        for stock in stocks:
-            if stock.name in user_message or stock.code in user_message:
-                result['stock_names'].append(stock.name)
-                result['is_specific_query'] = True
-                print(f"[DEBUG] 종목명 감지: {stock.name}")
+        # ===== 1단계: Alias 기반 종목명 추출 =====
+        alias_matched_stocks = find_stock_by_alias(user_message)
+        if alias_matched_stocks:
+            print(f"[DEBUG] Alias 매칭 성공: {alias_matched_stocks}")
+            # Alias로 찾은 종목명을 DB에서 검증
+            for stock_name in alias_matched_stocks:
+                stock = Stock.objects.filter(name__icontains=stock_name).first()
+                if stock:
+                    result['stock_names'].append(stock.name)
+                    result['is_specific_query'] = True
+                    print(f"[DEBUG] DB 검증 완료: {stock.name}")
+
+        # ===== 2단계: 추가 DB 전체 검색 (Alias에 없는 종목 대비) =====
+        if not result['stock_names']:
+            stocks = Stock.objects.all()
+            for stock in stocks:
+                # 종목명 또는 코드가 정확히 포함되어 있는지 확인
+                if stock.name in user_message or stock.code in user_message:
+                    result['stock_names'].append(stock.name)
+                    result['is_specific_query'] = True
+                    print(f"[DEBUG] DB 직접 매칭: {stock.name}")
 
         # 날짜 패턴 추출
         date_patterns = [
@@ -268,7 +431,50 @@ class ChatbotService:
                     print(f"[DEBUG] 종목명이 있어 종목 뉴스 수집 모드")
                 break
 
-        print(f"[DEBUG] 분석 결과: {result}")
+        # ===== 특정 상품명 추출 (예금/적금) =====
+        # 사용자가 특정 상품명을 언급했는지 확인
+        from finances.models import DepositProducts, SavingProducts
+
+        # 예금 상품명 검사
+        all_deposits = DepositProducts.objects.all()
+        for product in all_deposits:
+            if product.fin_prdt_nm and product.fin_prdt_nm in user_message:
+                result['specific_product_name'] = product.fin_prdt_nm
+                result['is_specific_query'] = True
+                print(f"[DEBUG] 특정 예금 상품 감지: {product.fin_prdt_nm}")
+                break
+
+        # 적금 상품명 검사 (예금에서 찾지 못한 경우)
+        if not result['specific_product_name']:
+            all_savings = SavingProducts.objects.all()
+            for product in all_savings:
+                if product.fin_prdt_nm and product.fin_prdt_nm in user_message:
+                    result['specific_product_name'] = product.fin_prdt_nm
+                    result['is_specific_query'] = True
+                    print(f"[DEBUG] 특정 적금 상품 감지: {product.fin_prdt_nm}")
+                    break
+
+        # ===== 의도 분류 (INTENT CLASSIFICATION) =====
+        # 주식 관련 키워드
+        stock_keywords = ['주가', '시세', '종목', '주식', '전망', '어때', '분석', '상승', '하락', '추천해', '매수', '매도']
+        # 금융상품 관련 키워드
+        product_keywords = ['예금', '적금', '상품', '은행', '금리', '이자', '저축', '투자상품']
+
+        # 의도 결정 우선순위: 종목명 > 주식 키워드 > 금융상품 키워드
+        if result['stock_names'] or any(kw in user_message for kw in stock_keywords):
+            result['intent'] = 'STOCK'
+            print(f"[DEBUG] 의도 분류: STOCK")
+        elif any(kw in user_message for kw in product_keywords) or result['specific_product_name']:
+            result['intent'] = 'PRODUCT'
+            print(f"[DEBUG] 의도 분류: PRODUCT")
+        elif result['is_news_query']:
+            result['intent'] = 'NEWS'
+            print(f"[DEBUG] 의도 분류: NEWS")
+        else:
+            result['intent'] = 'GENERAL'
+            print(f"[DEBUG] 의도 분류: GENERAL")
+
+        print(f"[DEBUG] 최종 분석 결과: {result}")
         return result
 
     def get_specific_stock_data(self, stock_names, dates=None):
@@ -519,12 +725,42 @@ class ChatbotService:
             text += "\n"
         return text
 
-    def build_system_prompt(self, user_profile, products, stocks, specific_data="", fresh_news=""):
+    def build_system_prompt(self, user_profile, products, stocks, specific_data="", fresh_news="", intent="GENERAL", mode="SERVICE", question_analysis=None):
         """
         GMS API에 전달할 시스템 프롬프트 생성
         specific_data: 사용자 질문에 대한 동적 조회 데이터
         fresh_news: 실시간으로 수집한 최신 뉴스 데이터
+        intent: 사용자 의도 (STOCK, PRODUCT, NEWS, GENERAL)
+        mode: 챗봇 모드 (CHAT, SERVICE)
+        question_analysis: 질문 분석 결과 (특정 상품/종목 정보 포함)
         """
+        # ===== CHAT 모드: 간단한 대화 전용 프롬프트 =====
+        if mode == "CHAT":
+            return """당신은 Finflow 금융 투자 플랫폼의 AI 어시스턴트입니다.
+
+역할:
+- 사용자의 인사, 감사, 일상적인 대화에 친절하고 간결하게 응답합니다.
+- 금융 상품이나 주식을 추천하지 마세요.
+- 짧고 자연스러운 대화체로 답변하세요 (1~3문장).
+
+답변 규칙:
+1. 최대 2~3문장으로 짧게 답변
+2. 상품/종목/금리 등 구체적인 정보는 언급하지 않음
+3. 사용자가 금융 서비스를 이용하고 싶다면 구체적인 질문을 하도록 안내
+4. 친근하고 자연스러운 어조 사용
+
+예시:
+- 입력: "안녕"
+  출력: "안녕하세요! Finflow AI 상담사입니다. 무엇을 도와드릴까요?"
+
+- 입력: "고마워"
+  출력: "천만에요! 언제든지 도와드릴게요 😊"
+
+- 입력: "날씨 어때?"
+  출력: "저는 금융 상담 AI라 날씨 정보는 잘 모르겠어요. 대신 금융 관련 질문이 있으시면 언제든 물어보세요!"
+"""
+
+        # ===== SERVICE 모드: 기존 상세 프롬프트 =====
         profile_text = ""
         if user_profile['has_profile']:
             # 성별 변환
@@ -567,34 +803,98 @@ class ChatbotService:
         # 데이터 업데이트 날짜
         today = datetime.now().strftime('%Y년 %m월 %d일')
 
-        # 동적 조회 데이터가 있으면 강조
+        # 동적 조회 데이터가 있으면 강조 (사용자 친화적 문구로 변경)
         specific_section = ""
         if specific_data:
             specific_section = f"""
-=== [중요] 사용자가 질문한 종목의 정확한 데이터 ===
+=== 요청하신 종목의 최신 정보 ({today} 기준) ===
 {specific_data}
-위 데이터는 사용자가 질문한 종목의 DB에서 직접 조회한 정확한 정보입니다.
-반드시 이 데이터를 우선적으로 사용하여 정확하게 답변하세요.
+⚠️ 위 정보를 기반으로 정확하게 답변하세요.
 """
 
-        # 최신 뉴스 데이터가 있으면 최우선 강조
+        # 최신 뉴스 데이터가 있으면 최우선 강조 (사용자 친화적 문구로 변경)
         news_section = ""
         if fresh_news:
             news_section = f"""
-=== [최우선] 방금 실시간으로 수집한 최신 뉴스 ===
+=== 최신 뉴스 ({today} 기준) ===
 {fresh_news}
-⚠️ 위 뉴스는 사용자 질문에 대응하여 방금 네이버 뉴스 API에서 실시간으로 수집한 데이터입니다.
-반드시 이 최신 뉴스를 기반으로 답변하세요. 이 데이터가 가장 최신이고 정확합니다.
+⚠️ 이 뉴스는 방금 수집한 최신 정보입니다. 반드시 이 데이터를 기반으로 답변하세요.
 """
 
-        system_prompt = f"""당신은 Finflow 금융 투자 플랫폼의 AI 재무 상담사입니다.
+        # ===== 의도별 맞춤 프롬프트 생성 =====
+        if intent == 'STOCK':
+            # 주식 질문: 주식 데이터만 포함, 예금/적금 제외
+            # 특정 종목 질문인지 확인
+            specific_stock_instruction = ""
+            if question_analysis and question_analysis.get('stock_names'):
+                stock_list = ", ".join(question_analysis['stock_names'])
+                specific_stock_instruction = f"""
+⚠️⚠️⚠️ 최우선 지침 ⚠️⚠️⚠️
+사용자가 "{stock_list}" 종목에 대해 질문했습니다.
+- 이 종목에 대해서만 설명하세요.
+- **절대로** 다른 종목을 추천하거나 언급하지 마세요.
+- 이 종목이 사용자의 프로필(위험 성향: {user_profile.get('risk_type', '미설정')}, 나이: {user_profile.get('age', '미설정')}세)에 적합한지 평가하세요.
+- 위험 성향이 안정형인데 고위험 종목이라면 명확히 경고하세요.
+- 적합하지 않다면 그 이유를 설명하되, 다른 종목을 추천하지 마세요.
+"""
 
-{profile_text}
+            data_section = f"""
+{news_section}
+{specific_section}
 
-=== 중요: 데이터 사용 지침 ===
-아래 제공된 DB 데이터는 {today} 기준으로 실제 금융 상품 및 주식 정보입니다.
-반드시 이 데이터를 우선적으로 활용하여 답변해주세요.
-일반적인 지식보다 아래 실제 데이터를 기반으로 구체적인 추천을 제공하세요.
+{stock_details}
+
+{specific_stock_instruction}
+
+⚠️ 중요 지침:
+1. 사용자는 주식에 대해 질문하고 있습니다.
+2. **절대로** 예금이나 적금 상품을 추천하지 마세요.
+3. 위에 나열된 주식 정보만 사용하여 답변하세요.
+4. 주식 투자에는 위험이 있음을 반드시 안내하세요.
+
+⚠️ 답변 구조 (반드시 이 순서로 작성):
+1. **요약**: 현재 시세, 수익률, 변동성, 최근 뉴스를 간단히 요약 (3-5줄)
+2. **해석**: 사용자의 투자 프로필(위험 성향, 나이, 투자 목표, 투자 기간)을 고려한 적합성 평가 (2-3줄)
+   - 적합한 경우: 그 이유를 명확히 설명
+   - 부적합한 경우: 명확한 주의사항과 리스크 경고
+3. **마무리**: "더 궁금한 점이 있으시면 말씀해주세요." 등으로 자연스럽게 대화를 마무리 (1줄)
+"""
+        elif intent == 'PRODUCT':
+            # 금융상품 질문: 예금/적금만 포함, 주식 제외
+            # 특정 상품 질문인지 확인
+            specific_product_instruction = ""
+            if question_analysis and question_analysis.get('specific_product_name'):
+                specific_product_instruction = f"""
+⚠️⚠️⚠️ 최우선 지침 ⚠️⚠️⚠️
+사용자가 "{question_analysis['specific_product_name']}" 상품에 대해 질문했습니다.
+- 이 상품에 대해서만 설명하세요.
+- **절대로** 다른 상품을 추천하거나 언급하지 마세요.
+- 이 상품이 사용자의 프로필(투자 기간: {user_profile.get('investment_period', '미설정')}개월, 목표: {user_profile.get('investment_goal', '미설정')})에 적합한지 평가하세요.
+- 적합하지 않다면 그 이유를 설명하되, 다른 상품을 추천하지 마세요.
+"""
+
+            data_section = f"""
+{deposit_details}
+
+{saving_details}
+
+{specific_product_instruction}
+
+⚠️ 중요 지침:
+1. 사용자는 예금/적금 상품에 대해 질문하고 있습니다.
+2. **절대로** 주식을 추천하지 마세요.
+3. 위에 나열된 예금/적금 상품 중에서만 답변하세요.
+
+⚠️ 답변 구조 (반드시 이 순서로 작성):
+1. **요약**: 추천 상품의 금리, 가입 기간, 특징을 간단히 요약 (2-4줄)
+2. **해석**: 사용자의 투자 프로필(투자 기간, 목표, 소득, 위험 성향)을 고려한 적합성 평가 (2-3줄)
+   - 적합한 경우: 그 이유를 명확히 설명
+   - 부적합한 경우: 명확한 주의사항
+3. **마무리**: "더 궁금한 점이 있으시면 말씀해주세요." 등으로 자연스럽게 대화를 마무리 (1줄)
+"""
+        else:
+            # 일반 질문 또는 뉴스: 모든 데이터 포함
+            data_section = f"""
 {news_section}
 {specific_section}
 
@@ -603,6 +903,17 @@ class ChatbotService:
 {saving_details}
 
 {stock_details}
+"""
+
+        system_prompt = f"""당신은 Finflow 금융 투자 플랫폼의 AI 재무 상담사입니다.
+
+{profile_text}
+
+=== 데이터 기준일: {today} ===
+아래 제공된 데이터는 실제 금융 상품 및 주식 정보입니다.
+반드시 이 데이터를 우선적으로 활용하여 답변해주세요.
+
+{data_section}
 
 역할:
 1. 위의 실제 DB 데이터를 기반으로 사용자의 투자 성향과 재무 상태에 맞는 상품을 추천합니다.
@@ -614,6 +925,8 @@ class ChatbotService:
 - 사용자의 질문에 대한 친절한 답변을 먼저 제공합니다.
 - 추천 상품이 있다면, 위 DB 데이터에서 구체적인 상품명, 은행명, 금리를 인용합니다.
   예: "우리은행의 'WON플러스예금'은 최고 3.50% 금리를 제공하며..."
+- 답변은 반드시 자연스러운 마무리 문장으로 끝내세요.
+  예: "더 궁금한 점이 있으시면 말씀해주세요.", "투자 결정에 도움이 되셨으면 좋겠습니다."
 - 주식을 추천할 경우, 최근 수익률과 뉴스를 함께 언급하고, 반드시 DART 전자공시 링크를 제공합니다.
   예: "삼성전자는 최근 20일간 5.2% 상승했으며, 최근 AI 반도체 관련 긍정적 뉴스가 있습니다.
        더 자세한 기업 정보는 전자공시(DART)에서 확인하실 수 있습니다: [DART 링크]"
@@ -637,6 +950,60 @@ class ChatbotService:
         GMS API를 호출하여 AI 응답 생성
         """
         try:
+            # 0. 챗봇 모드 분류 (최우선)
+            chat_mode = classify_chat_mode(user_message)
+            print(f"[MODE] 챗봇 모드: {chat_mode}")
+
+            # CHAT_MODE 가드: 단순 대화는 DB 조회 생략
+            if chat_mode == 'CHAT':
+                print(f"[MODE] CHAT 모드 - 간단한 대화 처리")
+
+                # 최소한의 프롬프트로 빠르게 응답
+                system_prompt = self.build_system_prompt(
+                    user_profile={'has_profile': False},
+                    products={'deposits': [], 'savings': []},
+                    stocks=[],
+                    mode="CHAT"
+                )
+
+                messages = [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_message}
+                ]
+
+                # GMS API 호출
+                headers = {
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {self.api_key}"
+                }
+
+                payload = {
+                    "model": "gpt-5-mini",
+                    "messages": messages,
+                    "max_completion_tokens": 1000,  # gpt-5-mini는 reasoning 토큰 포함
+                }
+
+                response = requests.post(
+                    self.api_url,
+                    headers=headers,
+                    json=payload,
+                    timeout=30
+                )
+
+                response.raise_for_status()
+                result = response.json()
+                ai_response = result['choices'][0]['message']['content']
+
+                # CHAT 모드 후처리
+                ai_response = self.post_process_response(ai_response, mode='CHAT')
+
+                return {
+                    'success': True,
+                    'response': ai_response,
+                    'recommended_products': None,  # CHAT 모드는 추천 없음
+                }
+
+            # ===== SERVICE 모드: 기존 로직 =====
             # 1. 사용자 질문 분석
             question_analysis = self.analyze_user_question(user_message)
             print(f"질문 분석: {question_analysis}")  # 디버깅
@@ -692,8 +1059,17 @@ class ChatbotService:
                                     fresh_news_data += f"   {news['description']}\n"
                             fresh_news_data += "\n"
 
-            # 5. 시스템 프롬프트 생성 (동적 데이터 + 최신 뉴스 포함)
-            system_prompt = self.build_system_prompt(user_profile, products, stocks, specific_data, fresh_news_data)
+            # 5. 시스템 프롬프트 생성 (동적 데이터 + 최신 뉴스 + 의도 + 모드 + 질문 분석 포함)
+            system_prompt = self.build_system_prompt(
+                user_profile,
+                products,
+                stocks,
+                specific_data,
+                fresh_news_data,
+                intent=question_analysis.get('intent', 'GENERAL'),
+                mode="SERVICE",
+                question_analysis=question_analysis
+            )
 
             # 메시지 구성
             messages = [
@@ -720,6 +1096,7 @@ class ChatbotService:
             payload = {
                 "model": "gpt-5-mini",
                 "messages": messages,
+                "max_completion_tokens": 5000,  # gpt-5-mini는 reasoning에 많은 토큰을 사용하므로 넉넉하게
             }
 
             print(f"GMS API 호출 시작...")  # 디버깅
@@ -739,6 +1116,9 @@ class ChatbotService:
             ai_response = result['choices'][0]['message']['content']
 
             print(f"AI 응답 생성 완료")  # 디버깅
+
+            # ===== 응답 후처리: 내부 문구 제거 + SERVICE 모드 포맷팅 =====
+            ai_response = self.post_process_response(ai_response, mode='SERVICE')
 
             # 추천 상품 파싱 (응답에서 상품 코드 추출)
             recommended_products = self.extract_recommended_products(ai_response, products, stocks)
@@ -779,6 +1159,247 @@ class ChatbotService:
                 'error': error_msg,
                 'response': '죄송합니다. 요청을 처리할 수 없습니다.',
             }
+
+    def format_response_by_mode(self, ai_response, mode):
+        """
+        모드에 따라 응답 포맷팅 및 길이 제한
+
+        Args:
+            ai_response: AI가 생성한 원본 응답
+            mode: 'CHAT' | 'SERVICE'
+
+        Returns:
+            포맷팅된 응답 문자열
+        """
+        if mode == 'CHAT':
+            # CHAT 모드: 짧고 간결하게 (최대 300자)
+            max_length = 300
+
+            # 불필요한 상품 추천 섹션 제거
+            lines = ai_response.split('\n')
+            filtered_lines = []
+            skip_product_section = False
+
+            for line in lines:
+                # 상품 추천 시작 패턴 감지
+                if any(keyword in line for keyword in ['추천', '상품', '예금', '적금', '주식', '종목']):
+                    if any(marker in line for marker in ['===', '##', '**', '1.', '2.', '3.']):
+                        skip_product_section = True
+                        continue
+
+                # 빈 줄이 여러 개 나오면 섹션 종료
+                if not line.strip():
+                    skip_product_section = False
+                    continue
+
+                if not skip_product_section:
+                    filtered_lines.append(line)
+
+            cleaned = '\n'.join(filtered_lines).strip()
+
+            # 길이 제한
+            if len(cleaned) > max_length:
+                # 문장 단위로 자르기
+                sentences = re.split(r'([.!?])\s+', cleaned)
+                result = ""
+                for i in range(0, len(sentences), 2):
+                    if i + 1 < len(sentences):
+                        sentence = sentences[i] + sentences[i + 1]
+                    else:
+                        sentence = sentences[i]
+
+                    if len(result) + len(sentence) <= max_length:
+                        result += sentence + " "
+                    else:
+                        break
+
+                cleaned = result.strip()
+
+            return cleaned
+
+        else:
+            # SERVICE 모드: 구조화된 응답 (최대 1200자)
+            max_length = 1200
+
+            # 불릿 포인트 정리 및 가독성 개선
+            lines = ai_response.split('\n')
+            formatted_lines = []
+            in_list = False
+
+            for line in lines:
+                stripped = line.strip()
+
+                # 빈 줄 처리 (연속된 빈 줄 방지, 리스트 구분은 유지)
+                if not stripped:
+                    if formatted_lines and formatted_lines[-1] != '':
+                        if in_list:
+                            in_list = False  # 리스트 종료
+                        formatted_lines.append('')
+                    continue
+
+                # 섹션 헤더 (===, ##, **) - 앞뒤 공백 추가
+                if stripped.startswith(('===', '##', '**')):
+                    if formatted_lines and formatted_lines[-1]:
+                        formatted_lines.append('')  # 헤더 전 빈 줄
+                    formatted_lines.append(stripped)
+                    formatted_lines.append('')  # 헤더 후 빈 줄
+                    in_list = False
+
+                # 불릿 포인트 리스트
+                elif stripped.startswith(('•', '-', '*', '·')):
+                    formatted_lines.append(stripped)  # 불릿은 원본 유지
+                    in_list = True
+
+                # 숫자 목록
+                elif re.match(r'^\d+\.', stripped):
+                    formatted_lines.append(stripped)  # 숫자 목록 원본 유지
+                    in_list = True
+
+                # 일반 문장
+                else:
+                    formatted_lines.append(stripped)
+                    in_list = False
+
+            cleaned = '\n'.join(formatted_lines).strip()
+
+            # 연속된 빈 줄 제거 (최대 1개까지만 허용)
+            cleaned = re.sub(r'\n{3,}', '\n\n', cleaned)
+
+            # 길이 제한
+            if len(cleaned) > max_length:
+                # 문장 단위로 자르기 시도
+                sentences = cleaned.split('\n')
+                result = []
+                current_length = 0
+
+                for sentence in sentences:
+                    if current_length + len(sentence) + 1 <= max_length:
+                        result.append(sentence)
+                        current_length += len(sentence) + 1
+                    else:
+                        break
+
+                cleaned = '\n'.join(result)
+                if len(cleaned) > max_length:
+                    cleaned = cleaned[:max_length] + "..."
+
+            # 줄 수 제한을 더 유연하게 (최대 20줄)
+            all_lines = cleaned.split('\n')
+            non_empty_lines = [l for l in all_lines if l.strip()]
+
+            # 마무리 문장 감지 패턴
+            closing_patterns = [
+                r'궁금한.*말씀',
+                r'도움.*되[^가-힣]*좋겠',
+                r'문의.*주[시세]',
+                r'투자.*결정',
+                r'추가.*질문',
+                r'언제든.*말씀',
+                r'더.*필요.*사항',
+            ]
+
+            if len(non_empty_lines) > 20:
+                # 중요한 정보 우선 유지 + 마무리 문장 보존
+                result_lines = []
+                content_count = 0
+                max_content = 15  # 15개 컨텐츠까지
+                found_closing = False
+
+                for i, line in enumerate(all_lines):
+                    stripped = line.strip()
+
+                    # 빈 줄은 항상 포함 (연속되지 않은 경우)
+                    if not stripped:
+                        if result_lines and result_lines[-1].strip():
+                            result_lines.append(line)
+                        continue
+
+                    # 헤더는 항상 포함
+                    if stripped.startswith(('===', '##', '**')):
+                        result_lines.append(line)
+                        continue
+
+                    # 마무리 문장 감지
+                    is_closing = any(re.search(pattern, stripped) for pattern in closing_patterns)
+
+                    # 일반 내용은 제한
+                    if content_count < max_content:
+                        result_lines.append(line)
+                        content_count += 1
+                        if is_closing:
+                            found_closing = True
+                    elif is_closing and not found_closing:
+                        # 제한을 넘었지만 마무리 문장이면 포함
+                        result_lines.append(line)
+                        found_closing = True
+                        break
+                    else:
+                        # 제한 초과하고 마무리 문장도 아니면 중단
+                        break
+
+                # 마무리 문장이 없으면 마지막에 기본 마무리 추가
+                if not found_closing and result_lines:
+                    result_lines.append('')
+                    result_lines.append('더 궁금한 점이 있으시면 언제든 말씀해주세요.')
+
+                cleaned = '\n'.join(result_lines).strip()
+
+            return cleaned
+
+    def post_process_response(self, ai_response, mode='SERVICE'):
+        """
+        AI 응답 후처리: 내부 구현 문구 제거 및 사용자 친화적 변경
+
+        Args:
+            ai_response: AI가 생성한 원본 응답
+            mode: 'CHAT' | 'SERVICE'
+        """
+        # 제거할 내부 문구 패턴
+        forbidden_phrases = [
+            "내 DB기준",
+            "내 DB 기준",
+            "DB기준",
+            "DB 기준",
+            "DB에서 조회한",
+            "DB에서 직접 조회한",
+            "DB 데이터",
+            "실제 DB",
+            "우리 DB",
+            "시스템 DB",
+            "제공 데이터 내",
+            "제공된 데이터 내",
+            "제공 데이터에서",
+            "제공된 데이터에서",
+        ]
+
+        cleaned_response = ai_response
+
+        # 금지 문구 제거
+        for phrase in forbidden_phrases:
+            cleaned_response = cleaned_response.replace(phrase, "")
+
+        # 괄호 안의 "제공 데이터" 문구 제거 (예: "(제공 데이터 내 **)")
+        cleaned_response = re.sub(r'\(제공\s*데이터[^)]*\)', '', cleaned_response)
+        cleaned_response = re.sub(r'\(제공된\s*데이터[^)]*\)', '', cleaned_response)
+
+        # 중복 공백 정리 (줄바꿈은 유지)
+        cleaned_response = re.sub(r'  +', ' ', cleaned_response)  # 2개 이상의 연속 공백만 제거
+
+        # 날짜 표현 개선
+        today = datetime.now()
+        date_str = today.strftime('%Y년 %m월 %d일')
+
+        # "기준" 만 남은 경우 적절히 치환
+        cleaned_response = re.sub(
+            r'([^가-힣\s])기준',
+            r'\1' + f' 기준 (최종 확인일: {date_str})',
+            cleaned_response
+        )
+
+        # 모드별 포맷팅 적용
+        cleaned_response = self.format_response_by_mode(cleaned_response.strip(), mode)
+
+        return cleaned_response
 
     def generate_dart_link(self, company_name):
         """
