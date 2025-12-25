@@ -28,6 +28,14 @@
             <span class="badge-value">{{ profile.risk_type_name }}</span>
           </div>
         </div>
+        <button class="btn-pdf" @click="downloadPDF" :disabled="pdfGenerating">
+          <svg v-if="!pdfGenerating" width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <path d="M6 2C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V16C4 16.5304 4.21071 17.0391 4.58579 17.4142C4.96086 17.7893 5.46957 18 6 18H14C14.5304 18 15.0391 17.7893 15.4142 17.4142C15.7893 17.0391 16 16.5304 16 16V7.414C16 7.01478 15.842 6.63211 15.5607 6.35078L11.6464 2.43645C11.3651 2.15512 10.9824 1.99701 10.5832 1.99701L6 2Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M10 2V6C10 6.26522 10.1054 6.51957 10.2929 6.70711C10.4804 6.89464 10.7348 7 11 7H16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <div v-else class="spinner-small"></div>
+          <span>{{ pdfGenerating ? 'PDF 생성 중...' : 'PDF 다운로드' }}</span>
+        </button>
         <button class="btn-retake" @click="goToSurvey">
           재검사하기
         </button>
@@ -58,7 +66,7 @@
     </div>
 
     <!-- 추천 콘텐츠 -->
-    <div v-else class="recommendations-content">
+    <div v-else ref="pdfContent" class="recommendations-content">
       <!-- 프로필 요약 카드 -->
       <div class="profile-summary-card" :class="`type-${getTypeClass(profile.risk_type)}`">
         <div class="summary-header">
@@ -276,6 +284,7 @@ import { useAuthStore } from "@/stores/auth"
 import api from "@/api/axios"
 import AlertModal from "@/components/common/AlertModal.vue"
 import { useAlert } from "@/composables/useAlert"
+import html2pdf from 'html2pdf.js'
 
 // 투자 성향 결과 이미지 import
 import timidMale from "@/assets/character/timid_male.png"
@@ -298,6 +307,8 @@ const recommendations = ref([])
 const investmentPlan = ref(null)
 const totalCount = ref(0)
 const bookmarkedProducts = ref(new Set())
+const pdfContent = ref(null)
+const pdfGenerating = ref(false)
 
 // 중복 상품 제거 (같은 fin_prdt_cd는 최고 금리 옵션만 표시)
 const uniqueRecommendations = computed(() => {
@@ -381,6 +392,50 @@ const goToDetail = (finPrdtCd) => {
 
 const goToSurvey = () => {
   router.push({ name: "investment_survey" })
+}
+
+const downloadPDF = async () => {
+  if (!pdfContent.value || pdfGenerating.value) return
+
+  try {
+    pdfGenerating.value = true
+
+    // PDF 옵션 설정
+    const opt = {
+      margin: [10, 10, 10, 10],
+      filename: `맞춤_상품_추천_${auth.user?.username || '투자자'}_${new Date().toISOString().split('T')[0]}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        letterRendering: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff'
+      },
+      jsPDF: {
+        unit: 'mm',
+        format: 'a4',
+        orientation: 'portrait',
+        compress: true
+      },
+      pagebreak: {
+        mode: ['avoid-all', 'css', 'legacy'],
+        before: '.page-break-before',
+        after: '.page-break-after'
+      }
+    }
+
+    // PDF 생성
+    await html2pdf().set(opt).from(pdfContent.value).save()
+
+    console.log('PDF 다운로드 완료')
+  } catch (err) {
+    console.error('PDF 생성 실패:', err)
+    error('PDF 생성에 실패했습니다.')
+  } finally {
+    pdfGenerating.value = false
+  }
 }
 
 const getTypeClass = (riskType) => {
@@ -613,6 +668,51 @@ onMounted(async () => {
   font-size: 18px;
   font-weight: 700;
   color: #0f172a;
+}
+
+.btn-pdf {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  border: none;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
+}
+
+.btn-pdf:hover:not(:disabled) {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.35);
+  transform: translateY(-2px);
+}
+
+.btn-pdf:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-pdf svg {
+  flex-shrink: 0;
+}
+
+.spinner-small {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 .btn-retake {
