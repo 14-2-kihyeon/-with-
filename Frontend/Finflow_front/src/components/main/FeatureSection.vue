@@ -18,7 +18,7 @@
           </div>
 
           <h2 class="feature-title">
-            <span v-for="(word, idx) in descriptionWords" :key="idx" class="title-word" :style="{ transitionDelay: `${idx * 0.08}s` }">
+            <span v-for="(word, idx) in descriptionWords" :key="idx" class="title-word" :style="{ transitionDelay: `${idx * 0.25}s` }">
               {{ word }}&nbsp;
             </span>
           </h2>
@@ -73,7 +73,7 @@ let io = null
 
 // 단어별로 분리하여 각각 애니메이션 적용
 const descriptionWords = computed(() => {
-  return props.description.split(' ')
+  return props.description.split('\n')
 })
 
 const goTo = () => {
@@ -87,7 +87,7 @@ onMounted(() => {
         if (e.isIntersecting) visible.value = true
       }
     },
-    { threshold: 0.15 }
+    { threshold: 0.65 }
   )
   if (sectionEl.value) io.observe(sectionEl.value)
 })
