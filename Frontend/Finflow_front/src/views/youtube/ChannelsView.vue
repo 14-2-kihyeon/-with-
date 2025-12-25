@@ -11,20 +11,25 @@
       </h2>
     </header>
 
-    <div v-if="channels.length === 0" class="yt-empty">
+    <!-- 로딩 상태 -->
+    <div v-if="loading" class="yt-loading">
+      <span>채널 목록을 불러오는 중...</span>
+    </div>
+
+    <div v-else-if="channels.length === 0" class="yt-empty">
       <div class="yt-empty-icon">📺</div>
       <div class="yt-empty-text">구독 중인 채널이 없습니다</div>
       <p style="color:#8B95A1; margin-top:8px;">자주 보는 채널을 구독하고 모아보세요.</p>
     </div>
 
     <div v-else style="display:flex; flex-direction:column; gap:16px;">
-      <div 
-        v-for="c in channels" 
-        :key="c.channelId" 
+      <div
+        v-for="c in channels"
+        :key="c.channel_id"
         class="channel-item"
       >
         <div class="channel-info">
-          <div class="channel-name">{{ c.channelTitle }}</div>
+          <div class="channel-name">{{ c.channel_title }}</div>
           <div class="channel-status">구독중</div>
         </div>
 
@@ -32,7 +37,7 @@
           <button class="yt-btn soft" @click="goSearch(c)">
             🔍 채널 영상 검색
           </button>
-          <button class="yt-btn danger" @click="remove(c.channelId)">
+          <button class="yt-btn danger" @click="remove(c.channel_id)">
             구독 취소
           </button>
         </div>
@@ -44,30 +49,46 @@
 <script setup>
 import { onMounted, ref } from "vue"
 import { useRouter } from "vue-router"
+import { getYoutubeSubscriptions, toggleChannelSubscribe } from "@/api/youtube"
 
 const router = useRouter()
 const channels = ref([])
-const key = "savedChannels"
+const loading = ref(false)
 
-const load = () => {
-  try { 
-    channels.value = JSON.parse(localStorage.getItem(key) || "[]") 
-  } catch { 
-    channels.value = [] 
+const load = async () => {
+  loading.value = true
+  try {
+    const res = await getYoutubeSubscriptions()
+    channels.value = res.data
+  } catch (error) {
+    console.error("구독 채널 목록 조회 실패:", error)
+    channels.value = []
+  } finally {
+    loading.value = false
   }
 }
 
-const remove = (channelId) => {
+const remove = async (channelId) => {
   if (!confirm("구독을 취소하시겠습니까?")) return
-  const next = channels.value.filter((c) => c.channelId !== channelId)
-  localStorage.setItem(key, JSON.stringify(next))
-  channels.value = next
+
+  try {
+    const channelData = channels.value.find(c => c.channel_id === channelId)
+    await toggleChannelSubscribe(channelId, {
+      channel_title: channelData?.channel_title || "",
+      channel_description: channelData?.channel_description || "",
+      channel_thumbnail: channelData?.channel_thumbnail || "",
+    })
+    channels.value = channels.value.filter((c) => c.channel_id !== channelId)
+  } catch (error) {
+    console.error("구독 취소 실패:", error)
+    alert("구독 취소에 실패했습니다.")
+  }
 }
 
 const goSearch = (c) => {
   router.push({
     name: "youtube_search",
-    query: { q: c.channelTitle || " ", channelId: c.channelId },
+    query: { q: c.channel_title || " ", channelId: c.channel_id },
   })
 }
 

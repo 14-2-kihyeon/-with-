@@ -163,6 +163,232 @@
           </div>
         </div>
       </section>
+
+      <!-- 관심 주식 섹션 -->
+      <section class="section">
+        <div class="section-header">
+          <h2 class="section-title">
+            <span class="section-icon">📈</span>
+            관심 주식
+          </h2>
+          <span class="product-count">{{ bookmarkedStocks.length }}개</span>
+        </div>
+
+        <div v-if="loading.stocks" class="loading-state">
+          <div class="spinner"></div>
+          <p>관심 주식을 불러오는 중...</p>
+        </div>
+
+        <div v-else-if="bookmarkedStocks.length === 0" class="empty-state">
+          <div class="empty-icon">📭</div>
+          <p class="empty-text">아직 관심 주식이 없습니다.</p>
+          <p class="empty-hint">AI 챗봇에서 주식을 추천받아보세요.</p>
+        </div>
+
+        <div v-else class="products-grid">
+          <div
+            v-for="stock in bookmarkedStocks"
+            :key="stock.code"
+            class="product-card"
+          >
+            <div class="product-header">
+              <div class="product-bank">{{ stock.market }}</div>
+              <button
+                class="btn-unbookmark"
+                @click="removeStockBookmark(stock.code)"
+                title="관심 주식 제거"
+              >
+                ❤️
+              </button>
+            </div>
+            <h3 class="product-name">{{ stock.name }}</h3>
+            <div class="stock-price" v-if="stock.current_price">
+              현재가: {{ formatMoney(stock.current_price) }}원
+            </div>
+            <div class="product-date">
+              등록일: {{ formatDate(stock.bookmarked_at) }}
+            </div>
+            <div class="product-actions">
+              <RouterLink
+                :to="{ name: 'stock_detail', params: { code: stock.code } }"
+                class="btn-detail-small"
+              >
+                자세히 보기 →
+              </RouterLink>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 북마크한 뉴스 섹션 -->
+      <section class="section">
+        <div class="section-header">
+          <h2 class="section-title">
+            <span class="section-icon">📰</span>
+            북마크한 뉴스
+          </h2>
+          <div class="section-actions">
+            <span class="product-count">{{ bookmarkedNews.length }}개</span>
+            <button v-if="bookmarkedNews.length > 0" class="btn-more" @click="goToNews">
+              전체보기 →
+            </button>
+          </div>
+        </div>
+
+        <div v-if="loading.news" class="loading-state">
+          <div class="spinner"></div>
+          <p>뉴스를 불러오는 중...</p>
+        </div>
+
+        <div v-else-if="bookmarkedNews.length === 0" class="empty-state">
+          <div class="empty-icon">📭</div>
+          <p class="empty-text">아직 북마크한 뉴스가 없습니다.</p>
+          <p class="empty-hint">뉴스 페이지에서 관심있는 뉴스를 북마크해보세요.</p>
+          <button class="btn-secondary" @click="goToNews">
+            뉴스 보러가기
+          </button>
+        </div>
+
+        <div v-else class="news-list">
+          <div
+            v-for="news in bookmarkedNews.slice(0, 5)"
+            :key="news.news_id"
+            class="news-card"
+            @click="goToNewsDetail(news.link)"
+          >
+            <div class="news-header">
+              <h3 class="news-title" v-html="news.title"></h3>
+              <button
+                class="btn-unbookmark"
+                @click.stop="removeNewsBookmark(news.news_id)"
+                title="북마크 해제"
+              >
+                ❤️
+              </button>
+            </div>
+            <p class="news-description" v-html="news.description"></p>
+            <div class="news-footer">
+              <span class="news-date">{{ news.pub_date }}</span>
+              <span class="news-link-hint">클릭하여 원문 보기 →</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 나중에 볼 영상 섹션 -->
+      <section class="section">
+        <div class="section-header">
+          <h2 class="section-title">
+            <span class="section-icon">🎬</span>
+            나중에 볼 영상
+          </h2>
+          <div class="section-actions">
+            <span class="product-count">{{ watchLaterVideos.length }}개</span>
+            <button v-if="watchLaterVideos.length > 0" class="btn-more" @click="goToSavedVideos">
+              전체보기 →
+            </button>
+          </div>
+        </div>
+
+        <div v-if="loading.youtube" class="loading-state">
+          <div class="spinner"></div>
+          <p>영상을 불러오는 중...</p>
+        </div>
+
+        <div v-else-if="watchLaterVideos.length === 0" class="empty-state">
+          <div class="empty-icon">📭</div>
+          <p class="empty-text">나중에 볼 영상이 없습니다.</p>
+          <p class="empty-hint">유튜브 검색에서 영상을 저장해보세요.</p>
+          <button class="btn-secondary" @click="goToYoutubeSearch">
+            유튜브 검색하기
+          </button>
+        </div>
+
+        <div v-else class="video-grid">
+          <div
+            v-for="video in watchLaterVideos.slice(0, 4)"
+            :key="video.video_id"
+            class="video-card"
+          >
+            <div class="video-thumbnail" @click="goToVideoDetail(video.video_id)">
+              <img :src="video.video_thumbnail" :alt="video.video_title" />
+              <div class="play-overlay">▶</div>
+            </div>
+            <div class="video-info">
+              <h3 class="video-title" @click="goToVideoDetail(video.video_id)">
+                {{ video.video_title }}
+              </h3>
+              <p class="video-channel">{{ video.channel_title }}</p>
+              <div class="video-footer">
+                <span class="video-date">{{ formatDate(video.published_at) }}</span>
+                <button
+                  class="btn-remove-small"
+                  @click="removeWatchLater(video.video_id)"
+                  title="목록에서 제거"
+                >
+                  삭제
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 구독한 채널 섹션 -->
+      <section class="section">
+        <div class="section-header">
+          <h2 class="section-title">
+            <span class="section-icon">📺</span>
+            구독한 채널
+          </h2>
+          <div class="section-actions">
+            <span class="product-count">{{ youtubeSubscriptions.length }}개</span>
+            <button v-if="youtubeSubscriptions.length > 0" class="btn-more" @click="goToChannels">
+              전체보기 →
+            </button>
+          </div>
+        </div>
+
+        <div v-if="loading.youtube" class="loading-state">
+          <div class="spinner"></div>
+          <p>채널을 불러오는 중...</p>
+        </div>
+
+        <div v-else-if="youtubeSubscriptions.length === 0" class="empty-state">
+          <div class="empty-icon">📭</div>
+          <p class="empty-text">구독한 채널이 없습니다.</p>
+          <p class="empty-hint">유튜브에서 관심있는 채널을 구독해보세요.</p>
+          <button class="btn-secondary" @click="goToYoutubeSearch">
+            유튜브 검색하기
+          </button>
+        </div>
+
+        <div v-else class="channel-grid">
+          <div
+            v-for="channel in youtubeSubscriptions.slice(0, 6)"
+            :key="channel.channel_id"
+            class="channel-card"
+          >
+            <div class="channel-thumbnail">
+              <img :src="channel.channel_thumbnail" :alt="channel.channel_title" />
+            </div>
+            <div class="channel-info">
+              <h3 class="channel-title">{{ channel.channel_title }}</h3>
+              <p class="channel-description">{{ channel.channel_description?.substring(0, 80) }}...</p>
+              <div class="channel-footer">
+                <span class="channel-date">구독일: {{ formatDate(channel.created_at) }}</span>
+                <button
+                  class="btn-unsubscribe-small"
+                  @click="unsubscribeChannel(channel.channel_id)"
+                  title="구독 취소"
+                >
+                  구독취소
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   </div>
 </template>
@@ -188,10 +414,17 @@ const auth = useAuthStore()
 // 상태
 const loading = ref({
   profile: false,
-  bookmarks: false
+  bookmarks: false,
+  stocks: false,
+  news: false,
+  youtube: false
 })
 const investmentProfile = ref(null)
 const bookmarkedProducts = ref([])
+const bookmarkedStocks = ref([])
+const bookmarkedNews = ref([])
+const watchLaterVideos = ref([])
+const youtubeSubscriptions = ref([])
 
 // 사용자 이니셜
 const userInitial = computed(() => {
@@ -221,31 +454,48 @@ const profileImageUrl = computed(() => {
     : defaultImage
 })
 
-// 투자 성향 정보 가져오기
-const fetchInvestmentProfile = async () => {
+// 🔥 통합 마이페이지 데이터 가져오기 (한 번의 API 호출로 모든 데이터 로드)
+const fetchMyPageData = async () => {
   loading.value.profile = true
+  loading.value.bookmarks = true
+  loading.value.stocks = true
+  loading.value.news = true
+  loading.value.youtube = true
+
   try {
-    const res = await api.get("/accounts/investment-profile/")
-    investmentProfile.value = res.data
+    const res = await api.get("/accounts/mypage/")
+
+    console.log("📊 마이페이지 API 응답:", res.data)
+
+    // 1. 투자 프로필
+    investmentProfile.value = res.data.profile
+
+    // 2. 금융 상품 북마크
+    bookmarkedProducts.value = res.data.bookmarked_products || []
+
+    // 3. 주식 관심종목
+    bookmarkedStocks.value = res.data.bookmarked_stocks || []
+
+    // 4. 뉴스 북마크
+    bookmarkedNews.value = res.data.bookmarked_news || []
+    console.log("📰 뉴스 북마크:", bookmarkedNews.value.length, "개")
+
+    // 5. 나중에 볼 영상
+    watchLaterVideos.value = res.data.watch_later_videos || []
+    console.log("🎬 나중에 볼 영상:", watchLaterVideos.value.length, "개")
+
+    // 6. 구독한 채널
+    youtubeSubscriptions.value = res.data.youtube_subscriptions || []
+    console.log("📺 구독한 채널:", youtubeSubscriptions.value.length, "개")
+
   } catch (error) {
-    if (error.response?.status !== 404) {
-      console.error("투자 성향 조회 실패:", error)
-    }
+    console.error("마이페이지 데이터 조회 실패:", error)
   } finally {
     loading.value.profile = false
-  }
-}
-
-// 관심 상품 가져오기
-const fetchBookmarkedProducts = async () => {
-  loading.value.bookmarks = true
-  try {
-    const res = await api.get("/accounts/bookmarks/")
-    bookmarkedProducts.value = res.data
-  } catch (error) {
-    console.error("관심 상품 조회 실패:", error)
-  } finally {
     loading.value.bookmarks = false
+    loading.value.stocks = false
+    loading.value.news = false
+    loading.value.youtube = false
   }
 }
 
@@ -262,7 +512,73 @@ const removeBookmark = async (finPrdtCd) => {
   }
 }
 
-// 네비게이션
+// 관심 주식 제거
+const removeStockBookmark = async (stockCode) => {
+  try {
+    await api.post(`/accounts/stocks/${stockCode}/bookmark/`)
+    bookmarkedStocks.value = bookmarkedStocks.value.filter(
+      s => s.code !== stockCode
+    )
+  } catch (error) {
+    console.error("관심 주식 제거 실패:", error)
+    alert("관심 주식 제거에 실패했습니다.")
+  }
+}
+
+// 뉴스 북마크 제거
+const removeNewsBookmark = async (newsId) => {
+  try {
+    await api.delete(`/accounts/news/${newsId}/bookmark/`)
+    bookmarkedNews.value = bookmarkedNews.value.filter(
+      n => n.news_id !== newsId
+    )
+  } catch (error) {
+    console.error("뉴스 북마크 제거 실패:", error)
+    alert("뉴스 북마크 제거에 실패했습니다.")
+  }
+}
+
+// 나중에 볼 영상 제거
+const removeWatchLater = async (videoId) => {
+  try {
+    // 토글 API 호출 (이미 존재하므로 삭제됨)
+    const videoData = watchLaterVideos.value.find(v => v.video_id === videoId)
+    await api.post(`/accounts/youtube/videos/${videoId}/watch-later/`, {
+      video_title: videoData?.video_title || "",
+      video_description: videoData?.video_description || "",
+      video_thumbnail: videoData?.video_thumbnail || "",
+      channel_title: videoData?.channel_title || "",
+      published_at: videoData?.published_at || "",
+    })
+    watchLaterVideos.value = watchLaterVideos.value.filter(
+      v => v.video_id !== videoId
+    )
+  } catch (error) {
+    console.error("나중에 볼 영상 제거 실패:", error)
+    alert("나중에 볼 영상 제거에 실패했습니다.")
+  }
+}
+
+// 채널 구독 취소
+const unsubscribeChannel = async (channelId) => {
+  try {
+    // 토글 API 호출 (이미 존재하므로 삭제됨)
+    const channelData = youtubeSubscriptions.value.find(c => c.channel_id === channelId)
+    await api.post(`/accounts/youtube/channels/${channelId}/subscribe/`, {
+      channel_title: channelData?.channel_title || "",
+      channel_description: channelData?.channel_description || "",
+      channel_thumbnail: channelData?.channel_thumbnail || "",
+    })
+    youtubeSubscriptions.value = youtubeSubscriptions.value.filter(
+      c => c.channel_id !== channelId
+    )
+  } catch (error) {
+    console.error("채널 구독 취소 실패:", error)
+    alert("채널 구독 취소에 실패했습니다.")
+  }
+}
+
+// 네비게이션 - 금융
 const goToSurvey = () => {
   router.push({ name: "investment_survey" })
 }
@@ -273,6 +589,32 @@ const goToRecommendations = () => {
 
 const goToFinHome = () => {
   router.push({ name: "fin_home" })
+}
+
+// 네비게이션 - 뉴스/유튜브
+const goToNewsDetail = (newsLink) => {
+  // 뉴스 원문 링크로 이동 (새 탭)
+  window.open(newsLink, '_blank')
+}
+
+const goToVideoDetail = (videoId) => {
+  router.push({ name: "youtube_detail", params: { id: videoId } })
+}
+
+const goToYoutubeSearch = () => {
+  router.push({ name: "youtube_search" })
+}
+
+const goToSavedVideos = () => {
+  router.push({ name: "youtube_saved" })
+}
+
+const goToChannels = () => {
+  router.push({ name: "youtube_channels" })
+}
+
+const goToNews = () => {
+  router.push({ name: "naver_news" })
 }
 
 // 유틸리티 함수
@@ -308,10 +650,7 @@ const formatDate = (dateStr) => {
 
 // 마운트
 onMounted(async () => {
-  await Promise.all([
-    fetchInvestmentProfile(),
-    fetchBookmarkedProducts()
-  ])
+  await fetchMyPageData()
 })
 </script>
 
@@ -773,6 +1112,348 @@ onMounted(async () => {
 
   .products-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+/* 주식 카드 스타일 */
+.stock-card {
+  border-left: 4px solid #2563eb;
+}
+
+.stock-price {
+  font-size: 16px;
+  font-weight: 600;
+  color: #2563eb;
+  margin: 8px 0;
+}
+
+/* ========================================
+   뉴스/유튜브 섹션 스타일
+======================================== */
+
+/* 섹션 헤더 개선 */
+.section-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.btn-more {
+  padding: 6px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #3b82f6;
+  background: white;
+  border: 1px solid #3b82f6;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-more:hover {
+  background: #3b82f6;
+  color: white;
+  transform: translateX(2px);
+}
+
+/* 뉴스 리스트 */
+.news-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.news-card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s;
+  cursor: pointer;
+  border-left: 4px solid #f97316;
+}
+
+.news-card:hover {
+  box-shadow: 0 6px 20px rgba(249, 115, 22, 0.15);
+  transform: translateY(-2px);
+}
+
+.news-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.news-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
+  line-height: 1.5;
+  flex: 1;
+}
+
+.news-description {
+  font-size: 14px;
+  color: #6b7280;
+  line-height: 1.6;
+  margin-bottom: 12px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.news-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  color: #9ca3af;
+}
+
+.news-link-hint {
+  color: #3b82f6;
+  font-weight: 500;
+}
+
+.news-date {
+  font-size: 12px;
+}
+
+/* 비디오 그리드 */
+.video-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+.video-card {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s;
+}
+
+.video-card:hover {
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.15);
+  transform: translateY(-2px);
+}
+
+.video-thumbnail {
+  position: relative;
+  width: 100%;
+  padding-top: 56.25%; /* 16:9 비율 */
+  overflow: hidden;
+  cursor: pointer;
+  background: #000;
+}
+
+.video-thumbnail img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.play-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 60px;
+  height: 60px;
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 24px;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.video-thumbnail:hover .play-overlay {
+  opacity: 1;
+}
+
+.video-info {
+  padding: 16px;
+}
+
+.video-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1f2937;
+  line-height: 1.4;
+  margin-bottom: 8px;
+  cursor: pointer;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.video-title:hover {
+  color: #ef4444;
+}
+
+.video-channel {
+  font-size: 13px;
+  color: #6b7280;
+  margin-bottom: 12px;
+}
+
+.video-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.video-date {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.btn-remove-small {
+  padding: 4px 12px;
+  font-size: 12px;
+  color: #ef4444;
+  background: white;
+  border: 1px solid #ef4444;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-remove-small:hover {
+  background: #ef4444;
+  color: white;
+}
+
+/* 채널 그리드 */
+.channel-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.channel-card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s;
+  border-left: 4px solid #ef4444;
+}
+
+.channel-card:hover {
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.15);
+  transform: translateY(-2px);
+}
+
+.channel-thumbnail {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 16px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 3px solid #f3f4f6;
+}
+
+.channel-thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.channel-info {
+  text-align: center;
+}
+
+.channel-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 8px;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.channel-description {
+  font-size: 13px;
+  color: #6b7280;
+  line-height: 1.5;
+  margin-bottom: 12px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 40px;
+}
+
+.channel-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+}
+
+.channel-date {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.btn-unsubscribe-small {
+  padding: 6px 16px;
+  font-size: 13px;
+  color: #ef4444;
+  background: white;
+  border: 1px solid #ef4444;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-unsubscribe-small:hover {
+  background: #ef4444;
+  color: white;
+}
+
+/* 반응형 디자인 */
+@media (max-width: 768px) {
+  .video-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .channel-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .news-title {
+    font-size: 15px;
+  }
+
+  .news-description {
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  .channel-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .section-actions {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
 </style>

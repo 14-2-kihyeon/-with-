@@ -12,3 +12,23 @@ export const searchYoutube = (q, channelId) => {
 export const getYoutubeVideoDetail = (videoId) => {
   return api.get(`/youtube/videos/${videoId}/`)
 }
+
+// 나중에 볼 영상 토글
+export const toggleWatchLater = (videoId, videoData) => {
+  return api.post(`/accounts/youtube/videos/${videoId}/watch-later/`, videoData)
+}
+
+// 채널 구독 토글
+export const toggleChannelSubscribe = (channelId, channelData) => {
+  return api.post(`/accounts/youtube/channels/${channelId}/subscribe/`, channelData)
+}
+
+// 나중에 볼 영상 목록 조회
+export const getWatchLaterList = () => {
+  return api.get("/accounts/youtube/watch-later/")
+}
+
+// 구독한 채널 목록 조회
+export const getYoutubeSubscriptions = () => {
+  return api.get("/accounts/youtube/subscriptions/")
+}

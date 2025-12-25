@@ -214,7 +214,7 @@ const saveMessagesToStorage = (msgs) => {
 const isOpen = ref(false)
 const isLoading = ref(false)
 const userInput = ref('')
-const messages = ref(loadMessagesFromStorage()) // 로컬 스토리지에서 초기화
+const messages = ref([]) // 초기값은 빈 배열, DB에서 로드할 예정
 const messagesContainer = ref(null)
 const messageInput = ref(null)
 const hasNewRecommendation = ref(false)
@@ -468,10 +468,9 @@ const sendUserMessage = async () => {
 }
 
 const loadChatHistory = async () => {
-  // 이 함수는 더 이상 자동으로 호출되지 않습니다
-  // 사용자가 명시적으로 요청할 때만 호출됩니다
+  // DB에서 채팅 히스토리를 불러옵니다
   try {
-    const response = await api.get('/chatbot/history/', { params: { limit: 20 } })
+    const response = await api.get('/chatbot/history/', { params: { limit: 50 } })
     messages.value = response.data.map((msg) => [
       {
         text: msg.user_message,
@@ -485,9 +484,14 @@ const loadChatHistory = async () => {
         recommendedProducts: msg.recommended_products,
       },
     ]).flat()
+
+    // DB에서 로드한 메시지를 로컬 스토리지에도 동기화
+    saveMessagesToStorage(messages.value)
     scrollToBottom()
   } catch (error) {
     console.error('채팅 히스토리 로드 실패:', error)
+    // DB 로드 실패 시 로컬 스토리지에서 불러오기
+    messages.value = loadMessagesFromStorage()
   }
 }
 
@@ -528,8 +532,16 @@ const fetchAvatarInfo = async () => {
 
 const fetchBookmarks = async () => {
   try {
-    const response = await api.get('/accounts/bookmarks/')
-    bookmarkedProducts.value = new Set(response.data.map((b) => b.fin_prdt_cd))
+    // 예금/적금 상품 북마크 로드
+    const productsResponse = await api.get('/accounts/bookmarks/')
+    const productCodes = productsResponse.data.map((b) => b.fin_prdt_cd)
+
+    // 주식 관심종목 로드
+    const stocksResponse = await api.get('/accounts/stocks/bookmarks/')
+    const stockCodes = stocksResponse.data.map((b) => b.code)
+
+    // 모든 북마크를 하나의 Set에 저장
+    bookmarkedProducts.value = new Set([...productCodes, ...stockCodes])
   } catch (error) {
     console.error('북마크 로드 실패:', error)
   }
@@ -537,7 +549,13 @@ const fetchBookmarks = async () => {
 
 const toggleBookmark = async (product) => {
   try {
-    await api.post(`/accounts/recommendations/${product.code}/bookmark/`)
+    // 상품 타입에 따라 다른 API 엔드포인트 사용
+    if (product.type === 'stock') {
+      await api.post(`/accounts/stocks/${product.code}/bookmark/`)
+    } else {
+      // deposit, saving
+      await api.post(`/accounts/recommendations/${product.code}/bookmark/`)
+    }
 
     if (bookmarkedProducts.value.has(product.code)) {
       bookmarkedProducts.value.delete(product.code)
@@ -753,6 +771,7 @@ onMounted(() => {
   if (authStore.isLogin) {
     fetchAvatarInfo()
     fetchBookmarks()
+    loadChatHistory() // DB에서 대화 내역 로드
   }
 })
 
@@ -761,8 +780,7 @@ watch(() => authStore.isLogin, (newVal) => {
     // 로그인 시
     fetchAvatarInfo()
     fetchBookmarks()
-    // 로그인한 사용자의 메시지 로드
-    messages.value = loadMessagesFromStorage()
+    loadChatHistory() // DB에서 대화 내역 로드
   } else {
     // 로그아웃 시 모든 상태 초기화
     messages.value = []
