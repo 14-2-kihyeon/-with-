@@ -18,7 +18,7 @@
           </div>
 
           <h2 class="feature-title">
-            <span v-for="(word, idx) in descriptionWords" :key="idx" class="title-word" :style="{ transitionDelay: `${idx * 0.08}s` }">
+            <span v-for="(word, idx) in descriptionWords" :key="idx" class="title-word" :style="{ transitionDelay: `${idx * 0.25}s` }">
               {{ word }}&nbsp;
             </span>
           </h2>
@@ -54,6 +54,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from "vue"
 import { useRouter } from "vue-router"
 import ScreenshotCarousel from "@/components/main/ScreenshotCarousel.vue"
+import { useChatbot } from "@/composables/useChatbot"
 
 const props = defineProps({
   title: { type: String, default: "" },
@@ -68,16 +69,22 @@ const props = defineProps({
 const router = useRouter()
 const sectionEl = ref(null)
 const visible = ref(false)
+const { requestOpenChatbot } = useChatbot()
 
 let io = null
 
 // 단어별로 분리하여 각각 애니메이션 적용
 const descriptionWords = computed(() => {
-  return props.description.split(' ')
+  return props.description.split('\n')
 })
 
 const goTo = () => {
-  router.push({ name: props.routeName })
+  // 챗봇인 경우 플로팅 챗봇 열기
+  if (props.routeName === 'chatbot_list') {
+    requestOpenChatbot()
+  } else {
+    router.push({ name: props.routeName })
+  }
 }
 
 onMounted(() => {
@@ -87,7 +94,7 @@ onMounted(() => {
         if (e.isIntersecting) visible.value = true
       }
     },
-    { threshold: 0.15 }
+    { threshold: 0.65 }
   )
   if (sectionEl.value) io.observe(sectionEl.value)
 })

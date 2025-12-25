@@ -1022,11 +1022,14 @@ def get_mypage_data(request):
     profile_data = {}
     try:
         profile = user.investment_profile
+        risk_data = RISK_TYPE_MAPPING.get(profile.risk_type, {})
         profile_data = {
             'risk_type': profile.risk_type,
+            'risk_type_name': risk_data.get('name'),
             'risk_score': profile.risk_score,
             'age': profile.age,
             'gender': profile.gender,
+            'gender_display': '남성' if profile.gender == 'M' else '여성',
             'income': int(profile.income) if profile.income else 0,
             'savings': int(profile.savings) if profile.savings else 0,
             'investment_goal': profile.investment_goal,

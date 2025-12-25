@@ -99,12 +99,6 @@
               <span class="stat-value">{{ formatCurrency(profile.investment_amount || profile.savings) }}</span>
             </div>
           </div>
-          <div v-if="recommendations.length > 0" class="stat-item highlight">
-            <div class="stat-content">
-              <span class="stat-label">예상 총액 (최고 상품 복리 기준)</span>
-              <span class="stat-value large">{{ formatCurrency(calculateCompoundTotal(profile.savings, profile.investment_amount || profile.savings, recommendations[0].option.intr_rate2, recommendations[0].option.save_trm, profile.investment_period)) }}</span>
-            </div>
-          </div>
         </div>
       </div>
 

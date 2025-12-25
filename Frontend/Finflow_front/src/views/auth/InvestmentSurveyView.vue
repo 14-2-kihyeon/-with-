@@ -197,6 +197,14 @@
       </div>
     </div>
 
+    <!-- 결과 동영상 팝업 -->
+    <ResultVideoPopup
+      v-if="result"
+      :risk-type="result.risk_type"
+      :show="showVideoPopup"
+      @close="showVideoPopup = false"
+    />
+
     <!-- 결과 화면 -->
     <div v-if="showResult" class="result-container">
       <div class="result-card">
@@ -302,6 +310,7 @@ const currentStep = ref(0)  // 0: 기본정보, 1~10: 설문
 const responses = ref([])
 const showResult = ref(false)
 const result = ref(null)
+const showVideoPopup = ref(false)
 
 // 기본 정보
 const basicInfo = ref({
@@ -395,7 +404,14 @@ const submitSurvey = async () => {
     })
 
     result.value = res.data
+    console.log('설문 결과:', result.value)
+    console.log('risk_type:', result.value.risk_type)
+
     showResult.value = true
+
+    // 동영상 팝업 표시
+    showVideoPopup.value = true
+    console.log('showVideoPopup 설정됨:', showVideoPopup.value)
 
     // 상단으로 스크롤
     window.scrollTo({ top: 0, behavior: 'smooth' })

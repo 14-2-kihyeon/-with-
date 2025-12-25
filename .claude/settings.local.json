@@ -11,7 +11,8 @@
       "Bash(netstat:*)",
       "Bash(findstr:*)",
       "Bash(venvScriptspython.exe manage.py check)",
-      "Bash(timeout /t 3 /nobreak)"
+      "Bash(timeout /t 3 /nobreak)",
+      "Bash(cat:*)"
     ]
   }
 }

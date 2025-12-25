@@ -99,7 +99,7 @@
             <div class="message" :class="msg.isUser ? 'user-message' : 'ai-message'">
               <img v-if="!msg.isUser" :src="avatarImage" alt="AI" class="message-avatar" />
               <div class="message-bubble">
-                <div v-if="!msg.isUser" class="ai-name">Finflow AI</div>
+                <div v-if="!msg.isUser" class="ai-name">PBTI AI 챗봇</div>
                 <div class="message-content">
                   <p v-html="formatMessage(msg.text)"></p>
 
@@ -196,6 +196,7 @@
 import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useChatbot } from '@/composables/useChatbot'
 import api from '@/api/axios'
 import AlertModal from '@/components/common/AlertModal.vue'
 import { useAlert } from '@/composables/useAlert'
@@ -209,6 +210,7 @@ import speculativeFemale from '@/assets/main/icon/speculative_female.png'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const { chatbotOpenRequested } = useChatbot()
 
 // Alert composable
 const { showAlert, alertConfig, success, error } = useAlert()
@@ -840,6 +842,23 @@ watch(() => authStore.isLogin, (newVal) => {
     bookmarkedProducts.value = new Set()
     hasNewRecommendation.value = false
     // 로그아웃 시에는 로컬 스토리지에서 메시지를 삭제하지 않음 (다음 로그인 시 복원 가능)
+  }
+})
+
+// 챗봇 열기 요청 감지
+watch(chatbotOpenRequested, (newVal) => {
+  if (newVal && !isOpen.value) {
+    // 로그인 확인
+    if (!authStore.isLogin) {
+      showLoginTooltip.value = true
+      return
+    }
+    // 챗봇 열기
+    isOpen.value = true
+    nextTick(() => {
+      messageInput.value?.focus()
+      scrollToBottom()
+    })
   }
 })
 </script>
