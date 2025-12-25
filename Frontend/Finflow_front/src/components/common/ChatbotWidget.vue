@@ -17,16 +17,24 @@
 
     <!-- 플로팅 버튼 -->
     <transition name="bounce">
-      <button
-        v-if="!isOpen"
-        @click="handleWidgetClick"
-        @mousedown="startDrag"
-        class="chatbot-floating-btn"
-        :class="{ 'pulse': hasNewRecommendation, 'dragging': isDragging }"
-      >
-        <img :src="widgetImage" alt="AI 챗봇" class="chatbot-avatar-icon" @error="handleImageError" />
-        <span v-if="hasNewRecommendation" class="notification-badge">!</span>
-      </button>
+      <div v-if="!isOpen" class="floating-widget-container">
+        <!-- 말풍선 -->
+        <div class="chatbot-bubble">
+          <div class="bubble-text">안녕하세요? PB 챗봇입니다!</div>
+          <div class="bubble-arrow"></div>
+        </div>
+
+        <!-- 플로팅 버튼 -->
+        <button
+          @click="handleWidgetClick"
+          @mousedown="startDrag"
+          class="chatbot-floating-btn"
+          :class="{ 'pulse': hasNewRecommendation, 'dragging': isDragging }"
+        >
+          <img :src="widgetImage" alt="AI 챗봇" class="chatbot-avatar-icon" @error="handleImageError" />
+          <span v-if="hasNewRecommendation" class="notification-badge">!</span>
+        </button>
+      </div>
     </transition>
 
     <!-- 채팅 창 -->
@@ -42,7 +50,7 @@
           <div class="header-left">
             <img :src="avatarImage" alt="AI 챗봇" class="chatbot-avatar" />
             <div class="header-text">
-              <h4 class="chatbot-title">Finflow AI 상담사</h4>
+              <h4 class="chatbot-title">PBTI 기반 AI 챗봇</h4>
               <p class="chatbot-subtitle" v-if="riskType">{{ riskTypeLabel }} 투자자</p>
               <p class="chatbot-subtitle" v-else>투자 성향 분석 필요</p>
             </div>
@@ -56,7 +64,7 @@
           <div v-if="messages.length === 0" class="welcome-message">
             <img :src="avatarImage" alt="AI" class="welcome-avatar" />
             <div class="welcome-text">
-              <h5>안녕하세요! Finflow AI 상담사입니다.</h5>
+              <h5>안녕하세요! PBTI 기반 AI 챗봇입니다.</h5>
               <p>금융 상품 추천, 투자 조언 등 무엇이든 물어보세요.</p>
               <div class="quick-questions">
                 <button
@@ -180,6 +188,12 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import api from '@/api/axios'
 import legoImage from '@/assets/main/icon/lego.png'
+import timidMale from '@/assets/main/icon/timid_male.png'
+import timidFemale from '@/assets/main/icon/timid_female.png'
+import normalMale from '@/assets/main/icon/normal_male.png'
+import normalFemale from '@/assets/main/icon/normal_female.png'
+import speculativeMale from '@/assets/main/icon/speculative_male.png'
+import speculativeFemale from '@/assets/main/icon/speculative_female.png'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -270,9 +284,23 @@ const riskTypeLabel = computed(() => {
   return labels[riskType.value] || '일반'
 })
 
-// 모든 아바타 이미지를 lego.png로 통일
-const avatarImage = computed(() => legoImage)
-const widgetImage = computed(() => legoImage)
+// 투자성향에 따른 아바타 이미지 매핑
+const getCharacterImage = (profileRiskType) => {
+  if (!profileRiskType) return legoImage
+
+  const map = {
+    timid_male: timidMale,
+    timid_female: timidFemale,
+    normal_male: normalMale,
+    normal_female: normalFemale,
+    speculative_male: speculativeMale,
+    speculative_female: speculativeFemale,
+  }
+  return map[profileRiskType] || legoImage
+}
+
+const avatarImage = computed(() => getCharacterImage(riskType.value))
+const widgetImage = computed(() => getCharacterImage(riskType.value))
 
 const chatContainerStyle = computed(() => {
   const pos = dragPosition.value
@@ -856,7 +884,7 @@ watch(() => authStore.isLogin, (newVal) => {
 .tooltip-login-btn {
   width: 100%;
   padding: 12px 24px;
-  background: linear-gradient(135deg, #3b82f6 0%, #10b981 100%);
+  background: linear-gradient(135deg, #3c6dbd 0%, #1c45cc 100%);
   color: white;
   border: none;
   border-radius: 12px;
@@ -872,12 +900,70 @@ watch(() => authStore.isLogin, (newVal) => {
   box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
 }
 
+/* 플로팅 위젯 컨테이너 */
+.floating-widget-container {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* 말풍선 */
+.chatbot-bubble {
+  position: absolute;
+  bottom: 85px;
+  background: white;
+  padding: 12px 18px;
+  border-radius: 20px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  white-space: nowrap;
+  animation: bubbleFloat 5s ease-in-out infinite;
+  z-index: 1;
+}
+
+.bubble-text {
+  font-size: 14px;
+  font-weight: 600;
+  color: #2c3e50;
+  line-height: 1.4;
+}
+
+.bubble-arrow {
+  position: absolute;
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-top: 10px solid white;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+}
+
+/* 말풍선 애니메이션 - 5초마다 살짝 흔들림 */
+@keyframes bubbleFloat {
+  0%, 90%, 100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  2%, 8% {
+    transform: translateY(-5px) scale(1.05);
+  }
+  5% {
+    transform: translateY(-8px) scale(1.08);
+  }
+  10%, 85% {
+    transform: translateY(0) scale(1);
+  }
+}
+
 /* 플로팅 버튼 */
 .chatbot-floating-btn {
   width: 70px;
   height: 70px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #3b82f6 0%, #10b981 100%);
+  background: linear-gradient(135deg, #3c6dbd 0%, #1c45cc 100%);
   border: none;
   box-shadow: 0 8px 24px rgba(59, 130, 246, 0.4);
   cursor: pointer;
@@ -984,7 +1070,7 @@ watch(() => authStore.isLogin, (newVal) => {
 
 /* 헤더 */
 .chatbot-header {
-  background: linear-gradient(135deg, #3b82f6 0%, #10b981 100%);
+  background: linear-gradient(135deg, #3c6dbd 0%, #1c45cc 100%);
   color: white;
   padding: 20px;
   display: flex;
@@ -1188,7 +1274,7 @@ watch(() => authStore.isLogin, (newVal) => {
 }
 
 .user-message .message-content {
-  background: linear-gradient(135deg, #3b82f6 0%, #10b981 100%);
+  background: linear-gradient(135deg, #3c6dbd 0%, #1c45cc 100%);
   color: white;
   border-bottom-right-radius: 6px;
   box-shadow: 0 2px 12px rgba(59, 130, 246, 0.3);
@@ -1382,7 +1468,7 @@ watch(() => authStore.isLogin, (newVal) => {
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #3b82f6 0%, #10b981 100%);
+  background: linear-gradient(135deg, #3c6dbd 0%, #1c45cc 100%);
   border: none;
   color: white;
   font-size: 20px;

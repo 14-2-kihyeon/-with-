@@ -194,7 +194,7 @@ watch(
 .popup-center-title {
     font-size: 56px;
     letter-spacing: 0.18em;
-    font-weight: 800;
+    font-weight: 900;
     color: #dc2626;
     text-shadow: 0 0 18px rgba(255, 255, 255, 0.65),
         2px 2px 4px rgba(0, 0, 0, 0.8),
@@ -238,7 +238,7 @@ watch(
     border: 0;
     background: #000;
     color: #fff;
-    font-weight: 700;
+    font-weight: 500;
     font-size: 15px;
     cursor: pointer;
     transition: background 140ms ease;
@@ -277,14 +277,12 @@ watch(
   align-self: flex-start;
   margin-left: 75px;
 
-  font-size: 15px;         
-  font-weight: 1000;
+  font-size: 15px;
+  font-weight: 900;
   letter-spacing: 0.34em;
 
-  color: #d61818;             
+  color: #d61818;
   opacity: 1;
-
-  font-family: "Pretendard", "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans KR", sans-serif;
 
   -webkit-text-stroke: 0.6px rgba(0, 0, 0, 0.35);  /* 또는 아예 0px로 */
 
@@ -325,7 +323,6 @@ watch(
   line-height: 1.35;
   color: rgba(255, 255, 255, 0.92);
 
-  font-family: "Pretendard", "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans KR", sans-serif;
   text-align: center;
   letter-spacing: -0.02em;
 
@@ -346,7 +343,6 @@ watch(
   line-height: 1.5;
   color: rgba(255, 255, 255, 0.92);
 
-  font-family: "Pretendard", "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans KR", sans-serif;
   text-align: center;
   letter-spacing: -0.01em;
 

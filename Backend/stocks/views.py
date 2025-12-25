@@ -1245,21 +1245,18 @@ def stock_realtime_price(request, code: str):
         # Stock 조회하여 market 정보 가져오기
         stock = Stock.objects.filter(code=code).first()
 
-        if not stock:
-            return Response(
-                {
-                    "endpoint": "realtime",
-                    "code": code,
-                    "data": None,
-                    "market_status": YFinanceClient.get_market_hours_status(),
-                    "detail": "종목을 찾을 수 없습니다.",
-                    "error": "STOCK_NOT_FOUND"
-                },
-                status=drf_status.HTTP_404_NOT_FOUND,
-            )
+        # market 타입 자동 감지
+        if stock:
+            market = stock.market
+        elif "-" in code:  # BTC-USD, ETH-USD 등
+            market = "CRYPTO"
+        elif code.isdigit():  # 한국 주식은 숫자 코드
+            market = "KOSPI"  # 기본값, DB에 없으면 찾을 수 없음
+        else:  # AAPL, TSLA 등 문자 코드
+            market = "US"
 
         # 실시간 주가 조회
-        realtime_data = YFinanceClient.get_realtime_price(code, stock.market)
+        realtime_data = YFinanceClient.get_realtime_price(code, market)
 
         if not realtime_data:
             return Response(
@@ -1362,26 +1359,24 @@ def stock_intraday_prices(request, code: str):
         # Stock 조회하여 market 정보 가져오기
         stock = Stock.objects.filter(code=code).first()
 
-        if not stock:
-            return Response(
-                {
-                    "endpoint": "intraday",
-                    "code": code,
-                    "name": None,
-                    "interval": interval,
-                    "days": days,
-                    "count": 0,
-                    "prices": [],
-                    "detail": "종목을 찾을 수 없습니다.",
-                    "error": "STOCK_NOT_FOUND"
-                },
-                status=drf_status.HTTP_404_NOT_FOUND,
-            )
+        # market 타입 자동 감지
+        if stock:
+            market = stock.market
+            name = stock.name
+        elif "-" in code:  # BTC-USD, ETH-USD 등
+            market = "CRYPTO"
+            name = code
+        elif code.isdigit():  # 한국 주식은 숫자 코드
+            market = "KOSPI"
+            name = code
+        else:  # AAPL, TSLA 등 문자 코드
+            market = "US"
+            name = code
 
         # 인트라데이 데이터 조회
         intraday_data = YFinanceClient.get_intraday_prices(
             code,
-            stock.market,
+            market,
             interval=interval,
             days=days
         )
@@ -1390,7 +1385,7 @@ def stock_intraday_prices(request, code: str):
             {
                 "endpoint": "intraday",
                 "code": code,
-                "name": stock.name,
+                "name": name,
                 "interval": interval,
                 "days": days,
                 "count": len(intraday_data),

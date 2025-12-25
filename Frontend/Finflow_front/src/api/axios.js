@@ -24,6 +24,13 @@ api.interceptors.response.use(
     const auth = useAuthStore()
     const original = err.config
 
+    // 네트워크 에러 (서버 꺼짐) 시 토큰 제거
+    if (!err.response) {
+      console.warn("서버 연결 실패, 토큰 제거:", err.message || "NETWORK_ERROR")
+      auth.clearTokens()
+      return Promise.reject(err)
+    }
+
     if (err.response?.status === 401 && !original._retry && auth.refresh) {
       original._retry = true
       try {
@@ -38,7 +45,9 @@ api.interceptors.response.use(
           localStorage.setItem("refresh", r.data.refresh)
         }
         return api(original)
-      } catch {
+      } catch (refreshErr) {
+        // refresh 실패 시에도 네트워크 에러인지 확인
+        console.warn("토큰 갱신 실패:", refreshErr.message || "REFRESH_FAILED")
         auth.clearTokens()
       }
     }

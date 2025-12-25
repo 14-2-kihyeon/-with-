@@ -109,13 +109,21 @@ const scrollToNext = () => {
     margin: 0;
     font-size: clamp(34px, 5.6vw, 64px);
     line-height: 1.18;
-    font-weight: 700;
+    font-weight: 900;
     color: rgba(15, 23, 42, 0.92);
     text-shadow: 0 8px 22px rgba(255, 255, 255, 0.55);
+    -webkit-text-stroke: 0.5px rgba(15, 23, 42, 0.3);
+    paint-order: stroke fill;
 }
 
 .hero-title strong {
     font-weight: 900;
+}
+
+.hero-line.line-1,
+.hero-line.line-2 {
+    font-weight: 700;
+    -webkit-text-stroke: 0.8px rgba(15, 23, 42, 0.25);
 }
 
 .hero-sub {

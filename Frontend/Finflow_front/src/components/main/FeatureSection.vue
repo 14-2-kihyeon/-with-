@@ -100,6 +100,7 @@ onBeforeUnmount(() => {
 
 <style scoped>
 /* =========================
+   font.css 전역 설정 무시
    Section Base
 ========================= */
 .feature-section {
@@ -224,7 +225,7 @@ onBeforeUnmount(() => {
   position: relative;
   display: inline-block;
   padding: 10px 20px;
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 700;
   color: #3b82f6;
   margin-bottom: 24px;
@@ -266,17 +267,21 @@ onBeforeUnmount(() => {
 
 /* Title */
 .feature-title {
-  font-size: clamp(36px, 4.5vw, 64px);
-  font-weight: 800;
+  font-size: clamp(32px, 4.5vw, 64px);
+  font-weight: 700;
   line-height: 1.2;
   margin: 0 0 48px 0;
   color: #0f172a;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.04em !important;
   word-break: keep-all;
 }
 
 .title-word {
   display: inline-block;
+  font-weight: 700;
+  letter-spacing: -0.04em !important;
+  -webkit-text-stroke: 0.6px rgba(15, 23, 42, 0.3);
+  paint-order: stroke fill;
   opacity: 0;
   transform: translateY(100px) rotateX(90deg);
   transform-origin: bottom center;

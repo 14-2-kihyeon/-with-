@@ -73,14 +73,32 @@ class YFinanceClient:
     @staticmethod
     def _get_ticker_symbol(code: str, market: str = "KOSPI") -> str:
         """
-        한국 주식 코드를 yfinance 티커 심볼로 변환
-        예: '005930' (삼성전자) -> '005930.KS'
+        주식/암호화폐 코드를 yfinance 티커 심볼로 변환
+
+        Examples:
+            '005930', 'KOSPI' -> '005930.KS' (한국 주식)
+            'AAPL', 'US' -> 'AAPL' (미국 주식)
+            'BTC-USD', 'CRYPTO' -> 'BTC-USD' (암호화폐)
+
+        Args:
+            code: 주식/암호화폐 코드
+            market: 시장 구분 ('KOSPI', 'KOSDAQ', 'US', 'CRYPTO' 등)
+
+        Returns:
+            yfinance 티커 심볼
         """
-        if "." in code:
+        # 이미 점(.)이나 하이픈(-)이 있으면 그대로 사용 (미국 주식 또는 암호화폐)
+        if "." in code or "-" in code:
             return code
 
-        suffix = YFinanceClient.KOSPI_SUFFIX if market == "KOSPI" else YFinanceClient.KOSDAQ_SUFFIX
-        return f"{code}{suffix}"
+        # 한국 주식만 접미사 추가
+        if market == "KOSPI":
+            return f"{code}{YFinanceClient.KOSPI_SUFFIX}"
+        elif market == "KOSDAQ":
+            return f"{code}{YFinanceClient.KOSDAQ_SUFFIX}"
+        else:
+            # US, CRYPTO 등은 그대로 사용
+            return code
 
     @staticmethod
     def get_realtime_price(code: str, market: str = "KOSPI") -> Optional[Dict[str, Any]]:

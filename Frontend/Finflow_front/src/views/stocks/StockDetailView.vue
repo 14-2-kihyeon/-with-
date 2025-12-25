@@ -1,18 +1,18 @@
 <template>
   <section class="stock-detail">
     <div class="top">
-      <RouterLink class="back" :to="{ name: 'stocks_home' }">← 주식 홈</RouterLink>
+      <RouterLink class="back" :to="backRoute">← {{ backLabel }}</RouterLink>
 
-      <div v-if="store.detail" class="title-wrap">
-        <h1 class="title">{{ store.detail.name }}</h1>
-        <p class="sub">{{ store.detail.code }} <span v-if="store.detail.market">· {{ store.detail.market }}</span></p>
-        <p class="small">
-          요청일: {{ store.detail.requested_as_of }} / 사용일: {{ store.detail.as_of_used }}
+      <div v-if="stockInfo" class="title-wrap">
+        <h1 class="title">{{ stockInfo.name }}</h1>
+        <p class="sub">{{ code }} <span v-if="stockInfo.market">· {{ marketLabel }}</span></p>
+        <p class="small" v-if="!isInternational">
+          요청일: {{ stockInfo.requested_as_of }} / 사용일: {{ stockInfo.as_of_used }}
         </p>
-        <p v-if="store.detail.detail" class="hint">{{ store.detail.detail }}</p>
+        <p v-if="stockInfo.detail" class="hint">{{ stockInfo.detail }}</p>
       </div>
 
-      <div v-if="store.error" class="error">{{ store.error }}</div>
+      <div v-if="error" class="error">{{ error }}</div>
     </div>
 
     <div class="grid">
@@ -22,23 +22,25 @@
           :code="code"
           :auto-refresh="true"
           :refresh-interval="60000"
+          :is-international="isInternational"
           ref="realtimePriceRef"
         />
       </div>
 
       <!-- 인트라데이 차트 -->
       <div class="card intraday-card">
-        <h2 class="card-title">실시간 차트</h2>
+        <h2 class="card-title">실시간 차트 <span v-if="isInternational" class="unit-hint">(USD 기준)</span></h2>
         <IntradayChart
           :code="code"
           :auto-refresh="true"
           :refresh-interval="60000"
+          :is-international="isInternational"
           ref="intradayChartRef"
         />
       </div>
 
-      <!-- 일봉 차트 -->
-      <div class="card">
+      <!-- 일봉 차트 (국내 주식만) -->
+      <div v-if="!isInternational" class="card">
         <div class="row-between">
           <h2 class="card-title">일봉 차트</h2>
           <button class="btn ghost" @click="reloadPrices">새로고침</button>
@@ -46,7 +48,8 @@
         <StockChart :prices="store.prices" />
       </div>
 
-      <div class="card">
+      <!-- 뉴스 (국내 주식만) -->
+      <div v-if="!isInternational" class="card">
         <div class="row-between">
           <h2 class="card-title"> 📈 뉴스</h2>
           <div class="pagination-btns" v-if="totalNewsPages > 0">
@@ -63,7 +66,8 @@
         <StockNewsList :items="paginatedNews" />
       </div>
 
-      <div class="card full">
+      <!-- AI 설명 (국내 주식만) -->
+      <div v-if="!isInternational" class="card full">
         <div class="row-between">
           <h2 class="card-title">AI 설명</h2>
           <button class="btn" @click="showAnswer" :disabled="isTyping">
@@ -112,15 +116,56 @@ const question = ref("왜 이 종목이 추천됐어?")
 
 const code = route.params.code
 
+// 종목 정보
+const stockInfo = ref(null)
+const error = ref(null)
+
 // 실시간 주가 및 차트 컴포넌트 참조
 const realtimePriceRef = ref(null)
 const intradayChartRef = ref(null)
 
-// 뉴스 페이지네이션
+// 국제 시장 여부 판단 (미국 주식 또는 암호화폐)
+const isInternational = computed(() => {
+  // 코드에 하이픈이 있으면 암호화폐 (BTC-USD)
+  if (code.includes('-')) {
+    console.log('[StockDetail] isInternational = true (crypto):', code)
+    return true
+  }
+  // 코드가 숫자로만 이루어져 있으면 국내 주식
+  if (/^\d+$/.test(code)) {
+    console.log('[StockDetail] isInternational = false (domestic):', code)
+    return false
+  }
+  // 그 외는 미국 주식 (AAPL, TSLA 등)
+  console.log('[StockDetail] isInternational = true (US stock):', code)
+  return true
+})
+
+// 백 버튼 라벨 및 라우트
+const backLabel = computed(() => {
+  if (code.includes('-')) return '암호화폐 홈'
+  if (/^\d+$/.test(code)) return '주식 홈'
+  return '해외 주식 홈'
+})
+
+const backRoute = computed(() => {
+  if (code.includes('-')) return { name: 'stocks_crypto' }
+  if (/^\d+$/.test(code)) return { name: 'stocks_home' }
+  return { name: 'stocks_global' }
+})
+
+// 시장 라벨
+const marketLabel = computed(() => {
+  if (code.includes('-')) return 'CRYPTO'
+  if (/^\d+$/.test(code)) return stockInfo.value?.market || 'KOSPI'
+  return 'US'
+})
+
+// 뉴스 페이지네이션 (국내 주식만)
 const currentNewsPage = ref(1)
 const newsPerPage = 1
 
-// AI 설명 타이핑 애니메이션
+// AI 설명 타이핑 애니메이션 (국내 주식만)
 const isTyping = ref(false)
 const isLoadingAI = ref(false)
 const aiAnswerReady = ref(false)
@@ -152,17 +197,45 @@ const prevNewsPage = () => {
 }
 
 const reloadAll = async () => {
-  await store.fetchStockDetail(code, { auto: 1 })
-  await store.fetchStockPrices(code) // 전체 1500개까지
-  await store.fetchStockNews(code, { days: 7, limit: 10, refresh: 0 })
-  currentNewsPage.value = 1 // 뉴스 로드 시 첫 페이지로 리셋
-
-  // 백그라운드에서 AI 설명 미리 로드
-  await loadAiAnswerInBackground()
+  if (isInternational.value) {
+    // 해외 주식/암호화폐: 실시간 데이터만 로드
+    await loadInternationalStock()
+  } else {
+    // 국내 주식: 모든 데이터 로드
+    await store.fetchStockDetail(code, { auto: 1 })
+    stockInfo.value = store.detail
+    await store.fetchStockPrices(code)
+    await store.fetchStockNews(code, { days: 7, limit: 10, refresh: 0 })
+    currentNewsPage.value = 1
+    await loadAiAnswerInBackground()
+  }
 }
 
 const reloadPrices = async () => {
   await store.fetchStockPrices(code)
+}
+
+const loadInternationalStock = async () => {
+  try {
+    // 실시간 가격 API로 종목 이름 가져오기
+    const response = await import('@/api/stocks').then(m => m.apiGetRealtimePrice(code))
+    const data = response.data.data
+
+    stockInfo.value = {
+      name: data?.name || code,
+      code: code,
+      market: code.includes('-') ? 'CRYPTO' : 'US'
+    }
+    error.value = null
+  } catch (e) {
+    console.error('Failed to load stock info:', e)
+    error.value = '종목 정보를 가져올 수 없습니다.'
+    stockInfo.value = {
+      name: code,
+      code: code,
+      market: code.includes('-') ? 'CRYPTO' : 'US'
+    }
+  }
 }
 
 const loadAiAnswerInBackground = async () => {
@@ -173,7 +246,6 @@ const loadAiAnswerInBackground = async () => {
       refresh_news: 1,
     })
 
-    // AI 응답을 fullAnswer에 저장하고 준비 완료 상태로 변경
     fullAnswer.value = store.explain?.answer || ""
     aiAnswerReady.value = true
   } catch (e) {
@@ -185,125 +257,259 @@ const loadAiAnswerInBackground = async () => {
 const showAnswer = async () => {
   if (isTyping.value) return
 
-  // AI 답변이 아직 준비되지 않았다면 로딩 메시지 표시
   if (!aiAnswerReady.value) {
     isLoadingAI.value = true
-    // AI 답변이 준비될 때까지 대기
     while (!aiAnswerReady.value) {
       await new Promise(resolve => setTimeout(resolve, 500))
     }
     isLoadingAI.value = false
   }
 
-  // 답변 타이핑 애니메이션 시작
+  if (!fullAnswer.value) {
+    displayedAnswer.value = "AI 설명을 불러올 수 없습니다."
+    return
+  }
+
   displayedAnswer.value = ""
   isTyping.value = true
 
+  let index = 0
   const text = fullAnswer.value
-  const typingSpeed = 20 // 밀리초 단위 (빠르게 타이핑)
+  const typingSpeed = 5
 
-  for (let i = 0; i < text.length; i++) {
-    displayedAnswer.value += text[i]
-    await new Promise(resolve => setTimeout(resolve, typingSpeed))
-  }
-
-  isTyping.value = false
+  const typeInterval = setInterval(() => {
+    if (index < text.length) {
+      displayedAnswer.value += text[index]
+      index++
+    } else {
+      clearInterval(typeInterval)
+      isTyping.value = false
+    }
+  }, typingSpeed)
 }
 
-onMounted(() => {
-  console.log('[StockDetailView] Mounted with code:', code)
-  console.log('[StockDetailView] RealtimePrice ref:', realtimePriceRef.value)
-  console.log('[StockDetailView] IntradayChart ref:', intradayChartRef.value)
-  reloadAll()
+onMounted(async () => {
+  if (isInternational.value) {
+    await loadInternationalStock()
+  } else {
+    await reloadAll()
+  }
 })
 </script>
 
 <style scoped>
-.stock-detail { max-width: 1100px; margin: 0 auto; padding: 20px; }
-.top { margin-bottom: 14px; }
-.back { text-decoration: none; font-weight: 800; display: inline-block; margin-bottom: 10px; }
-.title-wrap { background: rgba(255,255,255,0.65); border-radius: 14px; padding: 14px; }
-.title { font-size: 26px; font-weight: 900; margin: 0; }
-.sub { opacity: 0.75; margin: 6px 0 0; }
-.small { opacity: 0.7; font-size: 13px; margin-top: 8px; }
-.hint { margin-top: 8px; opacity: 0.8; }
-.error { color: #b00020; margin-top: 10px; }
+.stock-detail {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 20px;
+}
 
-.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-.card { background: rgba(255,255,255,0.85); border-radius: 14px; padding: 16px; }
-.card.full { grid-column: 1 / -1; }
-.card.realtime-card { padding: 0; background: transparent; border: none; box-shadow: none; }
-.card.intraday-card { grid-column: 1 / -1; }
-.row-between { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
-.card-title { font-size: 18px; font-weight: 900; margin: 0; }
-.btns { display: flex; gap: 8px; }
+.top {
+  margin-bottom: 20px;
+}
 
-.btn { padding: 10px 12px; border-radius: 10px; border: none; cursor: pointer; }
-.btn.ghost { background: transparent; border: 1px solid rgba(0,0,0,0.12); }
-.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.back {
+  display: inline-block;
+  margin-bottom: 10px;
+  color: #2563eb;
+  text-decoration: none;
+  font-weight: 800;
+  font-size: 14px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgba(37, 99, 235, 0.08);
+  transition: all 0.3s;
+}
 
-.pagination-btns { display: flex; gap: 8px; align-items: center; }
-.page-info { font-size: 13px; font-weight: 800; opacity: 0.7; }
+.back:hover {
+  background: rgba(37, 99, 235, 0.15);
+}
 
-.textarea { width: 100%; min-height: 90px; margin-top: 12px; padding: 12px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.12); font-size: 14px; }
+.title-wrap {
+  margin-top: 10px;
+}
+
+.title {
+  font-size: 32px;
+  font-weight: 900;
+  margin: 0;
+}
+
+.sub {
+  font-size: 14px;
+  opacity: 0.7;
+  margin-top: 8px;
+}
+
+.small {
+  font-size: 12px;
+  opacity: 0.6;
+  margin-top: 6px;
+}
+
+.hint {
+  font-size: 13px;
+  opacity: 0.75;
+  margin-top: 8px;
+  padding: 10px;
+  background: rgba(37, 99, 235, 0.05);
+  border-radius: 8px;
+}
+
+.error {
+  color: #ef4444;
+  font-weight: 800;
+  margin-top: 10px;
+  padding: 12px;
+  background: rgba(239, 68, 68, 0.1);
+  border-radius: 10px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.card {
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 14px;
+  padding: 20px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.realtime-card {
+  grid-column: 1 / -1;
+}
+
+.intraday-card {
+  grid-column: 1 / -1;
+}
+
+.card.full {
+  grid-column: 1 / -1;
+}
+
+.card-title {
+  font-size: 18px;
+  font-weight: 800;
+  margin: 0 0 16px 0;
+}
+
+.unit-hint {
+  font-size: 13px;
+  opacity: 0.6;
+  font-weight: 600;
+}
+
+.row-between {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.btn {
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: none;
+  background: #2563eb;
+  color: white;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.btn:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn.ghost {
+  background: rgba(0, 0, 0, 0.05);
+  color: #333;
+}
+
+.btn.ghost:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.pagination-btns {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.page-info {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.textarea {
+  width: 100%;
+  min-height: 80px;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  font-family: inherit;
+  font-size: 14px;
+  resize: vertical;
+}
 
 .loading-message {
-  margin-top: 14px;
-  padding: 20px;
-  border-radius: 14px;
-  border: 1px solid rgba(37, 99, 235, 0.15);
-  background: rgba(37, 99, 235, 0.05);
   display: flex;
   align-items: center;
   gap: 12px;
-  font-size: 14px;
-  color: rgba(37, 99, 235, 0.95);
-  font-weight: 600;
+  margin-top: 16px;
+  padding: 16px;
+  background: rgba(37, 99, 235, 0.05);
+  border-radius: 10px;
 }
 
 .loading-spinner-small {
   width: 20px;
   height: 20px;
+  border: 3px solid rgba(37, 99, 235, 0.2);
+  border-top-color: #2563eb;
   border-radius: 50%;
-  border: 3px solid rgba(37, 99, 235, 0.15);
-  border-top-color: rgba(37, 99, 235, 0.95);
   animation: spin 0.8s linear infinite;
-  flex-shrink: 0;
-}
-
-.answer {
-  margin-top: 14px;
-  padding: 20px;
-  border-radius: 14px;
-  border: 1px solid rgba(0,0,0,0.08);
-  background: rgba(255,255,255,0.85);
-  line-height: 1.8;
-  white-space: pre-wrap;
-  font-size: 15px;
-  color: rgba(15, 23, 42, 0.95);
-  word-break: keep-all;
-  letter-spacing: 0.3px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-}
-
-.cursor {
-  display: inline-block;
-  margin-left: 2px;
-  animation: blink 0.8s infinite;
-  color: rgba(37, 99, 235, 0.8);
-  font-weight: 900;
-}
-
-@keyframes blink {
-  0%, 50% { opacity: 1; }
-  51%, 100% { opacity: 0; }
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
-@media (max-width: 900px) {
-  .grid { grid-template-columns: 1fr; }
+.answer {
+  margin-top: 16px;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.02);
+  border-radius: 10px;
+  white-space: pre-wrap;
+  line-height: 1.6;
+}
+
+.cursor {
+  animation: blink 1s infinite;
+}
+
+@keyframes blink {
+  0%, 50% {
+    opacity: 1;
+  }
+  51%, 100% {
+    opacity: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

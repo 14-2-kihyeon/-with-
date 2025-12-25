@@ -371,7 +371,6 @@ onMounted(async () => {
   padding: 40px 24px;
   min-height: 100vh;
   color: #191F28;
-  font-family: -apple-system, BlinkMacSystemFont, "Pretendard", sans-serif;
 }
 
 /* --- Header --- */

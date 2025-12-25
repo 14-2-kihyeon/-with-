@@ -75,6 +75,10 @@ const props = defineProps({
   refreshInterval: {
     type: Number,
     default: 60000 // 1분 (밀리초)
+  },
+  isInternational: {
+    type: Boolean,
+    default: false
   }
 })
 
@@ -154,12 +158,19 @@ const marketStatusText = computed(() => {
 // 포맷 함수들
 const formatPrice = (price) => {
   if (!price) return '-'
+  console.log('[RealtimePrice] formatPrice - isInternational:', props.isInternational, 'price:', price)
+  if (props.isInternational) {
+    return '$' + price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  }
   return price.toLocaleString('ko-KR') + '원'
 }
 
 const formatChange = (change) => {
-  if (!change) return '0원'
+  if (!change) return props.isInternational ? '$0.00' : '0원'
   const sign = change > 0 ? '+' : ''
+  if (props.isInternational) {
+    return sign + '$' + Math.abs(change).toFixed(2)
+  }
   return sign + change.toLocaleString('ko-KR') + '원'
 }
 
