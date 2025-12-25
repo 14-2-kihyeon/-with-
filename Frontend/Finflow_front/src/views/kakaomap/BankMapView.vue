@@ -1,5 +1,15 @@
 <template>
   <section class="bankmap-wrap">
+    <!-- Alert Modal -->
+    <AlertModal
+      v-model="showAlert"
+      :icon="alertConfig.icon"
+      :title="alertConfig.title"
+      :message="alertConfig.message"
+      :confirm-text="alertConfig.confirmText"
+      @confirm="alertConfig.onConfirm"
+    />
+
     <!-- 위치 권한 요청 모달 -->
     <transition name="modal-fade">
       <div v-if="showLocationModal" class="location-modal-overlay" @click="closeLocationModal">
@@ -117,10 +127,15 @@
 <script setup>
 import { onMounted, ref } from "vue"
 import { useKakaoBankMap } from "@/composables/kakaomap/useKakaoBankMap"
+import AlertModal from "@/components/common/AlertModal.vue"
+import { useAlert } from "@/composables/useAlert"
 
 const mapEl = ref(null)
 const originKeyword = ref("")
 const showLocationModal = ref(false)
+
+// Alert composable
+const { showAlert, alertConfig, error } = useAlert()
 
 const {
   loadKakaoSdk,
@@ -158,7 +173,7 @@ const allowLocation = async () => {
     console.error(e)
 
     if (e.code === 1) {
-      alert(
+      error(
         "위치 권한이 차단되어 있습니다.\n\n" +
         "해결 방법:\n" +
         "1. 주소창 왼쪽의 자물쇠 아이콘 클릭\n" +
@@ -166,11 +181,11 @@ const allowLocation = async () => {
         "3. 페이지 새로고침 후 다시 시도"
       )
     } else if (e.code === 2) {
-      alert("위치 정보를 사용할 수 없습니다. GPS가 비활성화되어 있을 수 있습니다.")
+      error("위치 정보를 사용할 수 없습니다. GPS가 비활성화되어 있을 수 있습니다.")
     } else if (e.code === 3) {
-      alert("위치 정보를 가져오는 데 시간이 너무 오래 걸립니다. 다시 시도해주세요.")
+      error("위치 정보를 가져오는 데 시간이 너무 오래 걸립니다. 다시 시도해주세요.")
     } else {
-      alert("내 위치를 가져오지 못했습니다.\n브라우저의 위치 권한을 확인해주세요.")
+      error("내 위치를 가져오지 못했습니다.\n브라우저의 위치 권한을 확인해주세요.")
     }
   }
 }
@@ -181,7 +196,10 @@ const closeLocationModal = () => {
 }
 
 const onSetOrigin = () => {
-  if (!originKeyword.value) return alert("출발지를 입력해주세요.")
+  if (!originKeyword.value) {
+    error("출발지를 입력해주세요.")
+    return
+  }
   setOriginByKeyword(originKeyword.value)
 }
 
@@ -190,11 +208,10 @@ const onMyLocation = async () => {
     await requestMyLocation()
   } catch (e) {
     console.error(e)
-    alert("위치 정보를 가져올 수 없습니다. 브라우저 권한을 확인해주세요.")
 
     // 위치 권한 거부 에러 처리
     if (e.code === 1) { // PERMISSION_DENIED
-      alert(
+      error(
         "위치 권한이 차단되어 있습니다.\n\n" +
         "해결 방법:\n" +
         "1. 주소창 왼쪽의 자물쇠 아이콘 클릭\n" +
@@ -202,11 +219,11 @@ const onMyLocation = async () => {
         "3. 페이지 새로고침 후 다시 시도"
       )
     } else if (e.code === 2) { // POSITION_UNAVAILABLE
-      alert("위치 정보를 사용할 수 없습니다. GPS가 비활성화되어 있을 수 있습니다.")
+      error("위치 정보를 사용할 수 없습니다. GPS가 비활성화되어 있을 수 있습니다.")
     } else if (e.code === 3) { // TIMEOUT
-      alert("위치 정보를 가져오는 데 시간이 너무 오래 걸립니다. 다시 시도해주세요.")
+      error("위치 정보를 가져오는 데 시간이 너무 오래 걸립니다. 다시 시도해주세요.")
     } else {
-      alert("내 위치를 가져오지 못했습니다.\n브라우저의 위치 권한을 확인해주세요.")
+      error("내 위치를 가져오지 못했습니다.\n브라우저의 위치 권한을 확인해주세요.")
     }
   }
 }

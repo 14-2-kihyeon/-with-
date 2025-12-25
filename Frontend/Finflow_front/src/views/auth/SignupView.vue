@@ -1,5 +1,15 @@
 <template>
   <div class="auth-page">
+    <!-- Alert Modal -->
+    <AlertModal
+      v-model="showAlert"
+      :icon="alertConfig.icon"
+      :title="alertConfig.title"
+      :message="alertConfig.message"
+      :confirm-text="alertConfig.confirmText"
+      @confirm="alertConfig.onConfirm"
+    />
+
     <div class="auth-container">
       <!-- 회원가입 카드 -->
       <div class="auth-card">
@@ -184,9 +194,15 @@ import { ref, computed } from "vue"
 import axios from "axios"
 import { useRouter } from "vue-router"
 import { useAuthStore } from "@/stores/auth"
+import AlertModal from "@/components/common/AlertModal.vue"
+import { useAlert } from "@/composables/useAlert"
 
 const router = useRouter()
 const authStore = useAuthStore()
+
+// Alert composable
+const { showAlert, alertConfig, success } = useAlert()
+
 const username = ref("")
 const email = ref("")
 const password1 = ref("")
@@ -306,8 +322,14 @@ const onSubmit = async () => {
     // 자동 로그인
     await authStore.login(username.value, password1.value)
 
-    alert("회원가입이 완료되었습니다!")
-    router.push({ name: "main" })
+    // Alert Modal 표시
+    success('회원가입이 완료되었습니다!\n메인 페이지로 이동합니다.', {
+      icon: '🎉',
+      title: '회원가입 완료',
+      onConfirm: () => {
+        router.push({ name: "main" })
+      }
+    })
   } catch (err) {
     errorMsg.value = JSON.stringify(err.response?.data || err.message)
     console.error("회원가입 오류:", err)

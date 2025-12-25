@@ -1,5 +1,15 @@
 <template>
   <div class="yt-page">
+    <!-- Alert Modal -->
+    <AlertModal
+      v-model="showAlert"
+      :icon="alertConfig.icon"
+      :title="alertConfig.title"
+      :message="alertConfig.message"
+      :confirm-text="alertConfig.confirmText"
+      @confirm="alertConfig.onConfirm"
+    />
+
     <header class="yt-header">
       <button class="btn-back-icon" @click="goBack" aria-label="뒤로가기">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
@@ -50,10 +60,15 @@
 import { onMounted, ref } from "vue"
 import { useRouter } from "vue-router"
 import { getYoutubeSubscriptions, toggleChannelSubscribe } from "@/api/youtube"
+import AlertModal from "@/components/common/AlertModal.vue"
+import { useAlert } from "@/composables/useAlert"
 
 const router = useRouter()
 const channels = ref([])
 const loading = ref(false)
+
+// Alert composable
+const { showAlert, alertConfig, error, confirm } = useAlert()
 
 const load = async () => {
   loading.value = true
@@ -69,7 +84,8 @@ const load = async () => {
 }
 
 const remove = async (channelId) => {
-  if (!confirm("구독을 취소하시겠습니까?")) return
+  const result = await confirm("구독을 취소하시겠습니까?")
+  if (!result) return
 
   try {
     const channelData = channels.value.find(c => c.channel_id === channelId)
@@ -79,9 +95,9 @@ const remove = async (channelId) => {
       channel_thumbnail: channelData?.channel_thumbnail || "",
     })
     channels.value = channels.value.filter((c) => c.channel_id !== channelId)
-  } catch (error) {
-    console.error("구독 취소 실패:", error)
-    alert("구독 취소에 실패했습니다.")
+  } catch (err) {
+    console.error("구독 취소 실패:", err)
+    error("구독 취소에 실패했습니다.")
   }
 }
 

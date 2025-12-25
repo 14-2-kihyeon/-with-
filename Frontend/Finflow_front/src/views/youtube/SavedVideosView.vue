@@ -1,5 +1,15 @@
 <template>
   <div class="yt-page">
+    <!-- Alert Modal -->
+    <AlertModal
+      v-model="showAlert"
+      :icon="alertConfig.icon"
+      :title="alertConfig.title"
+      :message="alertConfig.message"
+      :confirm-text="alertConfig.confirmText"
+      @confirm="alertConfig.onConfirm"
+    />
+
     <!-- 헤더 -->
     <header class="yt-header">
       <button class="btn-back-icon" @click="goBack" aria-label="뒤로가기">
@@ -56,10 +66,15 @@
 import { onMounted, ref } from "vue"
 import { useRouter } from "vue-router"
 import { getWatchLaterList, toggleWatchLater } from "@/api/youtube"
+import AlertModal from "@/components/common/AlertModal.vue"
+import { useAlert } from "@/composables/useAlert"
 
 const router = useRouter()
 const savedVideos = ref([])
 const loading = ref(false)
+
+// Alert composable
+const { showAlert, alertConfig, error } = useAlert()
 
 const load = async () => {
   loading.value = true
@@ -85,9 +100,9 @@ const remove = async (videoId) => {
       published_at: videoData?.published_at || "",
     })
     savedVideos.value = savedVideos.value.filter((v) => v.video_id !== videoId)
-  } catch (error) {
-    console.error("영상 삭제 실패:", error)
-    alert("영상 삭제에 실패했습니다.")
+  } catch (err) {
+    console.error("영상 삭제 실패:", err)
+    error("영상 삭제에 실패했습니다.")
   }
 }
 

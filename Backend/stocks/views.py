@@ -625,7 +625,10 @@ def stock_explain(request, code: str):
 
     try:
         answer = gms_chat(messages=messages, model="gpt-5-mini", timeout=(10, 120))
-        answer = " ".join(answer.split())
+
+        # ✅ 줄바꿈은 유지하고, 과한 공백만 정리
+        answer = (answer or "").replace("\r\n", "\n").replace("\r", "\n").strip()
+
     except Exception as e:
         error = str(e)
 

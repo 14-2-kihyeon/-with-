@@ -1,5 +1,15 @@
 <template>
   <div class="fin-page">
+    <!-- Alert Modal -->
+    <AlertModal
+      v-model="showAlert"
+      :icon="alertConfig.icon"
+      :title="alertConfig.title"
+      :message="alertConfig.message"
+      :confirm-text="alertConfig.confirmText"
+      @confirm="alertConfig.onConfirm"
+    />
+
     <div class="fin-shell">
       <!-- 상단 안내(선택) -->
       <div class="fin-notice">
@@ -264,6 +274,12 @@ const displayBankName = (apiName) => byApiName.get(apiName)?.label ?? apiName
 // ----------------------------
 const router = useRouter()
 const route = useRoute()
+
+// Alert composable
+import AlertModal from "@/components/common/AlertModal.vue"
+import { useAlert } from "@/composables/useAlert"
+const { showAlert, alertConfig, error } = useAlert()
+
 const activeTab = ref("deposit") // 'deposit' | 'saving'
 const loading = ref(false)
 const errorMsg = ref("")
@@ -467,9 +483,9 @@ const toggleBookmark = async (finPrdtCd) => {
     } else {
       bookmarkedProducts.value.add(finPrdtCd)
     }
-  } catch (error) {
-    console.error("북마크 실패:", error)
-    alert("북마크에 실패했습니다.")
+  } catch (err) {
+    console.error("북마크 실패:", err)
+    error("북마크에 실패했습니다.")
   }
 }
 

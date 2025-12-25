@@ -11,6 +11,7 @@ from naversearch.utils import search_and_save_news
 from naversearch.models import News
 from .stock_alias import find_stock_by_alias, expand_stock_search_terms
 from .mode_classifier import classify_chat_mode
+from .vector_store import get_vector_store  # RAG 벡터 스토어
 
 
 class ChatbotService:
@@ -162,6 +163,194 @@ class ChatbotService:
             'deposits': deposit_data,
             'savings': saving_data,
         }
+
+    def get_rag_products_context(self, user_message, top_k=5, intent='PRODUCT'):
+        """
+        RAG 시스템을 사용하여 사용자 질문과 관련된 금융 상품만 가져오기
+
+        Args:
+            user_message: 사용자 질문
+            top_k: 가져올 상품 개수 (기본 5개)
+            intent: 사용자 의도 ('PRODUCT', 'STOCK' 등)
+
+        Returns:
+            str: LLM 프롬프트에 넣을 컨텍스트 문자열
+        """
+        if intent != 'PRODUCT':
+            # PRODUCT 의도가 아니면 빈 문자열 반환
+            return ""
+
+        try:
+            # 벡터 스토어 가져오기
+            vector_store = get_vector_store()
+
+            # 유사 상품 검색
+            similar_products = vector_store.search(user_message, top_k=top_k)
+
+            if not similar_products:
+                return "검색된 상품이 없습니다."
+
+            # 사용자 프로필 정보
+            user_profile = self.get_user_profile_context()
+            user_gender = user_profile.get('gender') if user_profile.get('has_profile') else None
+            user_age = user_profile.get('age') if user_profile.get('has_profile') else None
+            user_period = user_profile.get('investment_period') if user_profile.get('has_profile') else None
+
+            # 상품 상세 정보 가져오기
+            context = f"사용자 질문 '{user_message}'와 관련된 상위 {len(similar_products)}개 금융 상품:\n\n"
+
+            for i, item in enumerate(similar_products, 1):
+                product_type = item['type']
+                fin_prdt_cd = item['fin_prdt_cd']
+
+                # DB에서 상세 정보 조회
+                if product_type == 'deposit':
+                    product = DepositProducts.objects.filter(fin_prdt_cd=fin_prdt_cd).first()
+                    if product:
+                        # 최고 금리 옵션 찾기
+                        best_option = product.options.order_by('-intr_rate2').first()
+                        if best_option:
+                            # 예상 수익 계산
+                            profit = self._calculate_deposit_profit(10000, best_option.save_trm, best_option.intr_rate2)
+
+                            context += f"{i}. [예금] {product.fin_prdt_nm}\n"
+                            context += f"   은행: {product.kor_co_nm}\n"
+                            context += f"   최고 금리: {best_option.intr_rate2:.2f}% ({best_option.save_trm}개월)\n"
+                            context += f"   예상 수익: {profit:,.0f}만원 (1억원 기준)\n"
+                            context += f"   가입 방법: {product.join_way or '정보 없음'}\n"
+                            if product.spcl_cnd:
+                                context += f"   특별 조건: {product.spcl_cnd[:100]}...\n"
+                            context += f"   관련도: {item['similarity_score']:.1%}\n\n"
+                else:
+                    product = SavingProducts.objects.filter(fin_prdt_cd=fin_prdt_cd).first()
+                    if product:
+                        # 최고 금리 옵션 찾기
+                        best_option = product.options.order_by('-intr_rate2').first()
+                        if best_option:
+                            # 예상 수익 계산
+                            profit = self._calculate_saving_profit(100, best_option.save_trm, best_option.intr_rate2)
+
+                            context += f"{i}. [적금] {product.fin_prdt_nm}\n"
+                            context += f"   은행: {product.kor_co_nm}\n"
+                            context += f"   최고 금리: {best_option.intr_rate2:.2f}% ({best_option.save_trm}개월)\n"
+                            context += f"   예상 수익: {profit:,.0f}만원 (월 100만원 납입)\n"
+                            context += f"   가입 방법: {product.join_way or '정보 없음'}\n"
+                            if product.spcl_cnd:
+                                context += f"   특별 조건: {product.spcl_cnd[:100]}...\n"
+                            context += f"   관련도: {item['similarity_score']:.1%}\n\n"
+
+            return context.strip()
+
+        except Exception as e:
+            print(f"[ERROR] RAG 검색 실패: {e}")
+            # 실패 시 기존 방식 사용
+            products = self.get_financial_products_context()
+            # 간단한 요약만 반환
+            context = "주요 금융 상품:\n\n"
+            for i, d in enumerate(products['deposits'][:3], 1):
+                context += f"{i}. [예금] {d['product_name']} - {d['max_rate']}\n"
+            for i, s in enumerate(products['savings'][:3], len(products['deposits'][:3]) + 1):
+                context += f"{i}. [적금] {s['product_name']} - {s['max_rate']}\n"
+            return context
+
+    def get_personalized_products_context(self, top_k=5):
+        """
+        맞춤 추천 페이지와 동일한 로직으로 상품 추천 (최대 5개)
+        recommend_products 함수의 로직을 재사용하여 투자 성향 기반 가중치 적용
+
+        Args:
+            top_k: 최대 추천 개수 (기본 5개)
+
+        Returns:
+            dict: {'rag_context': str, 'recommendation_count': int}
+        """
+        try:
+            from accounts.views import recommend_products
+            from rest_framework.test import APIRequestFactory, force_authenticate
+
+            # 가짜 API 요청 생성
+            factory = APIRequestFactory()
+            request = factory.get('/api/v1/accounts/recommend/')
+            force_authenticate(request, user=self.user)
+
+            # 맞춤 추천 API 호출
+            response = recommend_products(request)
+
+            if response.status_code != 200:
+                return {
+                    'rag_context': "추천 상품을 가져올 수 없습니다.",
+                    'recommendation_count': 0
+                }
+
+            all_recommendations = response.data.get('recommendations', [])
+
+            # 최대 top_k개만 선택 (투자 성향 기반 가중치 점수순으로 이미 정렬됨)
+            recommendations = all_recommendations[:top_k]
+
+            if not recommendations:
+                return {
+                    'rag_context': "추천 가능한 상품이 없습니다.",
+                    'recommendation_count': 0
+                }
+
+            # AI 프롬프트 형식으로 변환
+            context = f"사용자 맞춤 추천 상품 (투자 성향 기반 가중치 적용, 상위 {len(recommendations)}개):\n\n"
+
+            for i, rec in enumerate(recommendations, 1):
+                product = rec['product']
+                option = rec['option']
+                score = rec.get('risk_adjusted_score', 0)
+                product_type = rec.get('type', 'unknown')
+
+                # 상품 타입 표시
+                type_label = "예금" if product_type == 'deposit' else "적금"
+
+                context += f"{i}. [{type_label}] {product['fin_prdt_nm']}\n"
+                context += f"   은행: {product['kor_co_nm']}\n"
+                context += f"   기본금리: {option['intr_rate']:.2f}%\n"
+                context += f"   최고금리: {option['intr_rate2']:.2f}%\n"
+                context += f"   가입기간: {option['save_trm']}개월\n"
+                context += f"   투자 성향 적합도: {score:.1f}점 / 100점\n"
+
+                # 가입 방법
+                if product.get('join_way'):
+                    context += f"   가입 방법: {product['join_way']}\n"
+
+                # 우대조건 (최대 100자)
+                if product.get('spcl_cnd'):
+                    spcl_cnd = product['spcl_cnd'][:100]
+                    context += f"   우대조건: {spcl_cnd}...\n"
+
+                context += "\n"
+
+            # 투자 성향 안내 추가
+            user_profile = self.get_user_profile_context()
+            if user_profile.get('has_profile'):
+                risk_type = user_profile.get('risk_type', '')
+                context += f"\n💡 위 상품들은 '{risk_type}' 투자 성향에 맞춰 선별되었습니다.\n"
+
+                if 'timid' in risk_type:
+                    context += "   - 기본금리가 높고 우대조건이 단순한 상품 위주로 추천되었습니다.\n"
+                elif 'speculative' in risk_type:
+                    context += "   - 최고금리가 높은 상품 위주로 추천되었습니다.\n"
+                else:
+                    context += "   - 기본금리와 최고금리의 균형이 좋은 상품 위주로 추천되었습니다.\n"
+
+            return {
+                'rag_context': context.strip(),
+                'recommendation_count': len(recommendations)
+            }
+
+        except Exception as e:
+            print(f"[ERROR] 맞춤 추천 실패: {e}")
+            import traceback
+            traceback.print_exc()
+
+            # 실패 시 빈 컨텍스트 반환
+            return {
+                'rag_context': "추천 상품을 가져오는 중 오류가 발생했습니다.",
+                'recommendation_count': 0
+            }
 
     def _is_eligible_for_product(self, join_member, user_gender, user_age):
         """
@@ -454,25 +643,64 @@ class ChatbotService:
                     print(f"[DEBUG] 특정 적금 상품 감지: {product.fin_prdt_nm}")
                     break
 
-        # ===== 의도 분류 (INTENT CLASSIFICATION) =====
-        # 주식 관련 키워드
-        stock_keywords = ['주가', '시세', '종목', '주식', '전망', '어때', '분석', '상승', '하락', '추천해', '매수', '매도']
-        # 금융상품 관련 키워드
-        product_keywords = ['예금', '적금', '상품', '은행', '금리', '이자', '저축', '투자상품']
+        # ===== 의도 분류 (INTENT CLASSIFICATION) - 개선된 점수 기반 시스템 =====
+        # 핵심 주식 키워드 (명확하게 주식만을 의미)
+        stock_core_keywords = ['주가', '시세', '종목', '주식', '매수', '매도', '차트', '상장', '코스피', '코스닥', '거래량']
+        # 핵심 예금/적금 키워드 (명확하게 금융상품만을 의미)
+        product_core_keywords = ['예금', '적금', '금리', '이자', '은행', '저축', '원금', '만기', '가입']
+        # 안정성 관련 키워드 (예금/적금 선호 신호)
+        stability_keywords = ['안정', '안전', '보장', '확정', '원금보장']
 
-        # 의도 결정 우선순위: 종목명 > 주식 키워드 > 금융상품 키워드
-        if result['stock_names'] or any(kw in user_message for kw in stock_keywords):
+        # 점수 계산
+        stock_score = 0
+        product_score = 0
+
+        # 1. 종목명이 추출되었으면 주식 의도 강력 추정
+        if result['stock_names']:
+            stock_score += 10
+            print(f"[DEBUG] 종목명 감지 → stock_score +10")
+
+        # 2. 특정 상품명이 추출되었으면 금융상품 의도 강력 추정
+        if result['specific_product_name']:
+            product_score += 10
+            print(f"[DEBUG] 특정 상품명 감지 → product_score +10")
+
+        # 3. 핵심 키워드 점수 (각 키워드당 3점)
+        for kw in stock_core_keywords:
+            if kw in user_message:
+                stock_score += 3
+                print(f"[DEBUG] 주식 핵심 키워드 '{kw}' 감지 → stock_score +3")
+
+        for kw in product_core_keywords:
+            if kw in user_message:
+                product_score += 3
+                print(f"[DEBUG] 금융상품 핵심 키워드 '{kw}' 감지 → product_score +3")
+
+        # 4. 안정성 키워드는 예금/적금에 강력한 가산점 (각 5점)
+        for kw in stability_keywords:
+            if kw in user_message:
+                product_score += 5
+                print(f"[DEBUG] 안정성 키워드 '{kw}' 감지 → product_score +5")
+
+        # 5. 애매한 키워드 ('추천', '전망', '분석' 등)는 점수에 포함하지 않음
+        #    → 다른 명확한 키워드들로만 판단
+
+        print(f"[DEBUG] 최종 점수 - stock_score: {stock_score}, product_score: {product_score}")
+
+        # 의도 결정 로직
+        if stock_score > product_score:
             result['intent'] = 'STOCK'
-            print(f"[DEBUG] 의도 분류: STOCK")
-        elif any(kw in user_message for kw in product_keywords) or result['specific_product_name']:
+            print(f"[DEBUG] 의도 분류: STOCK (점수 우위)")
+        elif product_score > stock_score:
             result['intent'] = 'PRODUCT'
-            print(f"[DEBUG] 의도 분류: PRODUCT")
+            print(f"[DEBUG] 의도 분류: PRODUCT (점수 우위)")
         elif result['is_news_query']:
             result['intent'] = 'NEWS'
-            print(f"[DEBUG] 의도 분류: NEWS")
+            print(f"[DEBUG] 의도 분류: NEWS (뉴스 키워드 우선)")
         else:
-            result['intent'] = 'GENERAL'
-            print(f"[DEBUG] 의도 분류: GENERAL")
+            # 동점이거나 둘 다 0점인 경우 → 안전하게 PRODUCT 기본값 (예금/적금이 더 안전)
+            result['intent'] = 'PRODUCT'
+            print(f"[DEBUG] 의도 분류: PRODUCT (기본값 - 동점 또는 키워드 없음)")
 
         print(f"[DEBUG] 최종 분석 결과: {result}")
         return result
@@ -796,8 +1024,18 @@ class ChatbotService:
             profile_text = user_profile['message']
 
         # 상품 정보 상세 포맷팅
-        deposit_details = self._format_deposit_products(products['deposits'])
-        saving_details = self._format_saving_products(products['savings'])
+        # RAG 모드인 경우 이미 포맷된 컨텍스트 사용
+        if 'rag_context' in products:
+            # RAG 컨텍스트 사용 (이미 포맷된 문자열)
+            product_context = products['rag_context']
+            deposit_details = ""
+            saving_details = ""
+        else:
+            # 기존 방식 (전체 상품 목록)
+            deposit_details = self._format_deposit_products(products['deposits'])
+            saving_details = self._format_saving_products(products['savings'])
+            product_context = deposit_details + "\n\n" + saving_details
+
         stock_details = self._format_stock_data(stocks)
 
         # 데이터 업데이트 날짜
@@ -874,9 +1112,7 @@ class ChatbotService:
 """
 
             data_section = f"""
-{deposit_details}
-
-{saving_details}
+{product_context}
 
 {specific_product_instruction}
 
@@ -898,9 +1134,7 @@ class ChatbotService:
 {news_section}
 {specific_section}
 
-{deposit_details}
-
-{saving_details}
+{product_context}
 
 {stock_details}
 """
@@ -1010,11 +1244,23 @@ class ChatbotService:
 
             # 2. 사용자 프로필 및 기본 상품 정보 가져오기
             user_profile = self.get_user_profile_context()
-            products = self.get_financial_products_context()
+
+            # 맞춤 추천 시스템 사용: 투자 성향 기반 가중치 적용
+            intent = question_analysis.get('intent', 'GENERAL')
+            if intent == 'PRODUCT':
+                print("[맞춤 추천] 투자 성향 기반 상품 선별 중...")
+                personalized_result = self.get_personalized_products_context(top_k=5)
+                # products를 문자열 형태로 저장 (기존 dict 형식 대신)
+                products = {'rag_context': personalized_result['rag_context']}
+                print(f"[맞춤 추천] 선별 완료: {personalized_result['recommendation_count']}개 상품")
+            else:
+                # STOCK이나 다른 의도는 기존 방식 사용
+                products = self.get_financial_products_context()
+                print(f"예금 상품: {len(products['deposits'])}개, 적금 상품: {len(products['savings'])}개")
+
             stocks = self.get_stock_context(user_profile)
 
             print(f"프로필 로드 성공: {user_profile.get('has_profile')}")  # 디버깅
-            print(f"예금 상품: {len(products['deposits'])}개, 적금 상품: {len(products['savings'])}개")
             print(f"주식 종목: {len(stocks)}개")
 
             # 3. 특정 종목/날짜 질문이면 동적 데이터 조회
@@ -1026,38 +1272,36 @@ class ChatbotService:
                     question_analysis['dates'] if question_analysis['dates'] else None
                 )
 
-            # 4. 뉴스 질문이면 최신 뉴스 자동 수집 및 조회
+            # 4. 뉴스 자동 수집 (뉴스 키워드 또는 주식 종목명이 있으면 자동 실행)
             fresh_news_data = ""
-            if question_analysis['is_news_query']:
-                print(f"뉴스 질문 감지!")
 
-                # 종목 뉴스 수집
-                if question_analysis['stock_names']:
-                    print(f"종목 뉴스 수집 중: {question_analysis['stock_names']}")
-                    stock_news = self.fetch_stock_news_on_demand(question_analysis['stock_names'])
-                    if stock_news:
-                        fresh_news_data += "\n=== [최신 수집] 종목별 뉴스 ===\n"
-                        for stock_data in stock_news:
-                            fresh_news_data += f"\n[{stock_data['stock_name']} ({stock_data['stock_code']})] - {stock_data['fetch_info'].get('reason', '수집 완료')}\n"
-                            for i, news in enumerate(stock_data['news'], 1):
-                                fresh_news_data += f"{i}. [{news['published']}] {news['title']}\n"
-                                if news.get('description'):
-                                    fresh_news_data += f"   {news['description']}\n"
-                            fresh_news_data += "\n"
+            # 종목명이 있으면 자동으로 종목 뉴스 수집 (뉴스 키워드 없어도 실행)
+            if question_analysis['stock_names']:
+                print(f"[자동 뉴스 수집] 종목 감지: {question_analysis['stock_names']}")
+                stock_news = self.fetch_stock_news_on_demand(question_analysis['stock_names'])
+                if stock_news:
+                    fresh_news_data += "\n=== [최신 수집] 종목별 뉴스 ===\n"
+                    for stock_data in stock_news:
+                        fresh_news_data += f"\n[{stock_data['stock_name']} ({stock_data['stock_code']})] - {stock_data['fetch_info'].get('reason', '수집 완료')}\n"
+                        for i, news in enumerate(stock_data['news'], 1):
+                            fresh_news_data += f"{i}. [{news['published']}] {news['title']}\n"
+                            if news.get('description'):
+                                fresh_news_data += f"   {news['description']}\n"
+                        fresh_news_data += "\n"
 
-                # 일반 키워드 뉴스 수집
-                elif question_analysis['news_keywords']:
-                    print(f"일반 뉴스 수집 중: {question_analysis['news_keywords']}")
-                    general_news = self.fetch_general_news_on_demand(question_analysis['news_keywords'])
-                    if general_news:
-                        fresh_news_data += "\n=== [최신 수집] 검색 뉴스 ===\n"
-                        for keyword_data in general_news:
-                            fresh_news_data += f"\n['{keyword_data['keyword']}' 검색 결과] - {keyword_data['saved_count']}건 새로 저장됨\n"
-                            for i, news in enumerate(keyword_data['news'], 1):
-                                fresh_news_data += f"{i}. [{news['published']}] {news['title']}\n"
-                                if news.get('description'):
-                                    fresh_news_data += f"   {news['description']}\n"
-                            fresh_news_data += "\n"
+            # 뉴스 키워드가 있으면 일반 뉴스 수집 (종목 없이 뉴스만 요청한 경우)
+            elif question_analysis['is_news_query'] and question_analysis['news_keywords']:
+                print(f"[자동 뉴스 수집] 일반 뉴스 검색: {question_analysis['news_keywords']}")
+                general_news = self.fetch_general_news_on_demand(question_analysis['news_keywords'])
+                if general_news:
+                    fresh_news_data += "\n=== [최신 수집] 검색 뉴스 ===\n"
+                    for keyword_data in general_news:
+                        fresh_news_data += f"\n['{keyword_data['keyword']}' 검색 결과] - {keyword_data['saved_count']}건 새로 저장됨\n"
+                        for i, news in enumerate(keyword_data['news'], 1):
+                            fresh_news_data += f"{i}. [{news['published']}] {news['title']}\n"
+                            if news.get('description'):
+                                fresh_news_data += f"   {news['description']}\n"
+                        fresh_news_data += "\n"
 
             # 5. 시스템 프롬프트 생성 (동적 데이터 + 최신 뉴스 + 의도 + 모드 + 질문 분석 포함)
             system_prompt = self.build_system_prompt(
@@ -1420,29 +1664,62 @@ class ChatbotService:
         """
         recommended = []
 
-        # 예금 상품 확인
-        for product in products['deposits']:
-            product_name = product.get('product_name', '')
-            if product_name and product_name in ai_response:
-                recommended.append({
-                    'type': 'deposit',
-                    'code': product.get('code'),
-                    'name': product_name,
-                    'bank': product.get('bank', ''),
-                    'rate': product.get('max_rate', ''),
-                })
+        # RAG 모드인 경우: 상품 정보를 DB에서 직접 조회
+        if 'rag_context' in products:
+            # AI 응답에서 상품명 추출하여 DB 조회
+            from finances.models import DepositProducts, SavingProducts
 
-        # 적금 상품 확인
-        for product in products['savings']:
-            product_name = product.get('product_name', '')
-            if product_name and product_name in ai_response:
-                recommended.append({
-                    'type': 'saving',
-                    'code': product.get('code'),
-                    'name': product_name,
-                    'bank': product.get('bank', ''),
-                    'rate': product.get('max_rate', ''),
-                })
+            # 예금 상품 확인
+            deposits = DepositProducts.objects.all()
+            for deposit in deposits:
+                if deposit.fin_prdt_nm in ai_response:
+                    best_option = deposit.options.order_by('-intr_rate2').first()
+                    recommended.append({
+                        'type': 'deposit',
+                        'code': deposit.fin_prdt_cd,
+                        'name': deposit.fin_prdt_nm,
+                        'bank': deposit.kor_co_nm,
+                        'rate': f"{best_option.intr_rate2:.2f}%" if best_option else '',
+                    })
+
+            # 적금 상품 확인
+            savings = SavingProducts.objects.all()
+            for saving in savings:
+                if saving.fin_prdt_nm in ai_response:
+                    best_option = saving.options.order_by('-intr_rate2').first()
+                    recommended.append({
+                        'type': 'saving',
+                        'code': saving.fin_prdt_cd,
+                        'name': saving.fin_prdt_nm,
+                        'bank': saving.kor_co_nm,
+                        'rate': f"{best_option.intr_rate2:.2f}%" if best_option else '',
+                    })
+
+        # 기존 모드인 경우
+        else:
+            # 예금 상품 확인
+            for product in products.get('deposits', []):
+                product_name = product.get('product_name', '')
+                if product_name and product_name in ai_response:
+                    recommended.append({
+                        'type': 'deposit',
+                        'code': product.get('code'),
+                        'name': product_name,
+                        'bank': product.get('bank', ''),
+                        'rate': product.get('max_rate', ''),
+                    })
+
+            # 적금 상품 확인
+            for product in products.get('savings', []):
+                product_name = product.get('product_name', '')
+                if product_name and product_name in ai_response:
+                    recommended.append({
+                        'type': 'saving',
+                        'code': product.get('code'),
+                        'name': product_name,
+                        'bank': product.get('bank', ''),
+                        'rate': product.get('max_rate', ''),
+                    })
 
         # 주식 종목 확인
         for stock in stocks:

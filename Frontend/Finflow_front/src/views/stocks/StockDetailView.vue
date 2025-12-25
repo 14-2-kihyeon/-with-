@@ -40,7 +40,7 @@
       </div>
 
       <!-- 일봉 차트 (국내 주식만) -->
-      <div v-if="!isInternational" class="card">
+      <div v-if="!isInternational" class="card daily-card">
         <div class="row-between">
           <h2 class="card-title">일봉 차트</h2>
           <button class="btn ghost" @click="reloadPrices">새로고침</button>
@@ -48,8 +48,9 @@
         <StockChart :prices="store.prices" />
       </div>
 
+
       <!-- 뉴스 (국내 주식만) -->
-      <div v-if="!isInternational" class="card">
+      <div v-if="!isInternational" class="card news-card">
         <div class="row-between">
           <h2 class="card-title"> 📈 뉴스</h2>
           <div class="pagination-btns" v-if="totalNewsPages > 0">
@@ -59,12 +60,9 @@
           </div>
         </div>
 
-        <p class="small" v-if="store.news?.news_fetch">
-          <!-- fetch: {{ store.news.news_fetch.reason }} / saved: {{ store.news.news_fetch.saved }} -->
-        </p>
-
         <StockNewsList :items="paginatedNews" />
       </div>
+
 
       <!-- AI 설명 (국내 주식만) -->
       <div v-if="!isInternational" class="card full">
@@ -367,8 +365,16 @@ onMounted(async () => {
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(12, minmax(0, 1fr)); /* ✅ 12칸 고정 */
   gap: 20px;
+  align-items: start;
+}
+
+/* ✅ 큰 카드들은 전체 폭 */
+.realtime-card,
+.intraday-card,
+.card.full {
+  grid-column: 1 / -1;
 }
 
 .card {
@@ -507,9 +513,26 @@ onMounted(async () => {
   }
 }
 
-@media (max-width: 768px) {
+/* ✅ 일봉/뉴스가 한 줄을 2등분으로 꽉 채움 */
+.daily-card {
+  grid-column: span 6;
+}
+
+.news-card {
+  grid-column: span 6;
+}
+
+/* ✅ 모바일/태블릿에서는 한 줄씩 */
+@media (max-width: 900px) {
   .grid {
     grid-template-columns: 1fr;
   }
+  .daily-card,
+  .news-card,
+  .realtime-card,
+  .intraday-card,
+  .card.full {
+    grid-column: 1 / -1;
+  }
 }
-</style>
+</style>  

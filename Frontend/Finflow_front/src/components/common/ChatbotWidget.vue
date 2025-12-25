@@ -1,5 +1,15 @@
 <template>
   <div class="chatbot-widget" :class="{ 'dragging': isDragging }" :style="widgetPositionStyle">
+    <!-- Alert Modal -->
+    <AlertModal
+      v-model="showAlert"
+      :icon="alertConfig.icon"
+      :title="alertConfig.title"
+      :message="alertConfig.message"
+      :confirm-text="alertConfig.confirmText"
+      @confirm="alertConfig.onConfirm"
+    />
+
     <!-- 로그인 안내 말풍선 -->
     <transition name="fade">
       <div v-if="showLoginTooltip" class="login-tooltip">
@@ -188,6 +198,8 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useChatbot } from '@/composables/useChatbot'
 import api from '@/api/axios'
+import AlertModal from '@/components/common/AlertModal.vue'
+import { useAlert } from '@/composables/useAlert'
 import legoImage from '@/assets/main/icon/lego.png'
 import timidMale from '@/assets/main/icon/timid_male.png'
 import timidFemale from '@/assets/main/icon/timid_female.png'
@@ -199,6 +211,9 @@ import speculativeFemale from '@/assets/main/icon/speculative_female.png'
 const router = useRouter()
 const authStore = useAuthStore()
 const { chatbotOpenRequested } = useChatbot()
+
+// Alert composable
+const { showAlert, alertConfig, success, error } = useAlert()
 
 // 로컬 스토리지 키 (사용자별로 구분)
 const getStorageKey = () => {
@@ -526,17 +541,23 @@ const loadChatHistory = async () => {
 }
 
 const clearHistory = async () => {
-  if (!confirm('모든 대화 내역을 삭제하시겠습니까?')) return
+  const result = await confirm('모든 대화 내역을 삭제하시겠습니까?', {
+    icon: '🗑️',
+    title: '대화 내역 삭제',
+    confirmText: '삭제',
+    cancelText: '취소'
+  })
+  if (!result) return
 
   try {
     await api.delete('/chatbot/history/')
     messages.value = []
     // 로컬 스토리지도 삭제
     localStorage.removeItem(getStorageKey())
-    alert('대화 내역이 삭제되었습니다.')
-  } catch (error) {
-    console.error('대화 삭제 실패:', error)
-    alert('대화 내역 삭제에 실패했습니다.')
+    success('대화 내역이 삭제되었습니다.')
+  } catch (err) {
+    console.error('대화 삭제 실패:', err)
+    error('대화 내역 삭제에 실패했습니다.')
   }
 }
 
@@ -592,9 +613,9 @@ const toggleBookmark = async (product) => {
     } else {
       bookmarkedProducts.value.add(product.code)
     }
-  } catch (error) {
-    console.error('북마크 토글 실패:', error)
-    alert('관심상품 등록에 실패했습니다.')
+  } catch (err) {
+    console.error('북마크 토글 실패:', err)
+    error('관심상품 등록에 실패했습니다.')
   }
 }
 
