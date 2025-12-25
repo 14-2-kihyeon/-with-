@@ -230,7 +230,6 @@ export function useKakaoBankMap() {
 
     places.keywordSearch(keyword, (data, status) => {
       if (status !== kakao.maps.services.Status.OK || !data?.length) {
-        alert("출발지를 찾을 수 없습니다.")
         return
       }
       const top = data[0]
@@ -276,7 +275,6 @@ export function useKakaoBankMap() {
 
     places.keywordSearch(query, (data, status) => {
       if (status !== kakao.maps.services.Status.OK || !data?.length) {
-        alert("검색 결과가 없습니다.")
         return
       }
 
@@ -321,7 +319,6 @@ export function useKakaoBankMap() {
   /* ---------- route + polyline ---------- */
   const drawRouteTo = async (dest) => {
     if (!originPos.value) {
-      alert("출발지를 먼저 설정해주세요. (내 위치 또는 키워드)")
       return
     }
 
