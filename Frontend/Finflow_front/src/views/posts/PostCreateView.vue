@@ -1,5 +1,15 @@
 <template>
   <div class="community-page">
+    <!-- Alert Modal -->
+    <AlertModal
+      v-model="showAlert"
+      :icon="alertConfig.icon"
+      :title="alertConfig.title"
+      :message="alertConfig.message"
+      :confirm-text="alertConfig.confirmText"
+      @confirm="alertConfig.onConfirm"
+    />
+
     <!-- 헤더 -->
     <div class="page-header">
       <div class="header-left">
@@ -24,12 +34,12 @@
             v-model.trim="title"
             type="text"
             class="form-input"
-            placeholder="제목을 입력하세요 (최대 10자)"
+            placeholder="제목을 입력하세요 (최대 100자)"
             maxlength="10"
             required
           />
           <div class="form-hint">
-            {{ title.length }}/10 자
+            {{ title.length }}/100 자
           </div>
         </div>
 
@@ -99,9 +109,14 @@
 import { ref } from "vue"
 import { useRouter } from "vue-router"
 import { usePostsStore } from "@/stores/posts"
+import AlertModal from "@/components/common/AlertModal.vue"
+import { useAlert } from "@/composables/useAlert"
 
 const router = useRouter()
 const store = usePostsStore()
+
+// Alert composable
+const { showAlert, alertConfig, success } = useAlert()
 
 const title = ref("")
 const content = ref("")
@@ -126,13 +141,16 @@ const onSubmit = async () => {
   }
   
   try {
-    const created = await store.createPost({ 
-      title: title.value, 
-      content: content.value 
+    const created = await store.createPost({
+      title: title.value,
+      content: content.value
     })
-    
-    alert("게시글이 작성되었습니다!")
-    router.push(`/posts/${created.pk}`)
+
+    success("게시글이 작성되었습니다!", {
+      onConfirm: () => {
+        router.push(`/posts/${created.pk}`)
+      }
+    })
   } catch (e) {
     console.error("게시글 작성 실패:", e)
     err.value = e.response?.data?.detail || "게시글 작성에 실패했습니다."

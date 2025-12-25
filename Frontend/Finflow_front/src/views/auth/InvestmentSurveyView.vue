@@ -1,6 +1,16 @@
 <!-- src/views/auth/InvestmentSurveyView.vue -->
 <template>
   <div class="survey-container">
+    <!-- Alert Modal -->
+    <AlertModal
+      v-model="showAlert"
+      :icon="alertConfig.icon"
+      :title="alertConfig.title"
+      :message="alertConfig.message"
+      :confirm-text="alertConfig.confirmText"
+      @confirm="alertConfig.onConfirm"
+    />
+
     <div class="survey-header">
       <div class="header-badge">PBTI</div>
       <h1>투자 성향 분석</h1>
@@ -255,6 +265,8 @@
 import { ref, computed, onMounted } from "vue"
 import { useRouter } from "vue-router"
 import api from "@/api/axios"
+import AlertModal from "@/components/common/AlertModal.vue"
+import { useAlert } from "@/composables/useAlert"
 
 // character images
 import timidMale from "@/assets/character/timid_male.png"
@@ -279,6 +291,9 @@ const getCharacterImage = (riskType) => {
 
 
 const router = useRouter()
+
+// Alert composable
+const { showAlert, alertConfig, error } = useAlert()
 
 // 상태
 const loading = ref(false)
@@ -327,9 +342,9 @@ const fetchQuestions = async () => {
   try {
     const res = await api.get("/accounts/survey/questions/")
     questions.value = res.data
-  } catch (error) {
-    console.error("질문 로딩 실패:", error)
-    alert("질문을 불러오는데 실패했습니다.")
+  } catch (err) {
+    console.error("질문 로딩 실패:", err)
+    error("질문을 불러오는데 실패했습니다.")
   } finally {
     loading.value = false
   }
@@ -384,9 +399,9 @@ const submitSurvey = async () => {
 
     // 상단으로 스크롤
     window.scrollTo({ top: 0, behavior: 'smooth' })
-  } catch (error) {
-    console.error("제출 실패:", error)
-    alert(error.response?.data?.detail || "제출에 실패했습니다.")
+  } catch (err) {
+    console.error("제출 실패:", err)
+    error(err.response?.data?.detail || "제출에 실패했습니다.")
   } finally {
     loading.value = false
   }

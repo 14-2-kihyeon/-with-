@@ -1,5 +1,15 @@
 <template>
   <div class="community-page">
+    <!-- Alert Modal -->
+    <AlertModal
+      v-model="showAlert"
+      :icon="alertConfig.icon"
+      :title="alertConfig.title"
+      :message="alertConfig.message"
+      :confirm-text="alertConfig.confirmText"
+      @confirm="alertConfig.onConfirm"
+    />
+
     <!-- 헤더 -->
     <div class="page-header">
       <div class="header-left">
@@ -91,10 +101,15 @@
 import { ref, onMounted } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import { usePostsStore } from "@/stores/posts"
+import AlertModal from "@/components/common/AlertModal.vue"
+import { useAlert } from "@/composables/useAlert"
 
 const route = useRoute()
 const router = useRouter()
 const store = usePostsStore()
+
+// Alert composable
+const { showAlert, alertConfig, error, success } = useAlert()
 
 const title = ref("")
 const content = ref("")
@@ -107,10 +122,13 @@ onMounted(async () => {
     title.value = data.title
     content.value = data.content
     loaded.value = true
-  } catch (error) {
-    console.error("게시글 로딩 실패:", error)
-    alert("게시글을 불러올 수 없습니다.")
-    router.push("/posts")
+  } catch (err) {
+    console.error("게시글 로딩 실패:", err)
+    error("게시글을 불러올 수 없습니다.", {
+      onConfirm: () => {
+        router.push("/posts")
+      }
+    })
   }
 })
 
@@ -133,13 +151,16 @@ const onSubmit = async () => {
   }
   
   try {
-    await store.updatePost(route.params.pk, { 
-      title: title.value, 
-      content: content.value 
+    await store.updatePost(route.params.pk, {
+      title: title.value,
+      content: content.value
     })
-    
-    alert("게시글이 수정되었습니다!")
-    router.push(`/posts/${route.params.pk}`)
+
+    success("게시글이 수정되었습니다!", {
+      onConfirm: () => {
+        router.push(`/posts/${route.params.pk}`)
+      }
+    })
   } catch (e) {
     console.error("수정 실패:", e)
     err.value = e.response?.data?.detail || "게시글 수정에 실패했습니다."

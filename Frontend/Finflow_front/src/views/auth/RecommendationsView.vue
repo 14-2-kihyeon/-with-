@@ -1,6 +1,16 @@
 <!-- src/views/auth/RecommendationsView.vue -->
 <template>
   <div class="recommendations-container">
+    <!-- Alert Modal -->
+    <AlertModal
+      v-model="showAlert"
+      :icon="alertConfig.icon"
+      :title="alertConfig.title"
+      :message="alertConfig.message"
+      :confirm-text="alertConfig.confirmText"
+      @confirm="alertConfig.onConfirm"
+    />
+
     <!-- 헤더 -->
     <div class="recommendations-header">
       <div class="header-left">
@@ -270,6 +280,8 @@ import { ref, onMounted, computed } from "vue"
 import { useRouter } from "vue-router"
 import { useAuthStore } from "@/stores/auth"
 import api from "@/api/axios"
+import AlertModal from "@/components/common/AlertModal.vue"
+import { useAlert } from "@/composables/useAlert"
 
 // 투자 성향 결과 이미지 import
 import timidMale from "@/assets/character/timid_male.png"
@@ -281,6 +293,9 @@ import speculativeFemale from "@/assets/character/speculative_female.png"
 
 const router = useRouter()
 const auth = useAuthStore()
+
+// Alert composable
+const { showAlert, alertConfig, error } = useAlert()
 
 // 상태
 const loading = ref(false)
@@ -322,13 +337,13 @@ const fetchRecommendations = async () => {
     recommendations.value = res.data.recommendations || []
     investmentPlan.value = res.data.investment_plan
     totalCount.value = res.data.total_count || 0
-  } catch (error) {
-    if (error.response?.status === 404) {
+  } catch (err) {
+    if (err.response?.status === 404) {
       // 투자 성향 미등록
       profile.value = null
     } else {
-      console.error("추천 상품 로딩 실패:", error)
-      alert(error.response?.data?.detail || "추천 상품을 불러올 수 없습니다.")
+      console.error("추천 상품 로딩 실패:", err)
+      error(err.response?.data?.detail || "추천 상품을 불러올 수 없습니다.")
     }
   } finally {
     loading.value = false
@@ -356,9 +371,9 @@ const toggleBookmark = async (finPrdtCd) => {
       newSet.add(finPrdtCd)
     }
     bookmarkedProducts.value = newSet
-  } catch (error) {
-    console.error("북마크 실패:", error)
-    alert("북마크에 실패했습니다.")
+  } catch (err) {
+    console.error("북마크 실패:", err)
+    error("북마크에 실패했습니다.")
   }
 }
 

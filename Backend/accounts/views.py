@@ -14,7 +14,9 @@ from .models import (
     calculate_risk_type,
     RISK_TYPE_MAPPING
 )
-from finances.models import DepositProducts, DepositOptions
+from finances.models import DepositProducts, DepositOptions, SavingProducts, SavingOptions
+from django.db.models import Max
+import re
 
 
 # ==========================================
@@ -185,17 +187,338 @@ def get_investment_profile(request):
 # 2. 상품 추천 API
 # ==========================================
 
+def _is_eligible_for_product(join_member, user_gender, user_age):
+    """
+    사용자가 상품 가입 대상인지 확인
+
+    Args:
+        join_member: 상품의 가입 대상 (예: "만18세이상 여성고객")
+        user_gender: 사용자 성별 ('M' or 'F')
+        user_age: 사용자 나이
+
+    Returns:
+        bool: 가입 가능 여부
+    """
+    if not join_member or join_member == "제한없음":
+        return True
+
+    # 성별 체크
+    if user_gender:
+        if '여성' in join_member and user_gender == 'M':
+            return False
+        if '남성' in join_member and user_gender == 'F':
+            return False
+
+    # 나이 체크 (정규식 파싱)
+    if user_age:
+        # "만18세이상", "만65세미만" 등 파싱
+        age_patterns = [
+            (r'만(\d+)세\s*이상', lambda match: user_age >= int(match.group(1))),
+            (r'만(\d+)세\s*미만', lambda match: user_age < int(match.group(1))),
+            (r'(\d+)세\s*이상', lambda match: user_age >= int(match.group(1))),
+            (r'(\d+)세\s*미만', lambda match: user_age < int(match.group(1))),
+        ]
+
+        for pattern, check_func in age_patterns:
+            match = re.search(pattern, join_member)
+            if match:
+                if not check_func(match):
+                    return False
+
+    return True
+
+
+def _calculate_deposit_profit(principal, months, annual_rate):
+    """
+    예금 예상 수익 계산 (단리)
+
+    Args:
+        principal: 원금 (만원)
+        months: 투자 기간 (개월)
+        annual_rate: 연 이율 (%)
+
+    Returns:
+        int: 예상 수익 (만원)
+    """
+    return int(principal * (annual_rate / 100) * (months / 12))
+
+
+def _calculate_saving_profit(monthly_deposit, months, annual_rate):
+    """
+    적금 예상 수익 계산 (복리)
+
+    Args:
+        monthly_deposit: 월 납입액 (만원)
+        months: 투자 기간 (개월)
+        annual_rate: 연 이율 (%)
+
+    Returns:
+        int: 예상 수익 (만원)
+    """
+    monthly_rate = annual_rate / 100 / 12
+    total_principal = monthly_deposit * months
+
+    future_value = 0
+    for i in range(months):
+        future_value += monthly_deposit * ((1 + monthly_rate) ** (months - i))
+
+    return int(future_value - total_principal)
+
+
+def _evaluate_condition_complexity(spcl_cnd):
+    """
+    우대조건 복잡도 평가
+
+    Args:
+        spcl_cnd: 특별 조건 문자열
+
+    Returns:
+        str: 'low' (조건 1~2개), 'medium' (3~4개), 'high' (5개 이상)
+    """
+    if not spcl_cnd or len(spcl_cnd.strip()) < 10:
+        return 'low'
+
+    # 조건 개수 파악 (줄바꿈, 숫자+점, 하이픈 등으로 구분)
+    condition_markers = ['\n', '1.', '2.', '3.', '4.', '5.', '-', '•']
+    condition_count = sum(spcl_cnd.count(marker) for marker in condition_markers)
+
+    if condition_count <= 2:
+        return 'low'
+    elif condition_count <= 4:
+        return 'medium'
+    else:
+        return 'high'
+
+
+def _evaluate_join_convenience(join_way):
+    """
+    가입 방법 편의성 평가
+
+    Args:
+        join_way: 가입 방법 문자열
+
+    Returns:
+        int: 편의성 점수 (0~10점)
+    """
+    if not join_way:
+        return 0
+
+    join_way_lower = join_way.lower()
+    score = 0
+
+    # 인터넷/모바일 가입 가능 → 가장 편리
+    if '인터넷' in join_way or '모바일' in join_way or '스마트폰' in join_way or 'app' in join_way_lower:
+        score += 10
+    # 영업점만 가능 → 불편
+    elif '영업점' in join_way or '창구' in join_way:
+        score += 3
+    else:
+        score += 5
+
+    return min(score, 10)
+
+
+def _calculate_risk_adjusted_score(profile, product, option):
+    """
+    투자 성향에 따른 가중치 적용 점수 계산
+
+    안정형 (timid_male, timid_female):
+    - 기본금리(intr_rate) 가중치 높음 (70%)
+    - 우대조건 간단할수록 가산점
+    - 가입 편의성 중요
+
+    중립형 (normal_male, normal_female):
+    - 기본금리 + 우대금리 균형 (50% / 50%)
+    - 모든 요소 균형있게 평가
+
+    공격형 (speculative_male, speculative_female):
+    - 최고금리(intr_rate2) 가중치 높음 (70%)
+    - 우대조건 복잡해도 OK
+    - 가입 편의성 덜 중요
+
+    Args:
+        profile: InvestmentProfile 객체
+        product: DepositProducts or SavingProducts 객체
+        option: DepositOptions or SavingOptions 객체
+
+    Returns:
+        float: 위험 조정 점수 (0~100)
+    """
+    base_score = 0
+    risk_type = profile.risk_type
+
+    # risk_type을 일반 카테고리로 매핑
+    if 'timid' in risk_type:
+        risk_category = 'conservative'
+    elif 'speculative' in risk_type:
+        risk_category = 'aggressive'
+    else:  # 'normal' in risk_type
+        risk_category = 'moderate'
+
+    # 기본금리와 우대금리
+    basic_rate = float(option.intr_rate) if option.intr_rate else 0
+    max_rate = float(option.intr_rate2) if option.intr_rate2 else 0
+
+    # 1. 금리 점수 (투자 성향별 가중치) - 최대 50점
+    if risk_category == 'conservative':  # 안정형
+        # 기본금리 70% + 우대금리 30%
+        weighted_rate = (basic_rate * 0.7 + max_rate * 0.3)
+        rate_score = weighted_rate * 10
+    elif risk_category == 'aggressive':  # 공격형
+        # 기본금리 30% + 우대금리 70%
+        weighted_rate = (basic_rate * 0.3 + max_rate * 0.7)
+        rate_score = weighted_rate * 10
+    else:  # 중립형 (moderate)
+        # 기본금리 50% + 우대금리 50%
+        weighted_rate = (basic_rate * 0.5 + max_rate * 0.5)
+        rate_score = weighted_rate * 10
+
+    base_score += min(rate_score, 50)
+
+    # 2. 우대조건 복잡도 평가 - 최대 20점
+    condition_complexity = _evaluate_condition_complexity(product.spcl_cnd)
+
+    if risk_category == 'conservative':
+        # 안정형: 조건 간단할수록 선호
+        if condition_complexity == 'low':
+            base_score += 20  # 조건 1~2개
+        elif condition_complexity == 'medium':
+            base_score += 10  # 조건 3~4개
+        else:
+            base_score += 0   # 조건 5개 이상 (가산점 없음)
+
+    elif risk_category == 'aggressive':
+        # 공격형: 조건 많아도 OK (높은 금리 가능성)
+        if condition_complexity == 'high':
+            base_score += 15  # 복잡한 조건 = 높은 금리 가능
+        elif condition_complexity == 'medium':
+            base_score += 10
+        else:
+            base_score += 5
+
+    else:  # 중립형
+        # 균형: 적당한 조건 선호
+        if condition_complexity == 'medium':
+            base_score += 15
+        else:
+            base_score += 8
+
+    # 3. 가입 방법 편의성 - 최대 15점
+    convenience_score = _evaluate_join_convenience(product.join_way)
+
+    if risk_category == 'conservative':
+        # 안정형: 편의성 매우 중요
+        base_score += convenience_score * 1.5
+    elif risk_category == 'aggressive':
+        # 공격형: 편의성 덜 중요
+        base_score += convenience_score * 0.8
+    else:
+        # 중립형: 보통 중요
+        base_score += convenience_score
+
+    # 4. 투자 기간 일치도 - 최대 15점
+    if profile.investment_period and option.save_trm:
+        period_diff = abs(profile.investment_period - option.save_trm)
+        if period_diff == 0:
+            period_score = 15
+        elif period_diff <= 3:
+            period_score = 12
+        elif period_diff <= 6:
+            period_score = 8
+        elif period_diff <= 12:
+            period_score = 4
+        else:
+            period_score = 0
+
+        base_score += period_score
+    else:
+        base_score += 7  # 기본 점수
+
+    return min(base_score, 100)
+
+
+def _calculate_product_ratio(savings_amount, investment_period, investment_goal):
+    """
+    복합 조건 기반 예금/적금 추천 비율 계산
+
+    Args:
+        savings_amount: 현재 저축액 (만원)
+        investment_period: 투자 기간 (개월)
+        investment_goal: 투자 목표
+
+    Returns:
+        (deposit_count, saving_count): 예금 개수, 적금 개수
+    """
+    deposit_score = 0
+    saving_score = 0
+
+    # 1. 저축액 기반 점수 (0~40점)
+    if savings_amount >= 5000:  # 5,000만원 이상
+        deposit_score += 40  # 목돈 있음 → 예금 강력 선호
+        saving_score += 10
+    elif savings_amount >= 3000:  # 3,000~5,000만원
+        deposit_score += 30  # 예금 선호
+        saving_score += 20
+    elif savings_amount >= 1000:  # 1,000~3,000만원
+        deposit_score += 20  # 균형
+        saving_score += 30
+    else:  # 1,000만원 미만
+        deposit_score += 10  # 적금으로 모으기
+        saving_score += 40
+
+    # 2. 투자 기간 기반 점수 (0~40점)
+    if investment_period <= 6:  # 6개월 이하
+        deposit_score += 40  # 단기 → 예금 (즉시 인출)
+        saving_score += 10
+    elif investment_period <= 12:  # 6~12개월
+        deposit_score += 30  # 예금 선호
+        saving_score += 20
+    elif investment_period <= 24:  # 12~24개월
+        deposit_score += 20  # 균형
+        saving_score += 30
+    else:  # 24개월 이상
+        deposit_score += 10  # 장기 → 적금 (꾸준히 모으기)
+        saving_score += 40
+
+    # 3. 투자 목표 기반 점수 (0~20점)
+    goal_lower = investment_goal.lower()
+    if any(keyword in goal_lower for keyword in ['단기', '비상금', '생활비']):
+        deposit_score += 20  # 단기 목표 → 예금
+        saving_score += 5
+    elif any(keyword in goal_lower for keyword in ['장기', '노후', '은퇴']):
+        deposit_score += 5   # 장기 목표 → 적금
+        saving_score += 20
+    elif any(keyword in goal_lower for keyword in ['주택', '결혼', '자녀', '교육']):
+        deposit_score += 10  # 중대 목표 → 균형
+        saving_score += 15
+    else:
+        deposit_score += 10  # 기본값 → 균형
+        saving_score += 10
+
+    # 4. 점수 기반 비율 계산 (총 15개)
+    total_score = deposit_score + saving_score
+    deposit_ratio = deposit_score / total_score
+    saving_ratio = saving_score / total_score
+
+    # 최소 각 2개는 보장, 최대 13개까지
+    deposit_count = max(2, min(13, int(15 * deposit_ratio)))
+    saving_count = 15 - deposit_count
+
+    return deposit_count, saving_count
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def recommend_products(request):
     """
     사용자의 투자 성향에 맞는 예금/적금 상품 추천
 
-    추천 로직:
-    1. 투자 성향별 가입기간 매칭
-    2. 투자 가능 기간 고려한 상품 분산
-    3. 금리 높은 순으로 정렬
-    4. 투자 계획 제시
+    개선된 추천 로직:
+    1. 성별/나이 필터링 - 부적합 상품 제외
+    2. 최고 금리순 정렬
+    3. 예금 + 적금 모두 포함
+    4. 예상 수익 계산
+    5. 투자 기간 매칭
     """
     try:
         profile = request.user.investment_profile
@@ -205,47 +528,161 @@ def recommend_products(request):
             status=status.HTTP_404_NOT_FOUND
         )
 
+    user_gender = profile.gender
+    user_age = profile.age
+    user_period = profile.investment_period
     risk_data = RISK_TYPE_MAPPING[profile.risk_type]
-    recommended_period_months = risk_data.get('recommended_period_months', [12, 24, 36])
 
-    # 예금 상품 조회
-    deposit_products = DepositProducts.objects.prefetch_related('options').all()
+    # 기본 투자금 (프로필에 저축액이 있으면 사용, 없으면 1000만원 가정)
+    principal_amount = int(profile.savings) if profile.savings else 1000
+    monthly_deposit = 100  # 적금 월 납입액 (100만원)
 
-    recommendations = []
+    # ===== 예금 상품 추천 =====
+    deposits = DepositProducts.objects.annotate(
+        max_rate=Max('options__intr_rate2')
+    ).prefetch_related('options').filter(
+        max_rate__isnull=False
+    ).order_by('-max_rate')  # 최고 금리 내림차순
 
-    for product in deposit_products:
-        # 해당 성향에 맞는 옵션 찾기
-        for period in recommended_period_months:
-            matching_options = product.options.filter(
-                save_trm=period
-            ).order_by('-intr_rate2')
+    deposit_recommendations = []
+    for d in deposits:
+        # 성별/나이 필터링
+        if not _is_eligible_for_product(d.join_member, user_gender, user_age):
+            continue
 
-            if matching_options.exists():
-                best_option = matching_options.first()
-                match_score = calculate_match_score(profile, product, best_option)
+        # 투자 기간 매칭 (±6개월 범위)
+        if user_period:
+            period_match = d.options.filter(
+                save_trm__gte=user_period - 6,
+                save_trm__lte=user_period + 6
+            ).order_by('-intr_rate2').first()
+        else:
+            period_match = None
 
-                recommendations.append({
-                    'product': {
-                        'fin_prdt_cd': product.fin_prdt_cd,
-                        'kor_co_nm': product.kor_co_nm,
-                        'fin_prdt_nm': product.fin_prdt_nm,
-                        'join_way': product.join_way,
-                        'spcl_cnd': product.spcl_cnd,
-                    },
-                    'option': {
-                        'save_trm': best_option.save_trm,
-                        'intr_rate': float(best_option.intr_rate) if best_option.intr_rate else 0,
-                        'intr_rate2': float(best_option.intr_rate2) if best_option.intr_rate2 else 0,
-                    },
-                    'match_score': match_score,
-                    'reason': generate_recommendation_reason(profile, product, best_option),
-                })
+        # 기간 매칭 없으면 최고 금리 옵션 사용
+        if period_match:
+            matching_option = period_match
+        else:
+            matching_option = d.options.order_by('-intr_rate2').first()
 
-    # 매칭 점수 높은 순으로 정렬
-    recommendations.sort(key=lambda x: x['match_score'], reverse=True)
+        if not matching_option:
+            continue
 
-    # 투자 계획 생성
-    investment_plan = generate_investment_plan(profile, recommendations)
+        # 예상 수익 계산
+        rate = float(matching_option.intr_rate2) if matching_option.intr_rate2 else 0
+        expected_profit = _calculate_deposit_profit(principal_amount, matching_option.save_trm, rate)
+
+        # 투자 성향 기반 가중치 점수 계산
+        risk_adjusted_score = _calculate_risk_adjusted_score(profile, d, matching_option)
+
+        deposit_recommendations.append({
+            'type': 'deposit',
+            'product': {
+                'fin_prdt_cd': d.fin_prdt_cd,
+                'kor_co_nm': d.kor_co_nm,
+                'fin_prdt_nm': d.fin_prdt_nm,
+                'join_way': d.join_way,
+                'join_member': d.join_member,
+                'spcl_cnd': d.spcl_cnd,
+            },
+            'option': {
+                'save_trm': matching_option.save_trm,
+                'intr_rate': float(matching_option.intr_rate) if matching_option.intr_rate else 0,
+                'intr_rate2': rate,
+            },
+            'expected_profit': expected_profit,
+            'max_rate': rate,
+            'risk_adjusted_score': risk_adjusted_score,  # 가중치 점수 추가
+        })
+
+    # ===== 적금 상품 추천 =====
+    savings = SavingProducts.objects.annotate(
+        max_rate=Max('options__intr_rate2')
+    ).prefetch_related('options').filter(
+        max_rate__isnull=False
+    ).order_by('-max_rate')  # 최고 금리 내림차순
+
+    saving_recommendations = []
+    for s in savings:
+        # 성별/나이 필터링
+        if not _is_eligible_for_product(s.join_member, user_gender, user_age):
+            continue
+
+        # 투자 기간 매칭 (±6개월 범위)
+        if user_period:
+            period_match = s.options.filter(
+                save_trm__gte=user_period - 6,
+                save_trm__lte=user_period + 6
+            ).order_by('-intr_rate2').first()
+        else:
+            period_match = None
+
+        # 기간 매칭 없으면 최고 금리 옵션 사용
+        if period_match:
+            matching_option = period_match
+        else:
+            matching_option = s.options.order_by('-intr_rate2').first()
+
+        if not matching_option:
+            continue
+
+        # 예상 수익 계산
+        rate = float(matching_option.intr_rate2) if matching_option.intr_rate2 else 0
+        expected_profit = _calculate_saving_profit(monthly_deposit, matching_option.save_trm, rate)
+
+        # 투자 성향 기반 가중치 점수 계산
+        risk_adjusted_score = _calculate_risk_adjusted_score(profile, s, matching_option)
+
+        saving_recommendations.append({
+            'type': 'saving',
+            'product': {
+                'fin_prdt_cd': s.fin_prdt_cd,
+                'kor_co_nm': s.kor_co_nm,
+                'fin_prdt_nm': s.fin_prdt_nm,
+                'join_way': s.join_way,
+                'join_member': s.join_member,
+                'spcl_cnd': s.spcl_cnd,
+            },
+            'option': {
+                'save_trm': matching_option.save_trm,
+                'intr_rate': float(matching_option.intr_rate) if matching_option.intr_rate else 0,
+                'intr_rate2': rate,
+            },
+            'expected_profit': expected_profit,
+            'max_rate': rate,
+            'risk_adjusted_score': risk_adjusted_score,
+        })
+
+    # ===== 복합 조건 기반 예금/적금 비율 결정 =====
+    deposit_count, saving_count = _calculate_product_ratio(
+        savings_amount=int(profile.savings) if profile.savings else 0,
+        investment_period=user_period or 12,
+        investment_goal=profile.investment_goal or ""
+    )
+
+    # 예금 + 적금 합치기 (비율에 맞게)
+    # 1. 각각 금리순으로 정렬되어 있음
+    # 2. 지정된 개수만큼 가져오기
+    selected_deposits = deposit_recommendations[:deposit_count]
+    selected_savings = saving_recommendations[:saving_count]
+
+    # 3. 합치기
+    all_recommendations = selected_deposits + selected_savings
+
+    # 4. 투자 성향 기반 가중치 점수로 정렬 (예금+적금 혼합하여 최적 상품 우선)
+    all_recommendations.sort(key=lambda x: x['risk_adjusted_score'], reverse=True)
+
+    # 투자 계획 생성 (기존 함수 호환을 위해 변환)
+    legacy_format_recommendations = []
+    for rec in all_recommendations:
+        legacy_format_recommendations.append({
+            'product': rec['product'],
+            'option': rec['option'],
+            'match_score': rec['risk_adjusted_score'],  # 투자 성향 기반 가중치 점수
+            'reason': f"최고 금리 {rec['max_rate']}%로 {rec['expected_profit']}만원의 수익이 예상됩니다.",
+        })
+
+    investment_plan = generate_investment_plan(profile, legacy_format_recommendations)
 
     return Response({
         'profile': {
@@ -260,9 +697,17 @@ def recommend_products(request):
             'investment_goal': profile.investment_goal,
             'investment_period': profile.investment_period,
         },
-        'recommendations': recommendations[:15],  # 상위 15개
+        'recommendations': all_recommendations,  # 비율에 맞춘 추천 (15개)
         'investment_plan': investment_plan,
-        'total_count': len(recommendations),
+        'total_count': len(all_recommendations),
+        'total_deposits_available': len(deposit_recommendations),
+        'total_savings_available': len(saving_recommendations),
+        'recommended_deposit_count': deposit_count,  # 실제 추천된 예금 개수
+        'recommended_saving_count': saving_count,    # 실제 추천된 적금 개수
+        'recommendation_reason': f"저축액 {int(profile.savings) if profile.savings else 0}만원, "
+                                f"투자기간 {user_period or 12}개월, "
+                                f"투자목표 '{profile.investment_goal or '미설정'}'를 고려하여 "
+                                f"예금 {deposit_count}개, 적금 {saving_count}개를 추천합니다.",
     })
 
 
@@ -438,60 +883,114 @@ def generate_investment_plan(profile, recommendations):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def bookmark_recommendation(request, fin_prdt_cd):
-    """추천 상품 북마크 (관심 상품 저장)"""
-    from .models import ProductRecommendation
-    
-    try:
-        product = DepositProducts.objects.get(fin_prdt_cd=fin_prdt_cd)
-    except DepositProducts.DoesNotExist:
-        return Response(
-            {'detail': '상품을 찾을 수 없습니다.'},
-            status=status.HTTP_404_NOT_FOUND
+    """추천 상품 북마크 (관심 상품 저장 - 예금/적금 모두 지원)"""
+    from .models import ProductRecommendation, SavingRecommendation
+    from finances.models import SavingProducts
+
+    # 1. 먼저 예금 상품인지 확인
+    deposit_product = DepositProducts.objects.filter(fin_prdt_cd=fin_prdt_cd).first()
+
+    if deposit_product:
+        # 예금 상품 북마크 처리
+        recommendation, created = ProductRecommendation.objects.get_or_create(
+            user=request.user,
+            product=deposit_product,
+            defaults={
+                'match_score': 0,
+                'recommended_reason': '',
+            }
         )
-    
-    # 북마크 토글
-    recommendation, created = ProductRecommendation.objects.get_or_create(
-        user=request.user,
-        product=product,
-        defaults={
-            'match_score': 0,  # 나중에 계산
-            'recommended_reason': '',
-        }
+
+        if not created:
+            recommendation.is_bookmarked = not recommendation.is_bookmarked
+            recommendation.save()
+        else:
+            recommendation.is_bookmarked = True
+            recommendation.save()
+
+        return Response({
+            'bookmarked': recommendation.is_bookmarked,
+            'product_type': 'deposit',
+            'message': '예금 상품이 관심상품에 추가되었습니다.' if recommendation.is_bookmarked else '예금 상품이 관심상품에서 제거되었습니다.'
+        })
+
+    # 2. 적금 상품인지 확인
+    saving_product = SavingProducts.objects.filter(fin_prdt_cd=fin_prdt_cd).first()
+
+    if saving_product:
+        # 적금 상품 북마크 처리
+        recommendation, created = SavingRecommendation.objects.get_or_create(
+            user=request.user,
+            product=saving_product,
+            defaults={
+                'match_score': 0,
+                'recommended_reason': '',
+            }
+        )
+
+        if not created:
+            recommendation.is_bookmarked = not recommendation.is_bookmarked
+            recommendation.save()
+        else:
+            recommendation.is_bookmarked = True
+            recommendation.save()
+
+        return Response({
+            'bookmarked': recommendation.is_bookmarked,
+            'product_type': 'saving',
+            'message': '적금 상품이 관심상품에 추가되었습니다.' if recommendation.is_bookmarked else '적금 상품이 관심상품에서 제거되었습니다.'
+        })
+
+    # 3. 둘 다 아니면 404
+    return Response(
+        {'detail': '상품을 찾을 수 없습니다. (예금/적금 모두 확인했으나 존재하지 않음)'},
+        status=status.HTTP_404_NOT_FOUND
     )
-    
-    if not created:
-        recommendation.is_bookmarked = not recommendation.is_bookmarked
-        recommendation.save()
-    else:
-        recommendation.is_bookmarked = True
-        recommendation.save()
-    
-    return Response({
-        'bookmarked': recommendation.is_bookmarked,
-    })
 
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_bookmarked_products(request):
-    """사용자의 북마크한 상품 목록"""
-    from .models import ProductRecommendation
-    
-    bookmarks = ProductRecommendation.objects.filter(
+    """사용자의 북마크한 상품 목록 (예금 + 적금)"""
+    from .models import ProductRecommendation, SavingRecommendation
+
+    data = []
+
+    # 예금 북마크
+    deposit_bookmarks = ProductRecommendation.objects.filter(
         user=request.user,
         is_bookmarked=True
     ).select_related('product')
-    
-    data = []
-    for bookmark in bookmarks:
+
+    for bookmark in deposit_bookmarks:
         product = bookmark.product
         data.append({
             'fin_prdt_cd': product.fin_prdt_cd,
             'kor_co_nm': product.kor_co_nm,
             'fin_prdt_nm': product.fin_prdt_nm,
+            'product_type': 'deposit',
             'bookmarked_at': bookmark.created_at,
         })
-    
+
+    # 적금 북마크
+    saving_bookmarks = SavingRecommendation.objects.filter(
+        user=request.user,
+        is_bookmarked=True
+    ).select_related('product')
+
+    for bookmark in saving_bookmarks:
+        product = bookmark.product
+        data.append({
+            'fin_prdt_cd': product.fin_prdt_cd,
+            'kor_co_nm': product.kor_co_nm,
+            'fin_prdt_nm': product.fin_prdt_nm,
+            'product_type': 'saving',
+            'bookmarked_at': bookmark.created_at,
+        })
+
+    # 북마크 시간 기준으로 최신순 정렬
+    data.sort(key=lambda x: x['bookmarked_at'], reverse=True)
+
     return Response(data)
 
 
@@ -536,8 +1035,10 @@ def get_mypage_data(request):
     except Exception:
         profile_data = None
 
-    # 2. 북마크한 금융 상품
+    # 2. 북마크한 금융 상품 (예금 + 적금)
     bookmarked_products = []
+
+    # 예금 북마크
     product_bookmarks = ProductRecommendation.objects.filter(
         user=user,
         is_bookmarked=True
@@ -552,9 +1053,36 @@ def get_mypage_data(request):
             'fin_prdt_cd': product.fin_prdt_cd,
             'kor_co_nm': product.kor_co_nm,
             'fin_prdt_nm': product.fin_prdt_nm,
+            'product_type': 'deposit',
             'max_rate': f"{best_option.intr_rate2:.2f}%" if best_option and best_option.intr_rate2 else "정보없음",
             'bookmarked_at': bookmark.created_at,
         })
+
+    # 적금 북마크
+    from .models import SavingRecommendation
+    from finances.models import SavingOptions
+
+    saving_bookmarks = SavingRecommendation.objects.filter(
+        user=user,
+        is_bookmarked=True
+    ).select_related('product')
+
+    for bookmark in saving_bookmarks:
+        product = bookmark.product
+        # 최고 금리 옵션 찾기
+        best_option = SavingOptions.objects.filter(product=product).order_by('-intr_rate2').first()
+
+        bookmarked_products.append({
+            'fin_prdt_cd': product.fin_prdt_cd,
+            'kor_co_nm': product.kor_co_nm,
+            'fin_prdt_nm': product.fin_prdt_nm,
+            'product_type': 'saving',
+            'max_rate': f"{best_option.intr_rate2:.2f}%" if best_option and best_option.intr_rate2 else "정보없음",
+            'bookmarked_at': bookmark.created_at,
+        })
+
+    # 북마크 시간 기준 최신순 정렬
+    bookmarked_products.sort(key=lambda x: x['bookmarked_at'], reverse=True)
 
     # 3. 북마크한 주식 (관심종목)
     bookmarked_stocks = []

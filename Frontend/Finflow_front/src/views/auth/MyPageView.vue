@@ -1,5 +1,15 @@
 <template>
   <div class="mypage">
+    <!-- Alert Modal -->
+    <AlertModal
+      v-model="showAlert"
+      :icon="alertConfig.icon"
+      :title="alertConfig.title"
+      :message="alertConfig.message"
+      :confirm-text="alertConfig.confirmText"
+      @confirm="alertConfig.onConfirm"
+    />
+
     <div class="mypage-container">
       <!-- 헤더 -->
       <div class="mypage-header">
@@ -398,6 +408,8 @@ import { ref, onMounted, computed } from "vue"
 import { useRouter } from "vue-router"
 import { useAuthStore } from "@/stores/auth"
 import api from "@/api/axios"
+import AlertModal from "@/components/common/AlertModal.vue"
+import { useAlert } from "@/composables/useAlert"
 
 // 투자 성향 결과 이미지 import
 import timidMale from "@/assets/character/timid_male.png"
@@ -410,6 +422,9 @@ import defaultImage from "@/assets/main/icon/lego.png"
 
 const router = useRouter()
 const auth = useAuthStore()
+
+// Alert composable
+const { showAlert, alertConfig, error } = useAlert()
 
 // 상태
 const loading = ref({
@@ -506,9 +521,9 @@ const removeBookmark = async (finPrdtCd) => {
     bookmarkedProducts.value = bookmarkedProducts.value.filter(
       p => p.fin_prdt_cd !== finPrdtCd
     )
-  } catch (error) {
-    console.error("북마크 제거 실패:", error)
-    alert("관심 상품 제거에 실패했습니다.")
+  } catch (err) {
+    console.error("북마크 제거 실패:", err)
+    error("관심 상품 제거에 실패했습니다.")
   }
 }
 
@@ -519,9 +534,9 @@ const removeStockBookmark = async (stockCode) => {
     bookmarkedStocks.value = bookmarkedStocks.value.filter(
       s => s.code !== stockCode
     )
-  } catch (error) {
-    console.error("관심 주식 제거 실패:", error)
-    alert("관심 주식 제거에 실패했습니다.")
+  } catch (err) {
+    console.error("관심 주식 제거 실패:", err)
+    error("관심 주식 제거에 실패했습니다.")
   }
 }
 
@@ -532,9 +547,9 @@ const removeNewsBookmark = async (newsId) => {
     bookmarkedNews.value = bookmarkedNews.value.filter(
       n => n.news_id !== newsId
     )
-  } catch (error) {
-    console.error("뉴스 북마크 제거 실패:", error)
-    alert("뉴스 북마크 제거에 실패했습니다.")
+  } catch (err) {
+    console.error("뉴스 북마크 제거 실패:", err)
+    error("뉴스 북마크 제거에 실패했습니다.")
   }
 }
 
@@ -553,9 +568,9 @@ const removeWatchLater = async (videoId) => {
     watchLaterVideos.value = watchLaterVideos.value.filter(
       v => v.video_id !== videoId
     )
-  } catch (error) {
-    console.error("나중에 볼 영상 제거 실패:", error)
-    alert("나중에 볼 영상 제거에 실패했습니다.")
+  } catch (err) {
+    console.error("나중에 볼 영상 제거 실패:", err)
+    error("나중에 볼 영상 제거에 실패했습니다.")
   }
 }
 

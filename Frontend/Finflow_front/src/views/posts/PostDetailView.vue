@@ -1,5 +1,18 @@
 <template>
   <div class="community-page">
+    <!-- Alert Modal -->
+    <AlertModal
+      v-model="showAlert"
+      :icon="alertConfig.icon"
+      :title="alertConfig.title"
+      :message="alertConfig.message"
+      :confirm-text="alertConfig.confirmText"
+      :cancel-text="alertConfig.cancelText"
+      :show-cancel="alertConfig.showCancel"
+      @confirm="alertConfig.onConfirm"
+      @cancel="alertConfig.onCancel"
+    />
+
     <!-- 헤더 -->
     <div class="page-nav">
       <RouterLink to="/posts" class="btn-back">
@@ -153,11 +166,16 @@ import { ref, computed, onMounted } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import { usePostsStore } from "@/stores/posts"
 import { useAuthStore } from "@/stores/auth"
+import AlertModal from "@/components/common/AlertModal.vue"
+import { useAlert } from "@/composables/useAlert"
 
 const route = useRoute()
 const router = useRouter()
 const store = usePostsStore()
 const auth = useAuthStore()
+
+// Alert composable
+const { showAlert, alertConfig, success, error, confirm } = useAlert()
 
 const comment = ref("")
 const p = computed(() => store.post)
@@ -188,37 +206,47 @@ onMounted(async () => {
 })
 
 const onDelete = async () => {
-  if (confirm("정말 삭제하시겠습니까?")) {
+  const result = await confirm("정말 삭제하시겠습니까?", {
+    icon: '🗑️',
+    title: '게시글 삭제',
+    confirmText: '삭제',
+    cancelText: '취소'
+  })
+  if (result) {
     await store.deletePost(route.params.pk)
-    alert("게시글이 삭제되었습니다.")
-    router.push("/posts")
+    success("게시글이 삭제되었습니다.", {
+      onConfirm: () => {
+        router.push("/posts")
+      }
+    })
   }
 }
 
 const onCreateComment = async () => {
   if (!comment.value.trim()) {
-    alert("댓글 내용을 입력해주세요.")
+    error("댓글 내용을 입력해주세요.")
     return
   }
-  
+
   try {
     await store.createComment(route.params.pk, comment.value)
     comment.value = ""
     await store.fetchPost(route.params.pk)
-  } catch (error) {
-    console.error("댓글 작성 실패:", error)
-    alert("댓글 작성에 실패했습니다.")
+  } catch (err) {
+    console.error("댓글 작성 실패:", err)
+    error("댓글 작성에 실패했습니다.")
   }
 }
 
 const onDeleteComment = async (commentPk) => {
-  if (confirm("댓글을 삭제하시겠습니까?")) {
+  const result = await confirm("댓글을 삭제하시겠습니까?")
+  if (result) {
     try {
       await store.deleteComment(route.params.pk, commentPk)
       await store.fetchPost(route.params.pk)
-    } catch (error) {
-      console.error("댓글 삭제 실패:", error)
-      alert("댓글 삭제에 실패했습니다.")
+    } catch (err) {
+      console.error("댓글 삭제 실패:", err)
+      error("댓글 삭제에 실패했습니다.")
     }
   }
 }

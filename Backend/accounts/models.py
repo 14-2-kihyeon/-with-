@@ -207,6 +207,42 @@ class ProductRecommendation(models.Model):
         unique_together = ('user', 'product')
 
 
+class SavingRecommendation(models.Model):
+    """사용자별 적금 상품 추천 기록"""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='saving_recommendations'
+    )
+    product = models.ForeignKey(
+        'finances.SavingProducts',
+        on_delete=models.CASCADE
+    )
+
+    # 추천 근거
+    match_score = models.FloatField(
+        help_text="매칭 점수 (0~100)"
+    )
+    recommended_reason = models.TextField(
+        help_text="추천 이유"
+    )
+
+    # 사용자 액션
+    is_viewed = models.BooleanField(default=False)
+    is_bookmarked = models.BooleanField(default=False)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.product.fin_prdt_nm}"
+
+    class Meta:
+        db_table = 'saving_recommendation'
+        ordering = ['-match_score', '-created_at']
+        unique_together = ('user', 'product')
+
+
 class StockRecommendation(models.Model):
     """사용자별 주식 추천 및 관심종목"""
 

@@ -1,5 +1,15 @@
 <template>
   <div class="yt-page">
+    <!-- Alert Modal -->
+    <AlertModal
+      v-model="showAlert"
+      :icon="alertConfig.icon"
+      :title="alertConfig.title"
+      :message="alertConfig.message"
+      :confirm-text="alertConfig.confirmText"
+      @confirm="alertConfig.onConfirm"
+    />
+
     <div class="yt-header">
       <div class="yt-title-group">
         <h2 class="yt-title">영상 재생</h2>
@@ -58,10 +68,15 @@ import {
   getYoutubeSubscriptions
 } from "@/api/youtube"
 import { useAuthStore } from "@/stores/auth"
+import AlertModal from "@/components/common/AlertModal.vue"
+import { useAlert } from "@/composables/useAlert"
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+
+// Alert composable
+const { showAlert, alertConfig, error: alertError } = useAlert()
 
 const video = ref(null)
 const loading = ref(false)
@@ -83,7 +98,7 @@ const fallbackThumb = (id) => `https://i.ytimg.com/vi/${id}/hqdefault.jpg`
 
 const toggleSave = async () => {
   if (!authStore.isLogin) {
-    alert("로그인이 필요합니다.")
+    alertError("로그인이 필요합니다.")
     return
   }
 
@@ -107,7 +122,7 @@ const toggleSave = async () => {
 
 const toggleChannelSave = async () => {
   if (!authStore.isLogin) {
-    alert("로그인이 필요합니다.")
+    alertError("로그인이 필요합니다.")
     return
   }
 
