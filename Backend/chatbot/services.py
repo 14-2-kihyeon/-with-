@@ -1272,38 +1272,36 @@ class ChatbotService:
                     question_analysis['dates'] if question_analysis['dates'] else None
                 )
 
-            # 4. 뉴스 질문이면 최신 뉴스 자동 수집 및 조회
+            # 4. 뉴스 자동 수집 (뉴스 키워드 또는 주식 종목명이 있으면 자동 실행)
             fresh_news_data = ""
-            if question_analysis['is_news_query']:
-                print(f"뉴스 질문 감지!")
 
-                # 종목 뉴스 수집
-                if question_analysis['stock_names']:
-                    print(f"종목 뉴스 수집 중: {question_analysis['stock_names']}")
-                    stock_news = self.fetch_stock_news_on_demand(question_analysis['stock_names'])
-                    if stock_news:
-                        fresh_news_data += "\n=== [최신 수집] 종목별 뉴스 ===\n"
-                        for stock_data in stock_news:
-                            fresh_news_data += f"\n[{stock_data['stock_name']} ({stock_data['stock_code']})] - {stock_data['fetch_info'].get('reason', '수집 완료')}\n"
-                            for i, news in enumerate(stock_data['news'], 1):
-                                fresh_news_data += f"{i}. [{news['published']}] {news['title']}\n"
-                                if news.get('description'):
-                                    fresh_news_data += f"   {news['description']}\n"
-                            fresh_news_data += "\n"
+            # 종목명이 있으면 자동으로 종목 뉴스 수집 (뉴스 키워드 없어도 실행)
+            if question_analysis['stock_names']:
+                print(f"[자동 뉴스 수집] 종목 감지: {question_analysis['stock_names']}")
+                stock_news = self.fetch_stock_news_on_demand(question_analysis['stock_names'])
+                if stock_news:
+                    fresh_news_data += "\n=== [최신 수집] 종목별 뉴스 ===\n"
+                    for stock_data in stock_news:
+                        fresh_news_data += f"\n[{stock_data['stock_name']} ({stock_data['stock_code']})] - {stock_data['fetch_info'].get('reason', '수집 완료')}\n"
+                        for i, news in enumerate(stock_data['news'], 1):
+                            fresh_news_data += f"{i}. [{news['published']}] {news['title']}\n"
+                            if news.get('description'):
+                                fresh_news_data += f"   {news['description']}\n"
+                        fresh_news_data += "\n"
 
-                # 일반 키워드 뉴스 수집
-                elif question_analysis['news_keywords']:
-                    print(f"일반 뉴스 수집 중: {question_analysis['news_keywords']}")
-                    general_news = self.fetch_general_news_on_demand(question_analysis['news_keywords'])
-                    if general_news:
-                        fresh_news_data += "\n=== [최신 수집] 검색 뉴스 ===\n"
-                        for keyword_data in general_news:
-                            fresh_news_data += f"\n['{keyword_data['keyword']}' 검색 결과] - {keyword_data['saved_count']}건 새로 저장됨\n"
-                            for i, news in enumerate(keyword_data['news'], 1):
-                                fresh_news_data += f"{i}. [{news['published']}] {news['title']}\n"
-                                if news.get('description'):
-                                    fresh_news_data += f"   {news['description']}\n"
-                            fresh_news_data += "\n"
+            # 뉴스 키워드가 있으면 일반 뉴스 수집 (종목 없이 뉴스만 요청한 경우)
+            elif question_analysis['is_news_query'] and question_analysis['news_keywords']:
+                print(f"[자동 뉴스 수집] 일반 뉴스 검색: {question_analysis['news_keywords']}")
+                general_news = self.fetch_general_news_on_demand(question_analysis['news_keywords'])
+                if general_news:
+                    fresh_news_data += "\n=== [최신 수집] 검색 뉴스 ===\n"
+                    for keyword_data in general_news:
+                        fresh_news_data += f"\n['{keyword_data['keyword']}' 검색 결과] - {keyword_data['saved_count']}건 새로 저장됨\n"
+                        for i, news in enumerate(keyword_data['news'], 1):
+                            fresh_news_data += f"{i}. [{news['published']}] {news['title']}\n"
+                            if news.get('description'):
+                                fresh_news_data += f"   {news['description']}\n"
+                        fresh_news_data += "\n"
 
             # 5. 시스템 프롬프트 생성 (동적 데이터 + 최신 뉴스 + 의도 + 모드 + 질문 분석 포함)
             system_prompt = self.build_system_prompt(
