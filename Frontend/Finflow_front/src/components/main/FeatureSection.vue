@@ -101,16 +101,6 @@ onBeforeUnmount(() => {
 <style scoped>
 /* =========================
    font.css 전역 설정 무시
-========================= */
-.feature-section,
-.feature-section *,
-.feature-section *::before,
-.feature-section *::after {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
-  letter-spacing: normal !important;
-}
-
-/* =========================
    Section Base
 ========================= */
 .feature-section {
